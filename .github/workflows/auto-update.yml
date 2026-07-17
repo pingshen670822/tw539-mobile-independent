@@ -1,0 +1,35 @@
+name: 開獎後全自動更新與手機同步
+on:
+  schedule:
+    # 台灣時間週一至週六 20:40、20:50、21:00，確保官方資料延遲時可重試
+    - cron: '40,50 12 * * 1-6'
+    - cron: '0 13 * * 1-6'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: tw539-auto-update
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: 取得官方開獎並重算
+        run: python cloud_pipeline.py
+      - name: 保存最新資料與戰報
+        run: |
+          git config user.name "tw539-auto-update"
+          git config user.email "actions@users.noreply.github.com"
+          git add data reports site
+          git diff --cached --quiet || git commit -m "開獎後自動更新"
+          git push
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: {path: site}
+      - uses: actions/deploy-pages@v4
+  

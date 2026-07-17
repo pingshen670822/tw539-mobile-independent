@@ -1,0 +1,9 @@
+{
+  "name": "台灣539 精算預測戰報",
+  "short_name": "539戰報",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#8b0000",
+  "lang": "zh-Hant"
+}
