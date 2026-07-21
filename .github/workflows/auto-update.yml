@@ -1,9 +1,10 @@
 name: 開獎後全自動更新與手機同步
 on:
   schedule:
-    # 台灣時間週一至週六 20:40、20:50、21:00，確保官方資料延遲時可重試
-    - cron: '40,50 12 * * 1-6'
-    - cron: '0 13 * * 1-6'
+    # 鐵律：台灣時間週一至週六 20:35～23:50 每15分鐘監控。
+    # GitHub 排程可能延遲，因此不能只排三次；任一輪取得新期別即重算並部署。
+    - cron: '35,50 12 * * 1-6'
+    - cron: '5,20,35,50 13-15 * * 1-6'
   workflow_dispatch: {}
 permissions:
   contents: write
@@ -20,7 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - name: 取得官方開獎並重算
-        run: python cloud_pipeline.py
+        run: python cloud_pipeline.py --strict-freshness
       - name: 保存最新資料與戰報
         run: |
           git config user.name "tw539-auto-update"
@@ -32,4 +33,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with: {path: site}
       - uses: actions/deploy-pages@v4
+
+      - name: 鐵律最終驗證
+        run: python cloud_pipeline.py --verify-only --strict-freshness
   

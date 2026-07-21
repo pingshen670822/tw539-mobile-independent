@@ -2,11 +2,12 @@
 """官方最新開獎 -> 驗證 -> 重算 -> 產生獨立 PWA。僅使用 Python 標準庫。"""
 from __future__ import annotations
 import argparse, csv, json, shutil, subprocess, sys, time, urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent; CSV=ROOT/'data'/'539.csv'; SITE=ROOT/'site'; REPORT=ROOT/'reports'/'最新539科學預測戰報.html'
 API='https://api.taiwanlottery.com/TLCAPIWeB/Lottery/LatestResult'
+TAIPEI=timezone(timedelta(hours=8))
 
 def fetch_latest():
     last=None
@@ -45,10 +46,28 @@ def build_site(latest, changed):
     (SITE/'version.json').write_text(json.dumps(version,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps(version,ensure_ascii=False))
 
+def expected_latest_date(now=None):
+    """台灣時間20:35後，週一至週六必須至少有當日開獎；週日沿用週六。"""
+    now=now or datetime.now(TAIPEI)
+    d=now.date()
+    if now.weekday()==6: d-=timedelta(days=1)
+    elif now.hour<20 or (now.hour==20 and now.minute<35):
+        d-=timedelta(days=1)
+        if d.weekday()==6: d-=timedelta(days=1)
+    return d.isoformat()
+
+def verify_freshness(latest, strict=False):
+    expected=expected_latest_date()
+    ok=latest['draw_date']>=expected
+    print(json.dumps({'freshness_ok':ok,'latest':latest['draw_date'],'expected':expected},ensure_ascii=False))
+    if strict and not ok: raise SystemExit(f'鐵律失敗：資料過期，最新 {latest["draw_date"]}，至少應為 {expected}')
+    return ok
+
 if __name__=='__main__':
-    ap=argparse.ArgumentParser(); ap.add_argument('--offline',action='store_true'); args=ap.parse_args()
+    ap=argparse.ArgumentParser(); ap.add_argument('--offline',action='store_true'); ap.add_argument('--strict-freshness',action='store_true'); ap.add_argument('--verify-only',action='store_true'); args=ap.parse_args()
     if args.offline:
         with CSV.open('r',encoding='utf-8-sig',newline='') as f: rows=list(csv.DictReader(f))
         x=max(rows,key=lambda r:(r['draw_date'],r['period'])); latest={'period':x['period'],'draw_date':x['draw_date'],'nums':[int(x[f'n{i}']) for i in range(1,6)]}; changed=False
     else: latest=fetch_latest(); changed=update_csv(latest)
-    build_site(latest,changed)
+    verify_freshness(latest,args.strict_freshness)
+    if not args.verify_only: build_site(latest,changed)
