@@ -6,7 +6,7 @@ ROOT=Path(__file__).resolve().parent
 checks={
     ROOT/'.github/workflows/auto-update.yml':['--strict-freshness','鐵律最終驗證','ironlaw_guard.py','issues: write'],
     ROOT/'cloud_pipeline.py':['verify_freshness','expected_latest_date','prediction-history.jsonl','published-settlements.jsonl','full_history_mode'],
-    ROOT/'tw539_ultra.py':['GLOBAL_HISTORY_WEIGHTS','GLOBAL_HISTORY_BLEND = .60','all_available_history_for_every_prediction','history_coverage'],
+    ROOT/'tw539_ultra.py':['GLOBAL_HISTORY_WEIGHTS','GLOBAL_HISTORY_BLEND = 1.00','短期視窗不得參與正式排名','all_available_history_for_every_prediction','history_coverage'],
     ROOT/'site/service-worker.js':["cache:'no-store'",'tw539-mobile-ironlaw-v2'],
     ROOT/'site/mobile-sync.js':['setInterval(checkVersion,30000)'],
 }
