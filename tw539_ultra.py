@@ -11,13 +11,14 @@ import math
 import random
 import shutil
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from itertools import combinations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data" / "539.csv"
 OUT = ROOT / "reports"
+TAIPEI = timezone(timedelta(hours=8))
 
 
 def load_draws(path: Path) -> list[dict]:
@@ -405,7 +406,7 @@ def render(draws: list[dict], weights: dict, quality: list[float], score: dict, 
     recent=[]
     for item in reversed(settlements[-15:]):
         recent.append(f"<tr><td>{item.get('target_draw_date','-')}</td><td>{int(item.get('single_published',0)):02}</td><td>{fmt(item.get('top5_published') or []) or '-'}</td><td>{fmt(item.get('actual_numbers') or []) or '-'}</td><td>{'命中' if item.get('single_hit') else '未中'}</td><td>{fmt(item.get('top5_hits') or []) or '-'}</td></tr>")
-    recent_html="".join(recent) or "<tr><td colspan='6'>尚無改版後、開獎前封存的實戰結算紀錄</td></tr>"; now=datetime.now().strftime("%Y-%m-%d %H:%M")
+    recent_html="".join(recent) or "<tr><td colspan='6'>尚無改版後、開獎前封存的實戰結算紀錄</td></tr>"; now=datetime.now(TAIPEI).strftime("%Y-%m-%d %H:%M")
     single_edge_verified=bool(bt.get('single_release_allowed'))
     single_display=f"{top15[0]:02}"
     if bt.get("ranking_direction_valid"):
@@ -458,7 +459,7 @@ def main() -> None:
     history_payload="|".join(f"{x['period']}:{x['date']}:{','.join(map(str,x['nums']))}" for x in draws)
     history_hash=hashlib.sha256(history_payload.encode()).hexdigest()
     result = {
-        "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "generated_at": datetime.now(TAIPEI).isoformat(timespec="seconds"),
         "based_on_period": draws[-1]["period"],
         "target_draw_date": target.isoformat(),
         "recalculation_fingerprint": fingerprint,

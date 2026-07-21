@@ -56,6 +56,8 @@ health=read_json(REPORTS/'system-health.json')
 site_health=read_json(SITE/'system-health.json')
 version=read_json(SITE/'version.json')
 latest=draws[-1]
+if not str(result.get('generated_at','')).endswith('+08:00'): fail('戰報產生時間不是台灣時區')
+if not str(health.get('checked_at','')).endswith('+08:00') or not str(version.get('updated_at','')).endswith('+08:00'): fail('雲端健康或手機版本時間不是台灣時區')
 equal_scores={n:0.0 for n in range(1,40)}
 tie_order=rank_numbers(equal_scores,latest['period'])
 if tie_order!=rank_numbers(equal_scores,latest['period']) or tie_order in (list(range(1,40)),list(range(39,0,-1))): fail('公平破同分規則不穩定或仍固定偏向號碼大小')
@@ -152,6 +154,8 @@ for path in (REPORTS/'最新539科學預測戰報.html',SITE/'index.html'):
     if expected_direction not in visible: fail(f'{path.name} 未照實顯示高低分方向')
     if '低機率精準暫避' in visible or '當期預測前九' in visible: fail(f'{path.name} 仍含事後回算或未驗證低機率標示')
     if ranked and f'{int(ranked[0]):02}' not in visible: fail(f'{path.name} 未顯示當期1中1主選')
+    generated_visible=str(result.get('generated_at',''))[:16].replace('T',' ')
+    if generated_visible and generated_visible not in visible: fail(f'{path.name} 戰報產生時間未同步台灣時區')
 
 service=(SITE/'service-worker.js').read_text(encoding='utf-8')
 sync=(SITE/'mobile-sync.js').read_text(encoding='utf-8')

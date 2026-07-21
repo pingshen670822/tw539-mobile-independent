@@ -37,7 +37,7 @@ def update_csv(latest):
         return False
     else:
         row={k:'' for k in fields}
-    row.update({'period':latest['period'],'draw_date':latest['draw_date'],'draw_order':','.join(f'{int(n):02}' for n in latest['order']),'source':'taiwanlottery_latest_result','fetched_at':datetime.now().isoformat(timespec='seconds')})
+    row.update({'period':latest['period'],'draw_date':latest['draw_date'],'draw_order':','.join(f'{int(n):02}' for n in latest['order']),'source':'taiwanlottery_latest_result','fetched_at':datetime.now(TAIPEI).isoformat(timespec='seconds')})
     for i,n in enumerate(latest['nums'],1): row[f'n{i}']=str(n)
     rows.append(row); rows.sort(key=lambda r:(r['draw_date'],r['period']))
     tmp=CSV.with_suffix('.csv.tmp')
@@ -74,7 +74,7 @@ def settle_previous(previous, latest):
         'single_hit':bool(previous.get('single_published') in actual) if previous.get('single_published') else None,
         'top5_published':top[:5],'top9_published':top[:9],
         'top5_hits':sorted(actual.intersection(top[:5])),'top9_hits':sorted(actual.intersection(top[:9])),
-        'settled_at':datetime.now().astimezone().isoformat(timespec='seconds')
+        'settled_at':datetime.now(TAIPEI).isoformat(timespec='seconds')
     }
     append_jsonl(REPORTS/'published-settlements.jsonl',item,lambda x:(x.get('target_draw_date'),x.get('fingerprint')))
     return item
@@ -88,7 +88,7 @@ def build_site(latest, changed, previous=None):
     direction_ok=bool(backtest.get('ranking_direction_valid'))
     degraded=(not direction_ok) or (backtest.get('single_rate',0)<=backtest.get('single_random_baseline',0) and backtest.get('top9_avg_hits',0)<=backtest.get('top9_random_baseline',0))
     health={
-        'status':'healthy_model_degraded' if degraded else 'healthy','checked_at':datetime.now().astimezone().isoformat(timespec='seconds'),
+        'status':'healthy_model_degraded' if degraded else 'healthy','checked_at':datetime.now(TAIPEI).isoformat(timespec='seconds'),
         'latest_period':latest['period'],'latest_draw_date':latest['draw_date'],'expected_latest_date':expected_latest_date(),
         'freshness_ok':latest['draw_date']>=expected_latest_date(),'data_changed':changed,
         'model_release_allowed':True,
@@ -114,7 +114,7 @@ def build_site(latest, changed, previous=None):
     page=page.replace("<title>","<link rel='manifest' href='./manifest.webmanifest'><meta name='theme-color' content='#8b0000'><title>",1)
     page=page.replace('</body>',"<script src='./mobile-sync.js'></script></body>") if '</body>' in page else page.replace('</html>',"<script src='./mobile-sync.js'></script></html>")
     (SITE/'index.html').write_text(page,encoding='utf-8')
-    version={'version':datetime.now().strftime('%Y%m%d%H%M%S'),'updated_at':datetime.now().astimezone().isoformat(timespec='seconds'),'latest_period':latest['period'],'latest_draw_date':latest['draw_date'],'data_changed':changed}
+    version={'version':datetime.now(TAIPEI).strftime('%Y%m%d%H%M%S'),'updated_at':datetime.now(TAIPEI).isoformat(timespec='seconds'),'latest_period':latest['period'],'latest_draw_date':latest['draw_date'],'data_changed':changed}
     (SITE/'version.json').write_text(json.dumps(version,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps(version,ensure_ascii=False))
 
