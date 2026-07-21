@@ -1,11 +1,11 @@
 {
   "status": "healthy",
-  "checked_at": "2026-07-21T22:37:33+08:00",
+  "checked_at": "2026-07-21T22:52:58+08:00",
   "latest_period": "115000176",
   "latest_draw_date": "2026-07-21",
   "expected_latest_date": "2026-07-21",
   "freshness_ok": true,
-  "data_changed": true,
+  "data_changed": false,
   "model_release_allowed": true,
   "single_release_allowed": true,
   "single_edge_verified": true,
@@ -18,7 +18,7 @@
   "bottom9_avg_hits": 1.1222,
   "model_drift": "stable_or_observing",
   "recalculation_fingerprint": "a8df63c27c27d624",
-  "settled_previous": true,
+  "settled_previous": false,
   "full_history_mode": true,
   "history_draws_used": 5920,
   "history_database_sha256": "1c8c5532251fe7d1e36b9bed78b288284ef6b6de88e40db3c640280487f2612f"
