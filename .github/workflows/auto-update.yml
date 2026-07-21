@@ -22,9 +22,13 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - name: 鐵律完整性檢查
-        run: python ironlaw_guard.py
+        run: python ironlaw_guard.py --structure-only
       - name: 取得官方開獎並重算
         run: python cloud_pipeline.py --strict-freshness
+      - name: 發布前整套系統全面驗收
+        run: |
+          python ironlaw_guard.py
+          python system_audit.py
       - name: 保存最新資料與戰報
         run: |
           git config user.name "tw539-auto-update"
@@ -38,7 +42,10 @@ jobs:
       - uses: actions/deploy-pages@v4
 
       - name: 鐵律最終驗證
-        run: python cloud_pipeline.py --verify-only --strict-freshness
+        run: |
+          python cloud_pipeline.py --verify-only --strict-freshness
+          python ironlaw_guard.py
+          python system_audit.py
 
   alert:
     needs: update

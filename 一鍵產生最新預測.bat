@@ -3,9 +3,9 @@ chcp 65001 >nul
 cd /d "%~dp0"
 where python >nul 2>nul
 if not errorlevel 1 (
-  python tw539_ultra.py
+  python cloud_pipeline.py --strict-freshness
 ) else (
-  py -3 tw539_ultra.py
+  py -3 cloud_pipeline.py --strict-freshness
 )
 if errorlevel 1 (
   echo.

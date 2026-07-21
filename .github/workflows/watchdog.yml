@@ -13,6 +13,9 @@ permissions:
 jobs:
   verify-and-repair:
     runs-on: ubuntu-latest
+    concurrency:
+      group: tw539-watchdog
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -27,10 +30,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh workflow run auto-update.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
-          sleep 180
       - name: 修復後再次驗證
         if: steps.first_check.outcome == 'failure'
-        run: python watchdog.py
+        run: |
+          for i in {1..30}; do
+            sleep 30
+            python watchdog.py && exit 0
+          done
+          exit 1
       - name: 修復失敗建立告警
         if: failure()
         env:

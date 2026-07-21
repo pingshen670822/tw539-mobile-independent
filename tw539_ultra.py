@@ -132,6 +132,16 @@ GLOBAL_HISTORY_WEIGHTS = {
 }
 GLOBAL_HISTORY_BLEND = 1.00
 
+FEATURE_LABELS = {
+    "full_freq": "全歷史頻率",
+    "full_bayes": "全歷史貝葉斯率",
+    "full_overdue": "全歷史遺漏週期",
+    "full_association": "全歷史共現關聯",
+    "full_transition": "全歷史轉移",
+    "full_similarity": "全歷史相似型態",
+    "full_reversion": "全歷史均值回歸",
+}
+
 
 def scores_from_features(f: dict[str, dict[int, float]], weights: dict[str, float]) -> dict[int, float]:
     raw = {n: sum(weights[k] * f[k][n] for k in weights) for n in range(1, 40)}
@@ -229,28 +239,28 @@ def render(draws: list[dict], weights: dict, quality: list[float], score: dict, 
     pct = lambda n: 60 + 39 * (score[n] - min(score.values())) / max(.00001, max(score.values()) - min(score.values()))
     current_features=feature_table(draws)
     support_keys=list(weights)
-    rows = "".join(f"<tr><td>{i}</td><td><b>{n:02}</b></td><td>{pct(n):.1f}%</td><td>{'、'.join(k for k in support_keys if current_features[k][n] >= .65) or '均衡校正'}</td><td>守門通過</td></tr>" for i,n in enumerate(top15,1))
+    rows = "".join(f"<tr><td>{i}</td><td><b>{n:02}</b></td><td>{pct(n):.1f}%</td><td>{'、'.join(FEATURE_LABELS.get(k,k) for k in support_keys if current_features[k][n] >= .65) or '均衡校正'}</td><td>守門通過</td></tr>" for i,n in enumerate(top15,1))
     packs = [("獨隻1中1",top15[:1]),("2中1~2",top15[:2]),("3中1~3",top15[:3]),("5中2~3",top15[:5]),("9中3~5",top15[:9])]
-    packrows = "".join(f"<tr><td>{name}</td><td>{fmt(ns)}</td><td>{len(ns)}</td><td>研究觀察</td></tr>" for name,ns in packs)
+    packrows = "".join(f"<tr><td>{name}</td><td>{fmt(ns)}</td><td>{len(ns)}</td><td>已公開</td></tr>" for name,ns in packs)
     low = list(reversed(ranked[-15:])); lowrows = "".join(f"<tr><td>{name}</td><td>{fmt(low[:k])}</td><td>相對低分</td><td>僅供暫避觀察</td></tr>" for name,k in (("5不中",5),("10不中",10),("15不中",15)))
     recent=[]
     for i in range(max(320,len(draws)-15),len(draws)):
         s=scores(draws[:i],weights); pred=sorted(s,key=s.get,reverse=True)[:9]; actual=draws[i]["nums"]; hit=sorted(set(pred)&set(actual))
         recent.append(f"<tr><td>{draws[i]['date']}</td><td>{fmt(pred)}</td><td>{fmt(actual)}</td><td>{fmt(hit) or '-'}</td><td>{len(hit)}</td></tr>")
     recent_html="".join(reversed(recent)); now=datetime.now().strftime("%Y-%m-%d %H:%M")
-    single_allowed=bool(bt.get('single_release_allowed'))
+    single_edge_verified=bool(bt.get('single_release_allowed'))
     single_display=f"{top15[0]:02}"
-    single_status="隔離驗證顯著優於隨機，正式放行" if single_allowed else "研究候選已算出；尚未通過正式高信心門檻"
-    formula_rows="".join(f"<tr><td>{k}</td><td>全歷史資料庫</td><td>{v:.3f}</td><td>正式排名核心</td></tr>" for k,v in weights.items())
+    single_status="樣本外優勢驗證通過" if single_edge_verified else "本期主選已公開；樣本外優勢尚待驗證"
+    formula_rows="".join(f"<tr><td>{FEATURE_LABELS.get(k,k)}</td><td>全歷史資料庫</td><td>{v:.3f}</td><td>正式排名核心</td></tr>" for k,v in weights.items())
     formula_rows+="<tr><td>近10／30／100期等短期模組</td><td>僅戰報觀察</td><td>0.000</td><td>鐵律禁止影響正式排名</td></tr>"
     dist="、".join(f"{k}中：{v}期" for k,v in bt['distribution'].items())
     return f"""<!doctype html><html lang='zh-Hant'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>台灣539 精算預測戰報</title><style>
 *{{box-sizing:border-box}}body{{margin:0;background:#f3f4f6;color:#172033;font-family:Arial,'Microsoft JhengHei',sans-serif}}main{{max-width:1180px;margin:auto;padding:18px}}header{{background:linear-gradient(135deg,#8b0000,#d1242f);color:white;padding:25px;border-radius:14px}}h1{{margin:0 0 8px}}h2{{border-left:6px solid #c1121f;padding-left:10px;color:#7f1017;margin-top:30px}}nav{{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}}nav a{{background:white;border:1px solid #d1d5db;border-radius:8px;padding:9px 12px;color:#8b0000;text-decoration:none;font-weight:700}}.band{{background:white;border:1px solid #d8dee8;border-radius:12px;padding:18px;margin:14px 0;box-shadow:0 2px 8px #0000000d}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}}.card{{border:1px solid #d9dde5;border-radius:10px;padding:13px;background:#fff}}.hot-card{{border:2px solid #c1121f;background:#fff5f5}}.label{{color:#687386;font-size:13px}}.value{{font-size:19px;font-weight:800;margin-top:5px}}.num{{color:#c1121f;font-size:34px}}table{{width:100%;border-collapse:collapse;display:block;overflow:auto}}th{{background:#7f1017;color:#fff}}th,td{{padding:9px;border:1px solid #d7dce4;text-align:left;white-space:nowrap}}tr:nth-child(even) td{{background:#fafafa}}.warn{{background:#fff8e6;border-color:#e9b949}}.note{{color:#626d7d}}@media(max-width:600px){{main{{padding:8px}}header{{border-radius:8px}}}}
 </style><main><header><h1>台灣539 精算預測戰報</h1><div>全新模型・依照天天樂戰報統一規格</div></header><nav><a href='#decision'>核心決策</a><a href='#rank'>前15名</a><a href='#packs'>強牌組</a><a href='#hits'>命中對照</a><a href='#low'>低機率</a><a href='#models'>公式模型</a><a href='#gate'>鐵律守門</a></nav>
 <div class='band'><h2>本報表日期對照</h2><div class='grid'><div class='card'><div class='label'>全歷史資料範圍</div><div class='value'>{draws[0]['date']}～{latest['date']}</div></div><div class='card'><div class='label'>實際輸入資料</div><div class='value'>{len(draws):,} 期／{len(draws)*5:,}個號碼</div></div><div class='card'><div class='label'>全歷史核心占比</div><div class='value'>100%（短期正式權重0%）</div></div><div class='card'><div class='label'>最新開獎期別</div><div class='value'>{latest['period']}</div></div><div class='card'><div class='label'>最新開獎號碼</div><div class='value'>{fmt(latest['nums'])}</div></div><div class='card'><div class='label'>資料對應開獎日</div><div class='value'>{latest['date']}</div></div><div class='card'><div class='label'>本次預測目標日</div><div class='value'>{target_date.isoformat()}</div></div><div class='card'><div class='label'>戰報產生時間</div><div class='value'>{now}</div></div></div></div>
-<div class='band' id='decision'><h2>核心決策</h2><div class='grid'><div class='card'><div class='label'>資料狀態</div><div class='value'>資料已更新</div></div><div class='card'><div class='label'>檢查</div><div class='value'>已重新運算</div></div><div class='card hot-card'><div class='label'>1中1研究候選</div><div class='value num'>{single_display}</div></div><div class='card'><div class='label'>正式放行</div><div class='value'>{'是' if single_allowed else '否'}</div></div><div class='card'><div class='label'>九碼核心</div><div class='value'>{fmt(top15[:9])}</div></div></div></div>
-<div class='band'><h2>最強獨隻1中1</h2><div class='grid'><div class='card hot-card'><div class='label'>1中1研究候選號碼</div><div class='value num'>{single_display}</div></div><div class='card'><div class='label'>判定</div><div class='value'>{single_status}</div></div><div class='card'><div class='label'>隔離驗證命中</div><div class='value'>{bt.get('single_hits',0)}/{bt['samples']}（{100*bt.get('single_rate',0):.2f}%）</div></div><div class='card'><div class='label'>隨機基準 / 95%下界</div><div class='value'>{100*bt.get('single_random_baseline',0):.2f}% / {100*bt.get('single_wilson_lower95',0):.2f}%</div></div></div></div>
-<div class='band' id='rank'><h2>下期研究候選前9名</h2><table><thead><tr><th>排名</th><th>號碼</th><th>相對分</th><th>主要支撐</th><th>守門</th></tr></thead><tbody>{rows[:rows.find('</tr>', rows.find('</tr>')*0)+5] if False else rows}</tbody></table><h2>第10到第15名第二層備查</h2><p>{fmt(top15[9:15])}</p></div>
+<div class='band' id='decision'><h2>核心決策</h2><div class='grid'><div class='card'><div class='label'>資料狀態</div><div class='value'>資料已更新</div></div><div class='card'><div class='label'>檢查</div><div class='value'>已重新運算</div></div><div class='card hot-card'><div class='label'>1中1主選</div><div class='value num'>{single_display}</div></div><div class='card'><div class='label'>公開狀態</div><div class='value'>已公開</div></div><div class='card'><div class='label'>九碼核心</div><div class='value'>{fmt(top15[:9])}</div></div></div></div>
+<div class='band'><h2>最強獨隻1中1</h2><div class='grid'><div class='card hot-card'><div class='label'>1中1主選號碼</div><div class='value num'>{single_display}</div></div><div class='card'><div class='label'>判定</div><div class='value'>{single_status}</div></div><div class='card'><div class='label'>隔離驗證命中</div><div class='value'>{bt.get('single_hits',0)}/{bt['samples']}（{100*bt.get('single_rate',0):.2f}%）</div></div><div class='card'><div class='label'>隨機基準／九成五下界</div><div class='value'>{100*bt.get('single_random_baseline',0):.2f}%／{100*bt.get('single_wilson_lower95',0):.2f}%</div></div></div></div>
+<div class='band' id='rank'><h2>下期精選前9名</h2><table><thead><tr><th>排名</th><th>號碼</th><th>相對分</th><th>主要支撐</th><th>守門</th></tr></thead><tbody>{rows[:rows.find('</tr>', rows.find('</tr>')*0)+5] if False else rows}</tbody></table><h2>第10到第15名第二層備查</h2><p>{fmt(top15[9:15])}</p></div>
 <div class='band'><h2>生成號碼逐號驗算</h2><table><thead><tr><th>排名</th><th>號碼</th><th>總分</th><th>交叉來源</th><th>狀態</th></tr></thead><tbody>{rows}</tbody></table></div>
 <div class='band' id='packs'><h2>強牌組精算</h2><table><thead><tr><th>類型</th><th>號碼</th><th>顆數</th><th>狀態</th></tr></thead><tbody>{packrows}</tbody></table></div>
 <div class='band' id='hits'><h2>最新命中結果與近期命中對照</h2><table><thead><tr><th>開獎日</th><th>當期預測前九</th><th>實際開獎</th><th>命中號</th><th>前九命中</th></tr></thead><tbody>{recent_html}</tbody></table></div>
@@ -258,8 +268,8 @@ def render(draws: list[dict], weights: dict, quality: list[float], score: dict, 
 <div class='band' id='models'><h2>公式模型實驗室</h2><p><b>每次預測與每一期回測都使用當時以前的全部歷史資料。</b>正式排名100%由全歷史模型產生；近10／30／100期等短期模組權重固定為0%，只准作戰報觀察。</p><table><thead><tr><th>公式</th><th>資料範圍</th><th>實際權重</th><th>動作</th></tr></thead><tbody>{formula_rows}</tbody></table></div>
 <div class='band warn'><h2>實戰失準回灌重排</h2><p>隔離保留 {bt['samples']} 期：獨隻 {bt.get('single_hits',0)} 中、前5平均 {bt.get('top5_avg_hits',0)}（隨機 {bt.get('top5_random_baseline',0)}）、前9平均 {bt.get('top9_avg_hits',0)}（隨機 {bt.get('top9_random_baseline',0)}）。每期 {len(tickets)} 組最佳組平均命中 {bt['avg_best_hits']}；{dist}。</p><p><b>權重只用保留期以前資料決定，禁止同一批資料選模又報成績。</b></p></div>
 <div class='band'><h2>雙軌模型對照</h2><div class='grid'><div class='card'><div class='label'>候選模型數</div><div class='value'>{len(quality)}</div></div><div class='card'><div class='label'>候選回測分數</div><div class='value'>{' / '.join(str(round(x,1)) for x in quality)}</div></div><div class='card'><div class='label'>採用原則</div><div class='value'>盲測最高者</div></div></div></div>
-<div class='band' id='gate'><h2>鐵律守門</h2><table><thead><tr><th>項目</th><th>結果</th><th>說明</th></tr></thead><tbody><tr><td>重新運算</td><td>已完成</td><td>依最新資料重算，不沿用上期答案</td></tr><tr><td>資料完整性</td><td>通過</td><td>去重、日期排序、號碼1至39、每期5個不重複</td></tr><tr><td>未來資料隔離</td><td>通過</td><td>時間序列逐期盲測</td></tr><tr><td>高信心包裝</td><td>禁止</td><td>未達實戰門檻只列研究觀察</td></tr></tbody></table></div>
-<div class='band warn'><h2>模型健康與發布狀態</h2><table><thead><tr><th>項目</th><th>目前數據</th><th>判定</th></tr></thead><tbody><tr><td>獨隻隔離命中率</td><td>{100*bt.get('single_rate',0):.2f}%（隨機 {100*bt.get('single_random_baseline',0):.2f}%）</td><td>{single_status}</td></tr><tr><td>前5隔離平均</td><td>{bt.get('top5_avg_hits',0)}（隨機 {bt.get('top5_random_baseline',0)}）</td><td>研究觀察</td></tr><tr><td>前9隔離平均</td><td>{bt.get('top9_avg_hits',0)}（隨機 {bt.get('top9_random_baseline',0)}）</td><td>研究觀察</td></tr><tr><td>正式發布</td><td>{'允許' if single_allowed else '禁止'}</td><td>沒有樣本外優勢不得發布高信心號碼</td></tr></tbody></table></div>
+<div class='band' id='gate'><h2>鐵律守門</h2><table><thead><tr><th>項目</th><th>結果</th><th>說明</th></tr></thead><tbody><tr><td>重新運算</td><td>已完成</td><td>依最新資料重算，不沿用上期答案</td></tr><tr><td>資料完整性</td><td>通過</td><td>去重、日期排序、號碼1至39、每期5個不重複</td></tr><tr><td>未來資料隔離</td><td>通過</td><td>時間序列逐期盲測</td></tr><tr><td>主選產出</td><td>通過</td><td>每期固定產出並公開，不得以回測門檻停發</td></tr></tbody></table></div>
+<div class='band warn'><h2>模型健康與公開狀態</h2><table><thead><tr><th>項目</th><th>目前數據</th><th>判定</th></tr></thead><tbody><tr><td>獨隻隔離命中率</td><td>{100*bt.get('single_rate',0):.2f}%（隨機 {100*bt.get('single_random_baseline',0):.2f}%）</td><td>{single_status}</td></tr><tr><td>前5隔離平均</td><td>{bt.get('top5_avg_hits',0)}（隨機 {bt.get('top5_random_baseline',0)}）</td><td>照實列示</td></tr><tr><td>前9隔離平均</td><td>{bt.get('top9_avg_hits',0)}（隨機 {bt.get('top9_random_baseline',0)}）</td><td>照實列示</td></tr><tr><td>1中1主選</td><td>已公開</td><td>每期固定產出；不因驗證結果高低停發</td></tr></tbody></table></div>
 <div class='band warn'><h2>實戰門檻與風險聲明</h2><p>今彩539為隨機遊戲，每組合法號碼理論機率相同；本戰報只供統計研究，不保證中獎或獲利。請設定固定娛樂預算。</p></div></main></html>"""
 
 
@@ -307,12 +317,13 @@ def main() -> None:
         "audit_candidate_quality": audit_quality,
         "ranked_top15": ranked[:15],
         "single_candidate": ranked[0],
-        "single_published": ranked[0] if bt["single_release_allowed"] else None,
+        "single_published": ranked[0],
         "release_policy": {
-            "official_release_allowed": bool(bt["single_release_allowed"]),
-            "single": "allowed" if bt["single_release_allowed"] else "blocked_no_verified_edge",
-            "top5": "research_only",
-            "top9": "research_only"
+            "official_release_allowed": True,
+            "single": "published_every_draw",
+            "single_edge_verified": bool(bt["single_release_allowed"]),
+            "top5": "published_with_backtest",
+            "top9": "published_with_backtest"
         },
         "tickets": tickets,
         "backtest": bt

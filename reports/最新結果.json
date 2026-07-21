@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-21T04:20:11+00:00",
+  "generated_at": "2026-07-21T12:37:35+08:00",
   "based_on_period": "115000175",
   "target_draw_date": "2026-07-21",
   "recalculation_fingerprint": "10ceacad475965dd",
@@ -78,12 +78,13 @@
     4
   ],
   "single_candidate": 5,
-  "single_published": null,
+  "single_published": 5,
   "release_policy": {
-    "official_release_allowed": false,
-    "single": "blocked_no_verified_edge",
-    "top5": "research_only",
-    "top9": "research_only"
+    "official_release_allowed": true,
+    "single": "published_every_draw",
+    "single_edge_verified": false,
+    "top5": "published_with_backtest",
+    "top9": "published_with_backtest"
   },
   "tickets": [
     [

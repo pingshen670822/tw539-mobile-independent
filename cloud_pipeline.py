@@ -27,8 +27,17 @@ def fetch_latest():
 def update_csv(latest):
     with CSV.open('r',encoding='utf-8-sig',newline='') as f: rows=list(csv.DictReader(f)); fields=list(rows[0])
     current=max(rows,key=lambda r:(r['draw_date'],r['period']))
-    if (latest['draw_date'],latest['period']) <= (current['draw_date'],current['period']): return False
-    row={k:'' for k in fields}; row.update({'period':latest['period'],'draw_date':latest['draw_date'],'draw_order':','.join(f'{n:02}' for n in latest['order']),'source':'taiwanlottery_latest_result','fetched_at':datetime.now().isoformat(timespec='seconds')})
+    existing=next((r for r in rows if r['period']==latest['period']),None)
+    if existing:
+        old_nums=sorted(int(existing[f'n{i}']) for i in range(1,6))
+        if existing['draw_date']==latest['draw_date'] and old_nums==latest['nums']: return False
+        row=existing
+        rows.remove(existing)
+    elif (latest['draw_date'],latest['period']) <= (current['draw_date'],current['period']):
+        return False
+    else:
+        row={k:'' for k in fields}
+    row.update({'period':latest['period'],'draw_date':latest['draw_date'],'draw_order':','.join(f'{int(n):02}' for n in latest['order']),'source':'taiwanlottery_latest_result','fetched_at':datetime.now().isoformat(timespec='seconds')})
     for i,n in enumerate(latest['nums'],1): row[f'n{i}']=str(n)
     rows.append(row); rows.sort(key=lambda r:(r['draw_date'],r['period']))
     tmp=CSV.with_suffix('.csv.tmp')
@@ -39,13 +48,18 @@ def read_json(path):
     try: return json.loads(path.read_text(encoding='utf-8'))
     except Exception: return None
 
-def append_jsonl(path, item, unique_key):
+def append_jsonl(path, item, unique_key, replace=False):
     old=[]
     if path.exists():
         for line in path.read_text(encoding='utf-8').splitlines():
             try: old.append(json.loads(line))
             except Exception: pass
-    if any(unique_key(x)==unique_key(item) for x in old): return False
+    for index,existing in enumerate(old):
+        if unique_key(existing)==unique_key(item):
+            if not replace: return False
+            old[index]=item
+            path.write_text('\n'.join(json.dumps(x,ensure_ascii=False) for x in old)+'\n',encoding='utf-8')
+            return True
     old.append(item)
     path.write_text('\n'.join(json.dumps(x,ensure_ascii=False) for x in old)+'\n',encoding='utf-8')
     return True
@@ -67,7 +81,7 @@ def settle_previous(previous, latest):
 def build_site(latest, changed, previous=None):
     subprocess.run([sys.executable,str(ROOT/'tw539_ultra.py'),'--backtest','360'],check=True,cwd=ROOT)
     current=read_json(REPORTS/'最新結果.json') or {}
-    append_jsonl(REPORTS/'prediction-history.jsonl',current,lambda x:(x.get('target_draw_date'),x.get('recalculation_fingerprint')))
+    append_jsonl(REPORTS/'prediction-history.jsonl',current,lambda x:(x.get('target_draw_date'),x.get('recalculation_fingerprint')),replace=True)
     settlement=settle_previous(previous,latest)
     backtest=current.get('backtest') or {}
     degraded=(backtest.get('single_rate',0)<=backtest.get('single_random_baseline',0) and backtest.get('top9_avg_hits',0)<=backtest.get('top9_random_baseline',0))
@@ -75,8 +89,9 @@ def build_site(latest, changed, previous=None):
         'status':'healthy_model_degraded' if degraded else 'healthy','checked_at':datetime.now().astimezone().isoformat(timespec='seconds'),
         'latest_period':latest['period'],'latest_draw_date':latest['draw_date'],'expected_latest_date':expected_latest_date(),
         'freshness_ok':latest['draw_date']>=expected_latest_date(),'data_changed':changed,
-        'model_release_allowed':bool((current.get('release_policy') or {}).get('official_release_allowed')),
-        'single_release_allowed':bool((current.get('backtest') or {}).get('single_release_allowed')),
+        'model_release_allowed':True,
+        'single_release_allowed':True,
+        'single_edge_verified':bool((current.get('backtest') or {}).get('single_release_allowed')),
         'model_drift':'no_verified_edge' if degraded else 'stable_or_observing',
         'recalculation_fingerprint':current.get('recalculation_fingerprint'),'settled_previous':settlement is not None
     }
@@ -114,12 +129,38 @@ def verify_freshness(latest, strict=False):
     if strict and not ok: raise SystemExit(f'鐵律失敗：資料過期，最新 {latest["draw_date"]}，至少應為 {expected}')
     return ok
 
+def verify_publication(latest):
+    result=read_json(REPORTS/'最新結果.json') or {}
+    health=read_json(REPORTS/'system-health.json') or {}
+    site_result=read_json(SITE/'latest-result.json') or {}
+    site_health=read_json(SITE/'system-health.json') or {}
+    errors=[]
+    for label,item in (('戰報結果',result),('手機結果',site_result)):
+        data=item.get('data_latest') or {}
+        if str(data.get('period'))!=str(latest['period']) or data.get('date')!=latest['draw_date']:
+            errors.append(f'{label}未對應官方最新期別')
+        ranked=item.get('ranked_top15') or []
+        if not ranked or item.get('single_candidate')!=ranked[0] or item.get('single_published')!=ranked[0]:
+            errors.append(f'{label}的1中1主選未完整公開')
+    for label,item in (('戰報健康檔',health),('手機健康檔',site_health)):
+        if str(item.get('latest_period'))!=str(latest['period']) or item.get('latest_draw_date')!=latest['draw_date']:
+            errors.append(f'{label}未對應官方最新期別')
+        if not item.get('full_history_mode') or not item.get('history_database_sha256'):
+            errors.append(f'{label}未通過全歷史鐵律')
+    if errors: raise SystemExit('鐵律發布驗證失敗：'+'；'.join(errors))
+    print(json.dumps({'publication_ok':True,'latest_period':latest['period'],'single_published':result['single_published']},ensure_ascii=False))
+
 if __name__=='__main__':
     ap=argparse.ArgumentParser(); ap.add_argument('--offline',action='store_true'); ap.add_argument('--strict-freshness',action='store_true'); ap.add_argument('--verify-only',action='store_true'); args=ap.parse_args()
     if args.offline:
         with CSV.open('r',encoding='utf-8-sig',newline='') as f: rows=list(csv.DictReader(f))
         x=max(rows,key=lambda r:(r['draw_date'],r['period'])); latest={'period':x['period'],'draw_date':x['draw_date'],'nums':[int(x[f'n{i}']) for i in range(1,6)]}; changed=False
-    else: latest=fetch_latest(); changed=update_csv(latest)
+    else:
+        latest=fetch_latest()
+        changed=False if args.verify_only else update_csv(latest)
     verify_freshness(latest,args.strict_freshness)
+    if args.verify_only:
+        verify_publication(latest)
+        raise SystemExit(0)
     previous=read_json(REPORTS/'最新結果.json')
-    if not args.verify_only: build_site(latest,changed,previous)
+    build_site(latest,changed,previous)
