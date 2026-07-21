@@ -102,7 +102,7 @@ def expected_latest_date(now=None):
     now=now or datetime.now(TAIPEI)
     d=now.date()
     if now.weekday()==6: d-=timedelta(days=1)
-    elif now.hour<20 or (now.hour==20 and now.minute<35):
+    elif now.hour<20 or (now.hour==20 and now.minute<40):
         d-=timedelta(days=1)
         if d.weekday()==6: d-=timedelta(days=1)
     return d.isoformat()

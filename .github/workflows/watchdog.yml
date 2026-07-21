@@ -1,0 +1,38 @@
+name: 手機雲端資料鐵律看門狗
+on:
+  schedule:
+    # 台灣時間21:00、22:00、23:30與隔日07:00，獨立檢查公開頁是否跟上官方。
+    - cron: '0 13,14 * * 1-6'
+    - cron: '30 15 * * 1-6'
+    - cron: '0 23 * * 1-6'
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: write
+  issues: write
+jobs:
+  verify-and-repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: 比較官方與手機公開頁
+        id: first_check
+        continue-on-error: true
+        run: python watchdog.py
+      - name: 落後時自動重跑主流程
+        if: steps.first_check.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run auto-update.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
+          sleep 180
+      - name: 修復後再次驗證
+        if: steps.first_check.outcome == 'failure'
+        run: python watchdog.py
+      - name: 修復失敗建立告警
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue create --repo "${{ github.repository }}" --title "鐵律告警：手機公開頁仍落後官方 ${{ github.run_id }}" --body "看門狗自動重跑後仍未同步。請立即檢查：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
