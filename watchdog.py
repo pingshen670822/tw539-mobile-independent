@@ -28,6 +28,14 @@ data_latest=result.get('data_latest') or {}
 if str(data_latest.get('period'))!=str(official['period']) or data_latest.get('date')!=official['draw_date']: errors.append('公開結果未對應官方最新期別')
 ranked=result.get('ranked_top15') or []
 if not ranked or result.get('single_candidate')!=ranked[0] or result.get('single_published')!=ranked[0]: errors.append('公開結果的1中1主選缺失')
+overlap=result.get('previous_draw_overlap_audit') or {}
+if overlap.get('method')!='model_score_with_repeat_qualification' or overlap.get('full_previous_draw_copied_into_top9') or set(data_latest.get('nums') or []).issubset(ranked[:9]): errors.append('公開結果仍整批複製上一期號碼或缺少連莊資格')
+repeat_by_number={x.get('number'):x for x in (result.get('repeat_qualification') or [])}
+for n in set(ranked[:9])&set(data_latest.get('nums') or []):
+    if not (repeat_by_number.get(n) or {}).get('qualified'): errors.append(f'上一期號碼{int(n):02}未通過連莊資格卻列入前9')
+    if not (repeat_by_number.get(n) or {}).get('repeat_backtest_pass'): errors.append(f'上一期號碼{int(n):02}個別連莊回測未達標卻列入前9')
+excluded=set(result.get('forced_ticket_exclusions') or [])
+if len(excluded)!=15 or any(set(ticket)&excluded for ticket in (result.get('tickets') or [])): errors.append('公開推薦牌組含強制投注排除號碼')
 coverage=result.get('history_coverage') or {}
 if coverage.get('mode')!='all_available_history_for_every_prediction' or coverage.get('global_history_blend')!=1.0: errors.append('公開結果不是100%全歷史正式排名')
 if coverage.get('database_sha256')!=health.get('history_database_sha256'): errors.append('公開結果與健康檔的資料庫指紋不同')
@@ -35,13 +43,16 @@ backtest=result.get('backtest') or {}
 if 'ranking_direction_valid' not in backtest or 'bottom1_hits' not in backtest or 'bottom5_avg_hits' not in backtest or 'bottom9_avg_hits' not in backtest: errors.append('公開結果缺少高低分方向驗證')
 if bool(backtest.get('ranking_direction_valid'))!=bool(health.get('ranking_direction_valid')): errors.append('公開結果與健康檔的排序方向不同步')
 if backtest.get('backtest_weights')!=result.get('production_weights') or result.get('audit_weights')!=result.get('production_weights'): errors.append('公開主選與隔離回測權重不同')
+full_scan=result.get('full_history_scan') or {}
+if full_scan.get('samples')!=result.get('draw_count',0)-320 or not full_scan.get('ranking_direction_valid'): errors.append('公開結果的全歷史逐期掃描未通過')
 if str(version.get('latest_period'))!=str(official['period']) or version.get('latest_draw_date')!=official['draw_date']: errors.append('手機版本檔未同步官方最新期別')
 visible=re.sub(r'(?is)<(?:style|script)\b[^>]*>.*?</(?:style|script)>',' ',page)
 visible=html.unescape(re.sub(r'(?s)<[^>]+>',' ',visible))
 english=sorted(set(re.findall(r'[A-Za-z][A-Za-z0-9_-]*',visible)))
 if english: errors.append('戰報可見文字含英文：'+','.join(english))
 if '1中1主選' not in visible or (ranked and f'{int(ranked[0]):02}' not in visible): errors.append('公開戰報未顯示1中1主選')
-if '低機率精準暫避' in visible or '當期預測前九' in visible: errors.append('公開戰報仍含事後回算或未驗證低機率標示')
+if '低機率' in visible or '當期預測前九' in visible: errors.append('公開戰報仍含易誤解標示或事後回算內容')
+if '強制投注排除名單' not in visible or '全歷史逐期一致性掃描' not in visible or '上一期號碼檢查' not in visible or '連莊資格驗算' not in visible or '全歷史連莊率不低於12.82%' not in visible: errors.append('公開戰報缺少投注排除、全歷史掃描或連莊資格')
 expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'
 if expected_direction not in visible: errors.append('公開戰報未照實顯示排序方向')
 if errors: raise SystemExit('鐵律看門狗失敗：'+'；'.join(errors))

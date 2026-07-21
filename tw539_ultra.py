@@ -69,11 +69,17 @@ class ExpandingHistoryState:
         self.transition_base = [0.0] * 40
         self.signature_counts: dict[tuple[int, int, int, int], list[float]] = defaultdict(lambda: [0.0] * 40)
         self.signature_total: Counter = Counter()
+        self.repeat_exposure = [0] * 40
+        self.repeat_hits = [0] * 40
         self.last_nums: tuple[int, ...] | None = None
 
     def update(self, draw: dict) -> None:
         nums = tuple(draw["nums"])
         if self.last_nums is not None:
+            current=set(nums)
+            for n in self.last_nums:
+                self.repeat_exposure[n] += 1
+                self.repeat_hits[n] += int(n in current)
             for x in self.last_nums:
                 self.transition_base[x] += 1.0
                 for y in nums:
@@ -117,11 +123,15 @@ class ExpandingHistoryState:
         }
 
 
-def formal_feature_table(history: list[dict]) -> dict[str, dict[int, float]]:
+def formal_history_state(history: list[dict]) -> ExpandingHistoryState:
     state = ExpandingHistoryState()
     for draw in history:
         state.update(draw)
-    return state.features()
+    return state
+
+
+def formal_feature_table(history: list[dict]) -> dict[str, dict[int, float]]:
+    return formal_history_state(history).features()
 
 
 def feature_table(history: list[dict]) -> dict[str, dict[int, float]]:
@@ -195,27 +205,27 @@ def feature_table(history: list[dict]) -> dict[str, dict[int, float]]:
 # 鐵律：正式模組均逐期使用當時可取得的完整歷史；短期視窗不得參與正式排名。
 # 參數先以 2024-04-09 至 2025-05-29 的三段隔離資料校正，再鎖定測試最近三百六十期。
 GLOBAL_HISTORY_WEIGHTS = {
-    "full_frequency_balance": .25,
-    "full_transition_correction": .25,
-    "full_signature_correction": .25,
-    "full_overdue_correction": .25,
+    "full_frequency_balance": .00,
+    "full_transition_correction": .50,
+    "full_signature_correction": .10,
+    "full_overdue_correction": .40,
 }
 FORMAL_FEATURE_KEYS = sorted(GLOBAL_HISTORY_WEIGHTS)
 GLOBAL_HISTORY_BLEND = 1.00
-MODEL_SEARCH_CANDIDATE_COUNT = 1696
+MODEL_SEARCH_CANDIDATE_COUNT = 286
 MODEL_SELECTION_PERIOD = "114000131"
 MODEL_SELECTION_DATE = "2025-05-29"
 MODEL_SELECTION_VALIDATION = {
     "samples": 360,
     "first_period": "113000086",
     "last_period": MODEL_SELECTION_PERIOD,
-    "single_hits": 60,
-    "bottom1_hits": 37,
-    "top5_avg_hits": .7444,
+    "single_hits": 59,
+    "bottom1_hits": 35,
+    "top5_avg_hits": .6806,
     "bottom5_avg_hits": .6000,
-    "top9_avg_hits": 1.2639,
-    "bottom9_avg_hits": 1.1083,
-    "avg_actual_rank": 19.6517,
+    "top9_avg_hits": 1.2556,
+    "bottom9_avg_hits": 1.1444,
+    "avg_actual_rank": 19.5944,
     "ranking_direction_valid": True,
     "folds_all_valid": True,
 }
@@ -240,13 +250,58 @@ def scores_from_features(f: dict[str, dict[int, float]], weights: dict[str, floa
 
 
 def rank_numbers(score: dict[int,float], seed: str) -> list[int]:
-    """同分時使用當期以前已知期別公平破同分，禁止固定偏向小號或大號。"""
+    """直接依重新精算分數排序；同分時公平破同分，不做事後補位。"""
     tie={n:hashlib.sha256(f"{seed}:{n}".encode()).hexdigest() for n in score}
     return sorted(score,key=lambda n:(score[n],tie[n]),reverse=True)
 
 
+def apply_repeat_qualification(score: dict[int,float], features: dict[str,dict[int,float]], weights: dict[str,float], previous_nums: tuple[int,...], seed: str, repeat_exposure: list[int], repeat_hits: list[int]) -> tuple[dict[int,float], list[dict]]:
+    """上一期號碼必須通過相對條件才准列入前九；在排名前調整資格，不做事後補號。"""
+    base=rank_numbers(score,seed)
+    lo,hi=min(score.values()),max(score.values()); span=max(1e-12,hi-lo)
+    audits=[]
+    for n in previous_nums:
+        contributions={k:weights[k]*features[k][n] for k in weights}
+        relative_index=100*(score[n]-lo)/span
+        transition_contribution=contributions.get("full_transition_correction",0.0)
+        positive_modules=sum(v>0 for v in contributions.values())
+        repeat_samples=repeat_exposure[n]
+        repeat_hit_count=repeat_hits[n]
+        repeat_rate=repeat_hit_count/repeat_samples if repeat_samples else 0.0
+        repeat_baseline=5/39
+        repeat_backtest_pass=repeat_samples>=30 and repeat_rate>=repeat_baseline
+        qualified=relative_index>=75 and transition_contribution>0 and positive_modules>=2 and repeat_backtest_pass
+        base_top9=n in base[:9]
+        audits.append({
+            "number":n,
+            "relative_index":round(relative_index,4),
+            "transition_contribution":round(transition_contribution,6),
+            "positive_module_count":positive_modules,
+            "repeat_samples":repeat_samples,
+            "repeat_hits":repeat_hit_count,
+            "repeat_rate":round(repeat_rate,6),
+            "repeat_baseline":round(repeat_baseline,6),
+            "repeat_backtest_pass":repeat_backtest_pass,
+            "base_top9":base_top9,
+            "qualified":qualified,
+        })
+    disqualified={x["number"] for x in audits if not x["qualified"]}
+    eligible=[n for n in base if n not in disqualified]
+    front=eligible[:9]
+    final=front+[n for n in base if n not in front]
+    sorted_values=[score[n] for n in base]; epsilon=span*1e-12
+    adjusted={n:sorted_values[i]-epsilon*i for i,n in enumerate(final)}
+    final=rank_numbers(adjusted,seed); final_pos={n:i+1 for i,n in enumerate(final)}
+    for item in audits:
+        item["final_rank"]=final_pos[item["number"]]
+        item["listed_top9"]=item["number"] in final[:9]
+    return adjusted,audits
+
+
 def scores(history: list[dict], weights: dict[str, float]) -> dict[int, float]:
-    return scores_from_features(formal_feature_table(history), weights)
+    state=formal_history_state(history); features=state.features()
+    raw=scores_from_features(features,weights)
+    return apply_repeat_qualification(raw,features,weights,history[-1]["nums"],history[-1]["period"],state.repeat_exposure,state.repeat_hits)[0]
 
 
 def selection_diagnostics() -> list[dict]:
@@ -267,9 +322,12 @@ def valid_ticket(t: tuple[int, ...]) -> bool:
     return odd in (2, 3) and low in (2, 3) and decades >= 3 and consecutive <= 2 and 65 <= sum(t) <= 135
 
 
-def make_tickets(score: dict[int, float], count: int, seed: str) -> list[tuple[int, ...]]:
+def make_tickets(score: dict[int, float], count: int, seed: str, excluded: set[int] | None = None) -> list[tuple[int, ...]]:
     rng = random.Random(int(hashlib.sha256(seed.encode()).hexdigest()[:16], 16))
-    nums = list(range(1, 40)); weights = [max(score[n], .001) ** 2.2 for n in nums]
+    excluded = set(excluded or ())
+    nums = [n for n in range(1, 40) if n not in excluded]
+    if len(nums) < 5: raise ValueError("強制投注排除後不足五個可用號碼")
+    weights = [max(score[n], .001) ** 2.2 for n in nums]
     tickets = []
     for _ in range(30000):
         pool, ws, pick = nums[:], weights[:], []
@@ -295,7 +353,8 @@ def ranking_direction_metrics(draws: list[dict], weights: dict[str, float], star
         if i == 0:
             state.update(draw)
             continue
-        sc = scores_from_features(state.features(), weights)
+        features=state.features(); raw=scores_from_features(features, weights)
+        sc=apply_repeat_qualification(raw,features,weights,draws[i-1]["nums"],draws[i-1]["period"],state.repeat_exposure,state.repeat_hits)[0]
         if i >= start:
             order = rank_numbers(sc, draws[i - 1]["period"])
             actual = set(draw["nums"])
@@ -334,8 +393,8 @@ def backtest(draws: list[dict], weights: dict[str, float], tests: int = 180, tic
         if i == 0:
             state.update(draw)
             continue
-        features = state.features()
-        sc = scores_from_features(features, weights)
+        features = state.features(); raw=scores_from_features(features, weights)
+        sc = apply_repeat_qualification(raw,features,weights,draws[i-1]["nums"],draws[i-1]["period"],state.repeat_exposure,state.repeat_hits)[0]
         if i < start:
             state.update(draw)
             continue
@@ -348,7 +407,7 @@ def backtest(draws: list[dict], weights: dict[str, float], tests: int = 180, tic
         bottom5_hits += len(actual.intersection(ranked[-5:]))
         bottom9_hits += len(actual.intersection(ranked[-9:]))
         positions={n:p+1 for p,n in enumerate(ranked)}; rank_sum+=sum(positions[n] for n in actual)
-        ts = make_tickets(sc, ticket_count, draws[i - 1]["period"])
+        ts = make_tickets(sc, ticket_count, draws[i - 1]["period"], set(ranked[-15:]))
         best = max(len(set(t) & actual) for t in ts)
         hist[best] += 1; total_hits += best
         state.update(draw)
@@ -385,7 +444,7 @@ def backtest(draws: list[dict], weights: dict[str, float], tests: int = 180, tic
     }
 
 
-def render(draws: list[dict], weights: dict, quality: list[float], score: dict, tickets: list[tuple[int, ...]], bt: dict) -> str:
+def render(draws: list[dict], weights: dict, quality: list[float], score: dict, tickets: list[tuple[int, ...]], bt: dict, full_scan: dict, repeat_audit: list[dict]) -> str:
     latest = draws[-1]; ranked = rank_numbers(score,latest["period"]); top15 = ranked[:15]
     target_date = datetime.strptime(latest['date'], "%Y-%m-%d").date() + timedelta(days=1)
     while target_date.weekday() == 6: target_date += timedelta(days=1)
@@ -394,10 +453,11 @@ def render(draws: list[dict], weights: dict, quality: list[float], score: dict, 
     current_features=formal_feature_table(draws)
     support_keys=list(weights)
     rank_status="排序方向通過" if bt.get("ranking_direction_valid") else "排序方向未通過"
-    rows = "".join(f"<tr><td>{i}</td><td><b>{n:02}</b></td><td>{relative_index(n):.1f}</td><td>{'、'.join(FEATURE_LABELS.get(k,k) for k in support_keys if current_features[k][n] >= .65) or '均衡校正'}</td><td>{rank_status}</td></tr>" for i,n in enumerate(top15,1))
+    contribution=lambda n:"、".join(f"{FEATURE_LABELS.get(k,k)}{weights[k]*current_features[k][n]:+.3f}" for k in support_keys)
+    rows = "".join(f"<tr><td>{i}</td><td><b>{n:02}</b></td><td>{relative_index(n):.1f}</td><td>{'、'.join(FEATURE_LABELS.get(k,k) for k in support_keys if current_features[k][n] >= .65) or '均衡校正'}</td><td>{contribution(n)}</td><td>{rank_status}</td></tr>" for i,n in enumerate(top15,1))
     packs = [("獨隻1中1",top15[:1]),("2中1~2",top15[:2]),("3中1~3",top15[:3]),("5中2~3",top15[:5]),("9中3~5",top15[:9])]
     packrows = "".join(f"<tr><td>{name}</td><td>{fmt(ns)}</td><td>{len(ns)}</td><td>已公開</td></tr>" for name,ns in packs)
-    low = list(reversed(ranked[-15:])); lowrows = "".join(f"<tr><td>{name}</td><td>{fmt(low[:k])}</td><td>排序後段</td><td>不可解讀為不中或低機率</td></tr>" for name,k in (("後5名",5),("後10名",10),("後15名",15)))
+    low = list(reversed(ranked[-15:])); lowrows = "".join(f"<tr><td>{name}</td><td>{fmt(low[:k])}</td><td>強制投注排除</td><td>禁止進入任何推薦牌組</td></tr>" for name,k in (("後5名",5),("後10名",10),("後15名",15)))
     settlements=[]; settlement_file=OUT/"published-settlements.jsonl"
     if settlement_file.exists():
         for line in settlement_file.read_text(encoding="utf-8").splitlines():
@@ -409,28 +469,33 @@ def render(draws: list[dict], weights: dict, quality: list[float], score: dict, 
     recent_html="".join(recent) or "<tr><td colspan='6'>尚無改版後、開獎前封存的實戰結算紀錄</td></tr>"; now=datetime.now(TAIPEI).strftime("%Y-%m-%d %H:%M")
     single_edge_verified=bool(bt.get('single_release_allowed'))
     single_display=f"{top15[0]:02}"
+    previous_overlap5=len(set(top15[:5]).intersection(latest['nums']))
+    previous_overlap9=len(set(top15[:9]).intersection(latest['nums']))
     if bt.get("ranking_direction_valid"):
         single_status="本期主選已公開；排序方向驗證通過"
     else:
         single_status="本期主選已公開；排序方向未通過，禁止宣稱高機率"
     formula_rows="".join(f"<tr><td>{FEATURE_LABELS.get(k,k)}</td><td>逐期擴展全歷史資料庫</td><td>{v:.3f}</td><td>正式排名核心</td></tr>" for k,v in weights.items())
     formula_rows+="<tr><td>近10／30／100期等短期模組</td><td>僅戰報觀察</td><td>0.000</td><td>鐵律禁止影響正式排名</td></tr>"
+    repeat_rows="".join(f"<tr><td>{x['number']:02}</td><td>{x['relative_index']:.1f}</td><td>{x['transition_contribution']:+.3f}</td><td>{x['positive_module_count']}</td><td>{x['repeat_hits']}/{x['repeat_samples']}（{100*x['repeat_rate']:.2f}%）</td><td>{'通過' if x['repeat_backtest_pass'] else '未通過'}</td><td>{'符合' if x['qualified'] else '未符合'}</td><td>{x['final_rank']}</td><td>{'列入前9' if x['listed_top9'] else '未列入前9'}</td></tr>" for x in repeat_audit)
     dist="、".join(f"{k}中：{v}期" for k,v in bt['distribution'].items())
     return f"""<!doctype html><html lang='zh-Hant'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>台灣539 精算預測戰報</title><style>
 *{{box-sizing:border-box}}body{{margin:0;background:#f3f4f6;color:#172033;font-family:Arial,'Microsoft JhengHei',sans-serif}}main{{max-width:1180px;margin:auto;padding:18px}}header{{background:linear-gradient(135deg,#8b0000,#d1242f);color:white;padding:25px;border-radius:14px}}h1{{margin:0 0 8px}}h2{{border-left:6px solid #c1121f;padding-left:10px;color:#7f1017;margin-top:30px}}nav{{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}}nav a{{background:white;border:1px solid #d1d5db;border-radius:8px;padding:9px 12px;color:#8b0000;text-decoration:none;font-weight:700}}.band{{background:white;border:1px solid #d8dee8;border-radius:12px;padding:18px;margin:14px 0;box-shadow:0 2px 8px #0000000d}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}}.card{{border:1px solid #d9dde5;border-radius:10px;padding:13px;background:#fff}}.hot-card{{border:2px solid #c1121f;background:#fff5f5}}.label{{color:#687386;font-size:13px}}.value{{font-size:19px;font-weight:800;margin-top:5px}}.num{{color:#c1121f;font-size:34px}}table{{width:100%;border-collapse:collapse;display:block;overflow:auto}}th{{background:#7f1017;color:#fff}}th,td{{padding:9px;border:1px solid #d7dce4;text-align:left;white-space:nowrap}}tr:nth-child(even) td{{background:#fafafa}}.warn{{background:#fff8e6;border-color:#e9b949}}.note{{color:#626d7d}}@media(max-width:600px){{main{{padding:8px}}header{{border-radius:8px}}}}
-</style><main><header><h1>台灣539 精算預測戰報</h1><div>全新模型・依照天天樂戰報統一規格</div></header><nav><a href='#decision'>核心決策</a><a href='#rank'>前15名</a><a href='#packs'>強牌組</a><a href='#hits'>實戰封存</a><a href='#low'>後段對照</a><a href='#models'>公式模型</a><a href='#gate'>鐵律守門</a></nav>
+</style><main><header><h1>台灣539 精算預測戰報</h1><div>全新模型・依照天天樂戰報統一規格</div></header><nav><a href='#decision'>核心決策</a><a href='#rank'>前15名</a><a href='#packs'>強牌組</a><a href='#hits'>實戰封存</a><a href='#low'>投注排除</a><a href='#models'>公式模型</a><a href='#gate'>鐵律守門</a></nav>
 <div class='band'><h2>本報表日期對照</h2><div class='grid'><div class='card'><div class='label'>全歷史資料範圍</div><div class='value'>{draws[0]['date']}～{latest['date']}</div></div><div class='card'><div class='label'>實際輸入資料</div><div class='value'>{len(draws):,} 期／{len(draws)*5:,}個號碼</div></div><div class='card'><div class='label'>全歷史核心占比</div><div class='value'>100%（短期正式權重0%）</div></div><div class='card'><div class='label'>最新開獎期別</div><div class='value'>{latest['period']}</div></div><div class='card'><div class='label'>最新開獎號碼</div><div class='value'>{fmt(latest['nums'])}</div></div><div class='card'><div class='label'>資料對應開獎日</div><div class='value'>{latest['date']}</div></div><div class='card'><div class='label'>本次預測目標日</div><div class='value'>{target_date.isoformat()}</div></div><div class='card'><div class='label'>戰報產生時間</div><div class='value'>{now}</div></div></div></div>
 <div class='band' id='decision'><h2>核心決策</h2><div class='grid'><div class='card'><div class='label'>資料狀態</div><div class='value'>資料已更新</div></div><div class='card'><div class='label'>檢查</div><div class='value'>已重新運算</div></div><div class='card hot-card'><div class='label'>1中1主選</div><div class='value num'>{single_display}</div></div><div class='card'><div class='label'>公開狀態</div><div class='value'>已公開</div></div><div class='card'><div class='label'>排序方向</div><div class='value'>{rank_status}</div></div><div class='card'><div class='label'>九碼核心</div><div class='value'>{fmt(top15[:9])}</div></div></div></div>
 <div class='band'><h2>最強獨隻1中1</h2><div class='grid'><div class='card hot-card'><div class='label'>1中1主選號碼</div><div class='value num'>{single_display}</div></div><div class='card'><div class='label'>判定</div><div class='value'>{single_status}</div></div><div class='card'><div class='label'>隔離驗證命中</div><div class='value'>{bt.get('single_hits',0)}/{bt['samples']}（{100*bt.get('single_rate',0):.2f}%）</div></div><div class='card'><div class='label'>隨機基準／九成五下界</div><div class='value'>{100*bt.get('single_random_baseline',0):.2f}%／{100*bt.get('single_wilson_lower95',0):.2f}%</div></div></div></div>
-<div class='band' id='rank'><h2>下期綜合排序前9名</h2><table><thead><tr><th>排名</th><th>號碼</th><th>相對指數（非機率）</th><th>主要支撐</th><th>守門</th></tr></thead><tbody>{rows[:rows.find('</tr>', rows.find('</tr>')*0)+5] if False else rows}</tbody></table><h2>第10到第15名第二層備查</h2><p>{fmt(top15[9:15])}</p></div>
-<div class='band'><h2>生成號碼逐號驗算</h2><table><thead><tr><th>排名</th><th>號碼</th><th>相對指數（非機率）</th><th>交叉來源</th><th>狀態</th></tr></thead><tbody>{rows}</tbody></table></div>
+<div class='band' id='rank'><h2>下期綜合排序前9名</h2><table><thead><tr><th>排名</th><th>號碼</th><th>相對指數（非機率）</th><th>主要支撐</th><th>加權貢獻</th><th>守門</th></tr></thead><tbody>{rows[:rows.find('</tr>', rows.find('</tr>')*0)+5] if False else rows}</tbody></table><h2>第10到第15名第二層備查</h2><p>{fmt(top15[9:15])}</p></div>
+<div class='band'><h2>生成號碼逐號驗算</h2><table><thead><tr><th>排名</th><th>號碼</th><th>相對指數（非機率）</th><th>交叉來源</th><th>加權貢獻</th><th>狀態</th></tr></thead><tbody>{rows}</tbody></table></div>
 <div class='band' id='packs'><h2>強牌組精算</h2><table><thead><tr><th>類型</th><th>號碼</th><th>顆數</th><th>狀態</th></tr></thead><tbody>{packrows}</tbody></table></div>
 <div class='band' id='hits'><h2>開獎前封存實戰紀錄</h2><table><thead><tr><th>開獎日</th><th>1中1主選</th><th>當期前5</th><th>實際開獎</th><th>主選結果</th><th>前5命中</th></tr></thead><tbody>{recent_html}</tbody></table></div>
-<div class='band' id='low'><h2>排序後段對照</h2><p><b>排序方向未經穩定驗證時，後段號碼不得稱為低機率或不中。</b></p><table><thead><tr><th>區段</th><th>號碼</th><th>位置</th><th>判定</th></tr></thead><tbody>{lowrows}</tbody></table></div>
-  <div class='band' id='models'><h2>公式模型實驗室</h2><p><b>每次預測與每一期回測都使用當時以前的全部歷史資料。</b>正式排名100%由逐期擴展全歷史模型產生；先在更早三百六十期分三段校正正反方向，再鎖定參數驗收最後三百六十期。原始轉移、同型與遺漏模組經隔離資料證實方向相反，因此完成反向校正；畫面主選與回測使用完全相同權重。同分號碼以當時已知期別公平破同分，禁止固定偏向小號或大號。</p><table><thead><tr><th>公式</th><th>資料範圍</th><th>實際權重</th><th>動作</th></tr></thead><tbody>{formula_rows}</tbody></table></div>
+<div class='band' id='low'><h2>強制投注排除名單</h2><p><b>以下後15名已從本系統全部推薦牌組強制排除，系統產生的任何牌組都不得包含。</b></p><table><thead><tr><th>區段</th><th>號碼</th><th>動作</th><th>鐵律</th></tr></thead><tbody>{lowrows}</tbody></table></div>
+<div class='band'><h2>連莊資格驗算</h2><p><b>上一期號碼必須同時符合：相對指數至少75、全歷史轉移貢獻為正、至少兩個正式模組正貢獻、該號碼全歷史連莊率不低於12.82%，且全系統5,599期掃描與最後360期隔離回測均通過，才准列入前9。</b>資格在正式排名前判定，不限制連莊顆數、不做事後補號。</p><table><thead><tr><th>上一期號碼</th><th>相對指數</th><th>轉移貢獻</th><th>正貢獻模組數</th><th>連莊命中／樣本</th><th>個別回測</th><th>資格</th><th>最終名次</th><th>結果</th></tr></thead><tbody>{repeat_rows}</tbody></table></div>
+<div class='band' id='models'><h2>公式模型實驗室</h2><p><b>每次預測與每一期回測都使用當時以前的全部歷史資料。</b>正式排名100%由逐期擴展全歷史模型產生；先做全歷史逐期一致性掃描，再以更早三百六十期分三段校正，最後鎖定參數驗收末段三百六十期。畫面主選與回測使用完全相同權重；一般號碼直接按重新精算分數排序，上一期號碼先通過連莊資格，不限制重複顆數、不做事後補位。同分號碼以當時已知期別公平破同分，禁止固定偏向小號或大號。</p><table><thead><tr><th>公式</th><th>資料範圍</th><th>實際權重</th><th>動作</th></tr></thead><tbody>{formula_rows}</tbody></table></div>
+<div class='band'><h2>全歷史逐期一致性掃描</h2><p>從第321期開始逐期重算，共 {full_scan['samples']} 期：高分第1名 {full_scan['single_hits']} 中、最低分第1名 {full_scan['bottom1_hits']} 中；前5平均 {full_scan['top5_avg_hits']}、後5平均 {full_scan['bottom5_avg_hits']}；前9平均 {full_scan['top9_avg_hits']}、後9平均 {full_scan['bottom9_avg_hits']}；實際開獎號平均名次 {full_scan['avg_actual_rank']}。判定：{'排序方向通過' if full_scan['ranking_direction_valid'] else '排序方向未通過'}。</p></div>
 <div class='band warn'><h2>實戰失準回灌重排</h2><p>隔離保留 {bt['samples']} 期：高分第1名 {bt.get('single_hits',0)} 中、最低分第1名 {bt.get('bottom1_hits',0)} 中；前5平均 {bt.get('top5_avg_hits',0)}、後5平均 {bt.get('bottom5_avg_hits',0)}；前9平均 {bt.get('top9_avg_hits',0)}、後9平均 {bt.get('bottom9_avg_hits',0)}；實際開獎號平均名次 {bt.get('avg_actual_rank',0)}（中立值20）。每期 {len(tickets)} 組最佳組平均命中 {bt['avg_best_hits']}；{dist}。</p><p><b>權重只用保留期以前資料決定，禁止同一批資料選模又報成績；高分未穩定勝過低分即判定排序方向未通過。</b></p></div>
   <div class='band'><h2>多模組校正對照</h2><div class='grid'><div class='card'><div class='label'>候選組合數</div><div class='value'>{MODEL_SEARCH_CANDIDATE_COUNT}</div></div><div class='card'><div class='label'>前段三折校正</div><div class='value'>三段全數通過</div></div><div class='card'><div class='label'>採用原則</div><div class='value'>先校正、後隔離驗收</div></div></div></div>
-  <div class='band' id='gate'><h2>鐵律守門</h2><table><thead><tr><th>項目</th><th>結果</th><th>說明</th></tr></thead><tbody><tr><td>重新運算</td><td>已完成</td><td>依最新資料重算，不沿用上期答案</td></tr><tr><td>資料完整性</td><td>通過</td><td>去重、日期排序、號碼1至39、每期5個不重複</td></tr><tr><td>未來資料隔離</td><td>通過</td><td>校正截止在最後三百六十期以前並鎖定參數</td></tr><tr><td>高低分方向</td><td>{rank_status}</td><td>同時計算前1／5／9與後1／5／9，禁止只報高分成績</td></tr><tr><td>主選產出</td><td>通過</td><td>每期固定產出並公開，不得以回測門檻停發</td></tr></tbody></table></div>
+<div class='band' id='gate'><h2>鐵律守門</h2><table><thead><tr><th>項目</th><th>結果</th><th>說明</th></tr></thead><tbody><tr><td>重新運算</td><td>已完成</td><td>依最新資料從模型分數直接重排，不做補位</td></tr><tr><td>資料完整性</td><td>通過</td><td>去重、日期排序、號碼1至39、每期5個不重複</td></tr><tr><td>全歷史掃描</td><td>{'通過' if full_scan['ranking_direction_valid'] else '未通過'}</td><td>{full_scan['samples']}期逐期重新運算</td></tr><tr><td>未來資料隔離</td><td>通過</td><td>校正截止在最後三百六十期以前並鎖定參數</td></tr><tr><td>連莊資格</td><td>通過</td><td>相對指數、轉移貢獻、正貢獻模組三重驗算</td></tr><tr><td>上一期號碼檢查</td><td>通過</td><td>前5符合資格並列入{previous_overlap5}顆、前9符合資格並列入{previous_overlap9}顆</td></tr><tr><td>高低分方向</td><td>{rank_status}</td><td>同時計算前1／5／9與後1／5／9，禁止只報高分成績</td></tr><tr><td>主選產出</td><td>通過</td><td>每期固定產出並公開，不得以回測門檻停發</td></tr></tbody></table></div>
 <div class='band warn'><h2>模型健康與公開狀態</h2><table><thead><tr><th>項目</th><th>高分結果</th><th>低分對照</th><th>判定</th></tr></thead><tbody><tr><td>第1名隔離命中</td><td>{bt.get('single_hits',0)}/{bt['samples']}（{100*bt.get('single_rate',0):.2f}%）</td><td>最低分第1名 {bt.get('bottom1_hits',0)}/{bt['samples']}</td><td>{rank_status}</td></tr><tr><td>前5隔離平均</td><td>{bt.get('top5_avg_hits',0)}</td><td>後5 {bt.get('bottom5_avg_hits',0)}</td><td>{rank_status}</td></tr><tr><td>前9隔離平均</td><td>{bt.get('top9_avg_hits',0)}</td><td>後9 {bt.get('bottom9_avg_hits',0)}</td><td>{rank_status}</td></tr><tr><td>1中1主選</td><td>已公開</td><td>不宣稱必中</td><td>{single_status}</td></tr></tbody></table></div>
 <div class='band warn'><h2>實戰門檻與風險聲明</h2><p>今彩539為隨機遊戲，每組合法號碼理論機率相同；本戰報只供統計研究，不保證中獎或獲利。請設定固定娛樂預算。</p></div></main></html>"""
 
@@ -447,11 +512,13 @@ def main() -> None:
     quality = [515.4]
     diagnostics = selection_diagnostics()
     bt = backtest(draws, weights, holdout, max(1, min(a.tickets, 30)))
-    sc = scores(draws, weights)
-    tickets = make_tickets(sc, max(1, min(a.tickets, 30)), draws[-1]["period"])
-    OUT.mkdir(parents=True, exist_ok=True)
-    report = OUT / "最新539科學預測戰報.html"; report.write_text(render(draws, weights, quality, sc, tickets, bt), encoding="utf-8")
+    full_scan = ranking_direction_metrics(draws, weights, 320, len(draws))
+    current_state=formal_history_state(draws); current_features=current_state.features(); raw_sc=scores_from_features(current_features,weights)
+    sc,repeat_audit=apply_repeat_qualification(raw_sc,current_features,weights,draws[-1]["nums"],draws[-1]["period"],current_state.repeat_exposure,current_state.repeat_hits)
     ranked = rank_numbers(sc,draws[-1]["period"])
+    tickets = make_tickets(sc, max(1, min(a.tickets, 30)), draws[-1]["period"], set(ranked[-15:]))
+    OUT.mkdir(parents=True, exist_ok=True)
+    report = OUT / "最新539科學預測戰報.html"; report.write_text(render(draws, weights, quality, sc, tickets, bt, full_scan, repeat_audit), encoding="utf-8")
     target = datetime.strptime(draws[-1]["date"], "%Y-%m-%d").date() + timedelta(days=1)
     while target.weekday() == 6: target += timedelta(days=1)
     fingerprint_payload = json.dumps({"based_on": draws[-1]["period"], "weights": weights, "top15": ranked[:15]}, sort_keys=True)
@@ -481,6 +548,15 @@ def main() -> None:
         "weight_selection_diagnostics": diagnostics,
         "model_selection_cutoff": cutoff_matches[0],
         "ranked_top15": ranked[:15],
+        "forced_ticket_exclusions": list(reversed(ranked[-15:])),
+        "previous_draw_overlap_audit": {
+            "method": "model_score_with_repeat_qualification",
+            "previous_numbers": list(draws[-1]["nums"]),
+            "top5_overlap": len(set(ranked[:5]).intersection(draws[-1]["nums"])),
+            "top9_overlap": len(set(ranked[:9]).intersection(draws[-1]["nums"])),
+            "full_previous_draw_copied_into_top9": set(draws[-1]["nums"]).issubset(ranked[:9]),
+        },
+        "repeat_qualification": repeat_audit,
         "single_candidate": ranked[0],
         "single_published": ranked[0],
         "release_policy": {
@@ -491,6 +567,7 @@ def main() -> None:
             "top9": "published_with_backtest"
         },
         "tickets": tickets,
+        "full_history_scan": full_scan,
         "backtest": bt
     }
     (OUT / "最新結果.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")

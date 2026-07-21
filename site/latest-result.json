@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-21T13:43:12+08:00",
+  "generated_at": "2026-07-21T14:14:21+08:00",
   "based_on_period": "115000175",
   "target_draw_date": "2026-07-21",
-  "recalculation_fingerprint": "32f48636c6a5bb01",
+  "recalculation_fingerprint": "0a67d849e51ce9dc",
   "data_latest": {
     "period": "115000175",
     "date": "2026-07-20",
@@ -31,16 +31,16 @@
     ]
   },
   "production_weights": {
-    "full_frequency_balance": 0.25,
-    "full_transition_correction": 0.25,
-    "full_signature_correction": 0.25,
-    "full_overdue_correction": 0.25
+    "full_frequency_balance": 0.0,
+    "full_transition_correction": 0.5,
+    "full_signature_correction": 0.1,
+    "full_overdue_correction": 0.4
   },
   "audit_weights": {
-    "full_frequency_balance": 0.25,
-    "full_transition_correction": 0.25,
-    "full_signature_correction": 0.25,
-    "full_overdue_correction": 0.25
+    "full_frequency_balance": 0.0,
+    "full_transition_correction": 0.5,
+    "full_signature_correction": 0.1,
+    "full_overdue_correction": 0.4
   },
   "audit_candidate_quality": [
     515.4
@@ -48,24 +48,24 @@
   "weight_selection_diagnostics": [
     {
       "selected": true,
-      "candidate_count": 1696,
+      "candidate_count": 286,
       "weights": {
-        "full_frequency_balance": 0.25,
-        "full_transition_correction": 0.25,
-        "full_signature_correction": 0.25,
-        "full_overdue_correction": 0.25
+        "full_frequency_balance": 0.0,
+        "full_transition_correction": 0.5,
+        "full_signature_correction": 0.1,
+        "full_overdue_correction": 0.4
       },
       "validation": {
         "samples": 360,
         "first_period": "113000086",
         "last_period": "114000131",
-        "single_hits": 60,
-        "bottom1_hits": 37,
-        "top5_avg_hits": 0.7444,
+        "single_hits": 59,
+        "bottom1_hits": 35,
+        "top5_avg_hits": 0.6806,
         "bottom5_avg_hits": 0.6,
-        "top9_avg_hits": 1.2639,
-        "bottom9_avg_hits": 1.1083,
-        "avg_actual_rank": 19.6517,
+        "top9_avg_hits": 1.2556,
+        "bottom9_avg_hits": 1.1444,
+        "avg_actual_rank": 19.5944,
         "ranking_direction_valid": true,
         "folds_all_valid": true
       },
@@ -84,24 +84,131 @@
     ]
   },
   "ranked_top15": [
-    28,
-    13,
-    20,
-    24,
-    19,
-    12,
-    10,
     33,
-    35,
-    11,
-    18,
-    6,
-    21,
+    28,
+    3,
+    19,
     29,
-    16
+    35,
+    16,
+    22,
+    30,
+    13,
+    24,
+    10,
+    21,
+    20,
+    18
   ],
-  "single_candidate": 28,
-  "single_published": 28,
+  "forced_ticket_exclusions": [
+    17,
+    4,
+    36,
+    39,
+    5,
+    2,
+    1,
+    27,
+    8,
+    14,
+    34,
+    7,
+    37,
+    38,
+    25
+  ],
+  "previous_draw_overlap_audit": {
+    "method": "model_score_with_repeat_qualification",
+    "previous_numbers": [
+      10,
+      12,
+      13,
+      20,
+      24
+    ],
+    "top5_overlap": 0,
+    "top9_overlap": 0,
+    "full_previous_draw_copied_into_top9": false
+  },
+  "repeat_qualification": [
+    {
+      "number": 10,
+      "relative_index": 65.9855,
+      "transition_contribution": 0.100662,
+      "positive_module_count": 2,
+      "repeat_samples": 750,
+      "repeat_hits": 107,
+      "repeat_rate": 0.142667,
+      "repeat_baseline": 0.128205,
+      "repeat_backtest_pass": true,
+      "base_top9": true,
+      "qualified": false,
+      "final_rank": 12,
+      "listed_top9": false
+    },
+    {
+      "number": 12,
+      "relative_index": 51.0438,
+      "transition_contribution": -0.541201,
+      "positive_module_count": 2,
+      "repeat_samples": 769,
+      "repeat_hits": 92,
+      "repeat_rate": 0.119636,
+      "repeat_baseline": 0.128205,
+      "repeat_backtest_pass": false,
+      "base_top9": false,
+      "qualified": false,
+      "final_rank": 16,
+      "listed_top9": false
+    },
+    {
+      "number": 13,
+      "relative_index": 100.0,
+      "transition_contribution": 1.170061,
+      "positive_module_count": 2,
+      "repeat_samples": 734,
+      "repeat_hits": 86,
+      "repeat_rate": 0.117166,
+      "repeat_baseline": 0.128205,
+      "repeat_backtest_pass": false,
+      "base_top9": true,
+      "qualified": false,
+      "final_rank": 10,
+      "listed_top9": false
+    },
+    {
+      "number": 20,
+      "relative_index": 57.4236,
+      "transition_contribution": -0.297038,
+      "positive_module_count": 2,
+      "repeat_samples": 766,
+      "repeat_hits": 104,
+      "repeat_rate": 0.13577,
+      "repeat_baseline": 0.128205,
+      "repeat_backtest_pass": true,
+      "base_top9": false,
+      "qualified": false,
+      "final_rank": 14,
+      "listed_top9": false
+    },
+    {
+      "number": 24,
+      "relative_index": 80.3945,
+      "transition_contribution": 0.465188,
+      "positive_module_count": 3,
+      "repeat_samples": 733,
+      "repeat_hits": 86,
+      "repeat_rate": 0.117326,
+      "repeat_baseline": 0.128205,
+      "repeat_backtest_pass": false,
+      "base_top9": true,
+      "qualified": false,
+      "final_rank": 11,
+      "listed_top9": false
+    }
+  ],
+  "single_candidate": 33,
+  "single_published": 33,
   "release_policy": {
     "official_release_allowed": true,
     "single": "published_every_draw",
@@ -111,93 +218,104 @@
   },
   "tickets": [
     [
+      3,
+      16,
       19,
-      20,
-      24,
       28,
       33
     ],
     [
-      10,
-      13,
-      19,
-      24,
-      28
-    ],
-    [
-      9,
-      10,
-      12,
-      24,
-      35
-    ],
-    [
-      12,
-      16,
+      3,
+      20,
       21,
-      33,
-      35
+      30,
+      33
     ],
     [
-      6,
-      12,
-      13,
-      28,
-      35
-    ],
-    [
-      13,
-      16,
-      24,
-      28,
-      35
-    ],
-    [
-      12,
+      3,
       19,
-      24,
+      22,
+      28,
+      30
+    ],
+    [
+      3,
+      10,
+      16,
       28,
       35
     ],
     [
-      11,
+      3,
       20,
       22,
+      28,
+      33
+    ],
+    [
+      3,
+      13,
+      28,
+      30,
+      33
+    ],
+    [
+      19,
+      20,
+      28,
+      30,
+      33
+    ],
+    [
+      3,
+      18,
       24,
+      28,
       33
     ]
   ],
+  "full_history_scan": {
+    "samples": 5599,
+    "single_hits": 775,
+    "bottom1_hits": 723,
+    "top5_avg_hits": 0.658,
+    "bottom5_avg_hits": 0.6398,
+    "top9_avg_hits": 1.1625,
+    "bottom9_avg_hits": 1.1482,
+    "avg_actual_rank": 19.9381,
+    "ranking_direction_valid": true
+  },
   "backtest": {
     "samples": 360,
     "evaluation": "最後三百六十期完全隔離；校正參數只用更早資料選定並鎖定",
     "distribution": {
-      "0": 35,
-      "1": 162,
-      "2": 140,
-      "3": 23,
-      "4": 0,
+      "0": 36,
+      "1": 179,
+      "2": 117,
+      "3": 26,
+      "4": 2,
       "5": 0
     },
-    "avg_best_hits": 1.419,
-    "single_hits": 60,
-    "single_rate": 0.1667,
+    "avg_best_hits": 1.386,
+    "single_hits": 62,
+    "single_rate": 0.1722,
     "single_random_baseline": 0.1282,
-    "single_wilson_lower95": 0.1317,
+    "single_wilson_lower95": 0.1367,
     "single_release_allowed": true,
-    "bottom1_hits": 36,
-    "top5_avg_hits": 0.7333,
+    "bottom1_hits": 45,
+    "top5_avg_hits": 0.6861,
     "top5_random_baseline": 0.641,
-    "bottom5_avg_hits": 0.6556,
-    "top9_avg_hits": 1.2083,
+    "bottom5_avg_hits": 0.6417,
+    "top9_avg_hits": 1.1389,
     "top9_random_baseline": 1.1538,
-    "bottom9_avg_hits": 1.1556,
-    "avg_actual_rank": 19.73,
+    "bottom9_avg_hits": 1.1222,
+    "avg_actual_rank": 19.8578,
     "ranking_direction_valid": true,
     "backtest_weights": {
-      "full_frequency_balance": 0.25,
-      "full_transition_correction": 0.25,
-      "full_signature_correction": 0.25,
-      "full_overdue_correction": 0.25
+      "full_frequency_balance": 0.0,
+      "full_transition_correction": 0.5,
+      "full_signature_correction": 0.1,
+      "full_overdue_correction": 0.4
     }
   }
 }
