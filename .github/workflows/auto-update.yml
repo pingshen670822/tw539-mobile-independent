@@ -18,8 +18,8 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: {python-version: '3.12'}
       - name: 鐵律完整性檢查
         run: python ironlaw_guard.py --structure-only
@@ -36,10 +36,10 @@ jobs:
           git add data reports site
           git diff --cached --quiet || git commit -m "開獎後自動更新"
           git push
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with: {path: site}
-      - uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v5
 
       - name: 鐵律最終驗證
         run: |
