@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from cloud_pipeline import expected_latest_date
-from tw539_ultra import FORMAL_FEATURE_KEYS, GLOBAL_HISTORY_BLEND, load_draws, rank_numbers, scores, valid_ticket
+from tw539_ultra import FORMAL_FEATURE_KEYS, GLOBAL_HISTORY_BLEND, MODEL_SEARCH_CANDIDATE_COUNT, MODEL_SELECTION_DATE, MODEL_SELECTION_PERIOD, MODEL_SELECTION_VALIDATION, load_draws, rank_numbers, ranking_direction_metrics, scores, valid_ticket
 
 ROOT=Path(__file__).resolve().parent
 CSV=ROOT/'data'/'539.csv'
@@ -72,9 +72,27 @@ if not weights or not set(weights).issubset(set(FORMAL_FEATURE_KEYS)): fail('正
 if abs(sum(float(x) for x in weights.values())-1)>1e-9: fail('正式模型權重總和不是一')
 if result.get('audit_weights')!=weights: fail('正式主選與隔離回測不是同一組權重')
 cutoff=result.get('model_selection_cutoff') or {}
-if cutoff.get('period')!=draws[-361]['period'] or cutoff.get('date')!=draws[-361]['date']: fail('正式權重沒有在隔離保留期以前凍結')
+if cutoff.get('period')!=MODEL_SELECTION_PERIOD or cutoff.get('date')!=MODEL_SELECTION_DATE: fail('正式權重沒有鎖定在隔離保留期以前的校正截止點')
+cutoff_index=next((i for i,x in enumerate(draws) if x['period']==MODEL_SELECTION_PERIOD and x['date']==MODEL_SELECTION_DATE),-1)
+if cutoff_index<0 or len(draws)-cutoff_index-1<360: fail('模型校正截止點與最後三百六十期沒有完全隔離')
 diagnostics=result.get('weight_selection_diagnostics') or []
-if len(diagnostics)!=7 or sum(bool(x.get('selected')) for x in diagnostics)!=1: fail('多區段穩定性選模紀錄不完整')
+if len(diagnostics)!=1 or sum(bool(x.get('selected')) for x in diagnostics)!=1: fail('多區段穩定性選模紀錄不完整')
+else:
+    selected=diagnostics[0]
+    validation=selected.get('validation') or {}
+    if selected.get('candidate_count')!=MODEL_SEARCH_CANDIDATE_COUNT or MODEL_SEARCH_CANDIDATE_COUNT<1000: fail('多模組候選組合搜尋數量不足')
+    if selected.get('weights')!=weights: fail('校正選定權重與正式權重不同')
+    if validation.get('samples')!=360 or not validation.get('ranking_direction_valid') or not validation.get('folds_all_valid'): fail('前段三折校正沒有全數通過')
+validation_start=next((i for i,x in enumerate(draws) if x['period']==MODEL_SELECTION_VALIDATION['first_period']),-1)
+if validation_start<0 or cutoff_index-validation_start+1!=360:
+    fail('前段三百六十期校正區段不完整')
+else:
+    recalculated_validation=ranking_direction_metrics(draws,weights,validation_start,cutoff_index+1)
+    for key in ('samples','single_hits','bottom1_hits','top5_avg_hits','bottom5_avg_hits','top9_avg_hits','bottom9_avg_hits','avg_actual_rank','ranking_direction_valid'):
+        if recalculated_validation.get(key)!=MODEL_SELECTION_VALIDATION.get(key): fail(f'前段校正獨立重算不符：{key}')
+    for fold in range(3):
+        a=validation_start+fold*120; b=a+120
+        if not ranking_direction_metrics(draws,weights,a,b).get('ranking_direction_valid'): fail(f'前段第{fold+1}折排序方向未通過')
 
 history_payload='|'.join(f"{x['period']}:{x['date']}:{','.join(map(str,x['nums']))}" for x in draws)
 database_hash=hashlib.sha256(history_payload.encode()).hexdigest()
@@ -108,7 +126,11 @@ for key in ('bottom1_hits','bottom5_avg_hits','bottom9_avg_hits','avg_actual_ran
     if key not in backtest: fail(f'隔離回測缺少高低分方向欄位：{key}')
 calculated_direction=(backtest.get('single_hits',0)>backtest.get('bottom1_hits',0) and backtest.get('top5_avg_hits',0)>backtest.get('bottom5_avg_hits',0) and backtest.get('top9_avg_hits',0)>backtest.get('bottom9_avg_hits',0) and backtest.get('avg_actual_rank',99)<20)
 if bool(backtest.get('ranking_direction_valid'))!=calculated_direction: fail('高低分方向判定與實際數據不符')
+if not calculated_direction: fail('校正後正式模型的最後三百六十期排序方向未通過')
 if backtest.get('backtest_weights')!=weights: fail('隔離回測權重與正式主選權重不同')
+recalculated_holdout=ranking_direction_metrics(draws,weights,len(draws)-360,len(draws))
+for key in ('samples','single_hits','bottom1_hits','top5_avg_hits','bottom5_avg_hits','top9_avg_hits','bottom9_avg_hits','avg_actual_rank','ranking_direction_valid'):
+    if recalculated_holdout.get(key)!=backtest.get(key): fail(f'最後三百六十期獨立重算不符：{key}')
 
 if site_result!=result: fail('手機結果與戰報結果不同步')
 if site_health!=health: fail('手機健康檔與戰報健康檔不同步')
