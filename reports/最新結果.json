@@ -1,4 +1,8 @@
 {
+  "generated_at": "2026-07-21T09:27:21+08:00",
+  "based_on_period": "115000175",
+  "target_draw_date": "2026-07-21",
+  "recalculation_fingerprint": "d42f4b752909eae7",
   "data_latest": {
     "period": "115000175",
     "date": "2026-07-20",
@@ -11,7 +15,7 @@
     ]
   },
   "draw_count": 5919,
-  "weights": {
+  "production_weights": {
     "freq10": 0.2,
     "freq30": 0.25,
     "freq100": 0.15,
@@ -19,6 +23,50 @@
     "momentum": 0.15,
     "reversion": 0.1,
     "association": 0.05
+  },
+  "audit_weights": {
+    "freq30": 0.1,
+    "freq100": 0.1,
+    "gap": 0.05,
+    "reversion": 0.15,
+    "association": 0.05,
+    "ewma": 0.2,
+    "bayes": 0.2,
+    "transition": 0.15
+  },
+  "audit_candidate_quality": [
+    3042.0,
+    2873.0,
+    2813.0,
+    3627.0,
+    3399.0,
+    3102.0,
+    2915.0
+  ],
+  "ranked_top15": [
+    37,
+    13,
+    34,
+    1,
+    35,
+    10,
+    21,
+    30,
+    15,
+    6,
+    25,
+    28,
+    29,
+    31,
+    12
+  ],
+  "single_candidate": 37,
+  "single_published": null,
+  "release_policy": {
+    "official_release_allowed": false,
+    "single": "blocked_no_verified_edge",
+    "top5": "research_only",
+    "top9": "research_only"
   },
   "tickets": [
     [
@@ -80,14 +128,24 @@
   ],
   "backtest": {
     "samples": 360,
+    "evaluation": "隔離保留期；模型權重只用更早資料選定",
     "distribution": {
-      "0": 2,
-      "1": 136,
-      "2": 197,
-      "3": 25,
-      "4": 0,
+      "0": 1,
+      "1": 126,
+      "2": 199,
+      "3": 33,
+      "4": 1,
       "5": 0
     },
-    "avg_best_hits": 1.681
+    "avg_best_hits": 1.742,
+    "single_hits": 42,
+    "single_rate": 0.1167,
+    "single_random_baseline": 0.1282,
+    "single_wilson_lower95": 0.0875,
+    "single_release_allowed": false,
+    "top5_avg_hits": 0.6417,
+    "top5_random_baseline": 0.641,
+    "top9_avg_hits": 1.1472,
+    "top9_random_baseline": 1.1538
   }
 }

@@ -10,6 +10,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  issues: write
 concurrency:
   group: tw539-auto-update
   cancel-in-progress: false
@@ -20,6 +21,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
+      - name: 鐵律完整性檢查
+        run: python ironlaw_guard.py
       - name: 取得官方開獎並重算
         run: python cloud_pipeline.py --strict-freshness
       - name: 保存最新資料與戰報
@@ -36,4 +39,14 @@ jobs:
 
       - name: 鐵律最終驗證
         run: python cloud_pipeline.py --verify-only --strict-freshness
+
+  alert:
+    needs: update
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: 建立自動更新失敗告警
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue create --repo "${{ github.repository }}" --title "鐵律告警：539自動更新失敗 ${{ github.run_id }}" --body "自動更新、資料新鮮度或部署失敗。請立即檢查：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
   

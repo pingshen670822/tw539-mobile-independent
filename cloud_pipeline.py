@@ -5,7 +5,7 @@ import argparse, csv, json, shutil, subprocess, sys, time, urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-ROOT=Path(__file__).resolve().parent; CSV=ROOT/'data'/'539.csv'; SITE=ROOT/'site'; REPORT=ROOT/'reports'/'最新539科學預測戰報.html'
+ROOT=Path(__file__).resolve().parent; CSV=ROOT/'data'/'539.csv'; SITE=ROOT/'site'; REPORTS=ROOT/'reports'; REPORT=REPORTS/'最新539科學預測戰報.html'
 API='https://api.taiwanlottery.com/TLCAPIWeB/Lottery/LatestResult'
 TAIPEI=timezone(timedelta(hours=8))
 
@@ -35,9 +35,56 @@ def update_csv(latest):
     with tmp.open('w',encoding='utf-8-sig',newline='') as f: w=csv.DictWriter(f,fieldnames=fields); w.writeheader(); w.writerows(rows)
     tmp.replace(CSV); return True
 
-def build_site(latest, changed):
+def read_json(path):
+    try: return json.loads(path.read_text(encoding='utf-8'))
+    except Exception: return None
+
+def append_jsonl(path, item, unique_key):
+    old=[]
+    if path.exists():
+        for line in path.read_text(encoding='utf-8').splitlines():
+            try: old.append(json.loads(line))
+            except Exception: pass
+    if any(unique_key(x)==unique_key(item) for x in old): return False
+    old.append(item)
+    path.write_text('\n'.join(json.dumps(x,ensure_ascii=False) for x in old)+'\n',encoding='utf-8')
+    return True
+
+def settle_previous(previous, latest):
+    if not previous or previous.get('target_draw_date') != latest['draw_date']: return None
+    actual=set(latest['nums']); top=previous.get('ranked_top15') or []
+    item={
+        'target_draw_date':latest['draw_date'],'actual_numbers':latest['nums'],
+        'based_on_period':previous.get('based_on_period'),'fingerprint':previous.get('recalculation_fingerprint'),
+        'single_published':previous.get('single_published'),
+        'single_hit':bool(previous.get('single_published') in actual) if previous.get('single_published') else None,
+        'top5_hits':sorted(actual.intersection(top[:5])),'top9_hits':sorted(actual.intersection(top[:9])),
+        'settled_at':datetime.now().astimezone().isoformat(timespec='seconds')
+    }
+    append_jsonl(REPORTS/'published-settlements.jsonl',item,lambda x:(x.get('target_draw_date'),x.get('fingerprint')))
+    return item
+
+def build_site(latest, changed, previous=None):
     subprocess.run([sys.executable,str(ROOT/'tw539_ultra.py'),'--backtest','360'],check=True,cwd=ROOT)
-    SITE.mkdir(exist_ok=True); shutil.copy2(REPORT,SITE/'index.html'); shutil.copy2(ROOT/'reports'/'最新結果.json',SITE/'latest-result.json')
+    current=read_json(REPORTS/'最新結果.json') or {}
+    append_jsonl(REPORTS/'prediction-history.jsonl',current,lambda x:(x.get('target_draw_date'),x.get('recalculation_fingerprint')))
+    settlement=settle_previous(previous,latest)
+    backtest=current.get('backtest') or {}
+    degraded=(backtest.get('single_rate',0)<=backtest.get('single_random_baseline',0) and backtest.get('top9_avg_hits',0)<=backtest.get('top9_random_baseline',0))
+    health={
+        'status':'healthy_model_degraded' if degraded else 'healthy','checked_at':datetime.now().astimezone().isoformat(timespec='seconds'),
+        'latest_period':latest['period'],'latest_draw_date':latest['draw_date'],'expected_latest_date':expected_latest_date(),
+        'freshness_ok':latest['draw_date']>=expected_latest_date(),'data_changed':changed,
+        'model_release_allowed':bool((current.get('release_policy') or {}).get('official_release_allowed')),
+        'single_release_allowed':bool((current.get('backtest') or {}).get('single_release_allowed')),
+        'model_drift':'no_verified_edge' if degraded else 'stable_or_observing',
+        'recalculation_fingerprint':current.get('recalculation_fingerprint'),'settled_previous':settlement is not None
+    }
+    (REPORTS/'system-health.json').write_text(json.dumps(health,ensure_ascii=False,indent=2),encoding='utf-8')
+    SITE.mkdir(exist_ok=True); shutil.copy2(REPORT,SITE/'index.html'); shutil.copy2(REPORTS/'最新結果.json',SITE/'latest-result.json'); shutil.copy2(REPORTS/'system-health.json',SITE/'system-health.json')
+    for name in ('prediction-history.jsonl','published-settlements.jsonl'):
+        src=REPORTS/name
+        if src.exists(): shutil.copy2(src,SITE/name)
     page=(SITE/'index.html').read_text(encoding='utf-8')
     page=page.replace("<title>","<link rel='manifest' href='./manifest.webmanifest'><meta name='theme-color' content='#8b0000'><title>",1)
     page=page.replace('</body>',"<script src='./mobile-sync.js'></script></body>") if '</body>' in page else page.replace('</html>',"<script src='./mobile-sync.js'></script></html>")
@@ -70,4 +117,5 @@ if __name__=='__main__':
         x=max(rows,key=lambda r:(r['draw_date'],r['period'])); latest={'period':x['period'],'draw_date':x['draw_date'],'nums':[int(x[f'n{i}']) for i in range(1,6)]}; changed=False
     else: latest=fetch_latest(); changed=update_csv(latest)
     verify_freshness(latest,args.strict_freshness)
-    if not args.verify_only: build_site(latest,changed)
+    previous=read_json(REPORTS/'最新結果.json')
+    if not args.verify_only: build_site(latest,changed,previous)

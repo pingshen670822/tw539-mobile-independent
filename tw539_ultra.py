@@ -11,7 +11,7 @@ import math
 import random
 import shutil
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timedelta
 from itertools import combinations
 from pathlib import Path
 
@@ -146,17 +146,46 @@ def make_tickets(score: dict[int, float], count: int, seed: str) -> list[tuple[i
 
 def backtest(draws: list[dict], weights: dict[str, float], tests: int = 180, ticket_count: int = 8) -> dict:
     start = max(320, len(draws) - tests); hist = Counter(); total_hits = 0
+    single_hits = top5_hits = top9_hits = 0
     for i in range(start, len(draws)):
         sc = scores(draws[:i], weights)
+        ranked = sorted(sc, key=sc.get, reverse=True)
+        actual = set(draws[i]["nums"])
+        single_hits += int(ranked[0] in actual)
+        top5_hits += len(actual.intersection(ranked[:5]))
+        top9_hits += len(actual.intersection(ranked[:9]))
         ts = make_tickets(sc, ticket_count, draws[i - 1]["period"])
-        best = max(len(set(t) & set(draws[i]["nums"])) for t in ts)
+        best = max(len(set(t) & actual) for t in ts)
         hist[best] += 1; total_hits += best
     n = sum(hist.values())
-    return {"samples": n, "distribution": {str(k): hist[k] for k in range(6)}, "avg_best_hits": round(total_hits / n, 3)}
+    p0 = 5 / 39
+    phat = single_hits / n
+    z = 1.96
+    center = (phat + z*z/(2*n)) / (1 + z*z/n)
+    margin = z * math.sqrt(phat*(1-phat)/n + z*z/(4*n*n)) / (1 + z*z/n)
+    lower = center - margin
+    gate = lower > p0
+    return {
+        "samples": n,
+        "evaluation": "隔離保留期；模型權重只用更早資料選定",
+        "distribution": {str(k): hist[k] for k in range(6)},
+        "avg_best_hits": round(total_hits / n, 3),
+        "single_hits": single_hits,
+        "single_rate": round(phat, 4),
+        "single_random_baseline": round(p0, 4),
+        "single_wilson_lower95": round(lower, 4),
+        "single_release_allowed": gate,
+        "top5_avg_hits": round(top5_hits / n, 4),
+        "top5_random_baseline": round(25 / 39, 4),
+        "top9_avg_hits": round(top9_hits / n, 4),
+        "top9_random_baseline": round(45 / 39, 4),
+    }
 
 
 def render(draws: list[dict], weights: dict, quality: list[float], score: dict, tickets: list[tuple[int, ...]], bt: dict) -> str:
     latest = draws[-1]; ranked = sorted(score, key=score.get, reverse=True); top15 = ranked[:15]
+    target_date = datetime.strptime(latest['date'], "%Y-%m-%d").date() + timedelta(days=1)
+    while target_date.weekday() == 6: target_date += timedelta(days=1)
     fmt = lambda ns: " ".join(f"{n:02}" for n in ns)
     pct = lambda n: 60 + 39 * (score[n] - min(score.values())) / max(.00001, max(score.values()) - min(score.values()))
     rows = "".join(f"<tr><td>{i}</td><td><b>{n:02}</b></td><td>{pct(n):.1f}%</td><td>{'、'.join(k for k in weights if feature_table(draws)[k][n] >= .65) or '均衡校正'}</td><td>守門通過</td></tr>" for i,n in enumerate(top15,1))
@@ -168,23 +197,27 @@ def render(draws: list[dict], weights: dict, quality: list[float], score: dict, 
         s=scores(draws[:i],weights); pred=sorted(s,key=s.get,reverse=True)[:9]; actual=draws[i]["nums"]; hit=sorted(set(pred)&set(actual))
         recent.append(f"<tr><td>{draws[i]['date']}</td><td>{fmt(pred)}</td><td>{fmt(actual)}</td><td>{fmt(hit) or '-'}</td><td>{len(hit)}</td></tr>")
     recent_html="".join(reversed(recent)); now=datetime.now().strftime("%Y-%m-%d %H:%M")
+    single_allowed=bool(bt.get('single_release_allowed'))
+    single_display=f"{top15[0]:02}" if single_allowed else "不發布"
+    single_status="隔離驗證顯著優於隨機，允許研究發布" if single_allowed else "未顯著優於隨機，鐵律禁止發布"
     formula_rows="".join(f"<tr><td>{k}</td><td>滾動盲測</td><td>{v:.2f}</td><td>已納入候選模型</td></tr>" for k,v in weights.items())
     dist="、".join(f"{k}中：{v}期" for k,v in bt['distribution'].items())
     return f"""<!doctype html><html lang='zh-Hant'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>台灣539 精算預測戰報</title><style>
 *{{box-sizing:border-box}}body{{margin:0;background:#f3f4f6;color:#172033;font-family:Arial,'Microsoft JhengHei',sans-serif}}main{{max-width:1180px;margin:auto;padding:18px}}header{{background:linear-gradient(135deg,#8b0000,#d1242f);color:white;padding:25px;border-radius:14px}}h1{{margin:0 0 8px}}h2{{border-left:6px solid #c1121f;padding-left:10px;color:#7f1017;margin-top:30px}}nav{{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}}nav a{{background:white;border:1px solid #d1d5db;border-radius:8px;padding:9px 12px;color:#8b0000;text-decoration:none;font-weight:700}}.band{{background:white;border:1px solid #d8dee8;border-radius:12px;padding:18px;margin:14px 0;box-shadow:0 2px 8px #0000000d}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}}.card{{border:1px solid #d9dde5;border-radius:10px;padding:13px;background:#fff}}.hot-card{{border:2px solid #c1121f;background:#fff5f5}}.label{{color:#687386;font-size:13px}}.value{{font-size:19px;font-weight:800;margin-top:5px}}.num{{color:#c1121f;font-size:34px}}table{{width:100%;border-collapse:collapse;display:block;overflow:auto}}th{{background:#7f1017;color:#fff}}th,td{{padding:9px;border:1px solid #d7dce4;text-align:left;white-space:nowrap}}tr:nth-child(even) td{{background:#fafafa}}.warn{{background:#fff8e6;border-color:#e9b949}}.note{{color:#626d7d}}@media(max-width:600px){{main{{padding:8px}}header{{border-radius:8px}}}}
 </style><main><header><h1>台灣539 精算預測戰報</h1><div>全新模型・依照天天樂戰報統一規格</div></header><nav><a href='#decision'>核心決策</a><a href='#rank'>前15名</a><a href='#packs'>強牌組</a><a href='#hits'>命中對照</a><a href='#low'>低機率</a><a href='#models'>公式模型</a><a href='#gate'>鐵律守門</a></nav>
-<div class='band'><h2>本報表日期對照</h2><div class='grid'><div class='card'><div class='label'>全歷史資料範圍</div><div class='value'>完整 {len(draws):,} 期</div></div><div class='card'><div class='label'>最新開獎期別</div><div class='value'>{latest['period']}</div></div><div class='card'><div class='label'>最新開獎號碼</div><div class='value'>{fmt(latest['nums'])}</div></div><div class='card'><div class='label'>資料對應開獎日</div><div class='value'>{latest['date']}</div></div><div class='card'><div class='label'>戰報產生時間</div><div class='value'>{now}</div></div></div></div>
-<div class='band' id='decision'><h2>核心決策</h2><div class='grid'><div class='card'><div class='label'>資料狀態</div><div class='value'>資料已更新</div></div><div class='card'><div class='label'>檢查</div><div class='value'>已重新運算</div></div><div class='card hot-card'><div class='label'>獨隻</div><div class='value num'>{top15[0]:02}</div></div><div class='card'><div class='label'>九碼核心</div><div class='value'>{fmt(top15[:9])}</div></div></div></div>
-<div class='band'><h2>最強獨隻1中1</h2><div class='grid'><div class='card hot-card'><div class='label'>獨隻號碼</div><div class='value num'>{top15[0]:02}</div></div><div class='card'><div class='label'>判定</div><div class='value'>本期相對最高分</div></div><div class='card'><div class='label'>相對評分</div><div class='value'>{pct(top15[0]):.1f}%</div></div><div class='card'><div class='label'>發布狀態</div><div class='value'>研究觀察</div></div></div></div>
+<div class='band'><h2>本報表日期對照</h2><div class='grid'><div class='card'><div class='label'>全歷史資料範圍</div><div class='value'>完整 {len(draws):,} 期</div></div><div class='card'><div class='label'>最新開獎期別</div><div class='value'>{latest['period']}</div></div><div class='card'><div class='label'>最新開獎號碼</div><div class='value'>{fmt(latest['nums'])}</div></div><div class='card'><div class='label'>資料對應開獎日</div><div class='value'>{latest['date']}</div></div><div class='card'><div class='label'>本次預測目標日</div><div class='value'>{target_date.isoformat()}</div></div><div class='card'><div class='label'>戰報產生時間</div><div class='value'>{now}</div></div></div></div>
+<div class='band' id='decision'><h2>核心決策</h2><div class='grid'><div class='card'><div class='label'>資料狀態</div><div class='value'>資料已更新</div></div><div class='card'><div class='label'>檢查</div><div class='value'>已重新運算</div></div><div class='card hot-card'><div class='label'>獨隻</div><div class='value num'>{single_display}</div></div><div class='card'><div class='label'>九碼核心</div><div class='value'>{fmt(top15[:9])}</div></div></div></div>
+<div class='band'><h2>最強獨隻1中1</h2><div class='grid'><div class='card hot-card'><div class='label'>獨隻號碼</div><div class='value num'>{single_display}</div></div><div class='card'><div class='label'>判定</div><div class='value'>{single_status}</div></div><div class='card'><div class='label'>隔離驗證命中</div><div class='value'>{bt.get('single_hits',0)}/{bt['samples']}（{100*bt.get('single_rate',0):.2f}%）</div></div><div class='card'><div class='label'>隨機基準 / 95%下界</div><div class='value'>{100*bt.get('single_random_baseline',0):.2f}% / {100*bt.get('single_wilson_lower95',0):.2f}%</div></div></div></div>
 <div class='band' id='rank'><h2>下期研究候選前9名</h2><table><thead><tr><th>排名</th><th>號碼</th><th>相對分</th><th>主要支撐</th><th>守門</th></tr></thead><tbody>{rows[:rows.find('</tr>', rows.find('</tr>')*0)+5] if False else rows}</tbody></table><h2>第10到第15名第二層備查</h2><p>{fmt(top15[9:15])}</p></div>
 <div class='band'><h2>生成號碼逐號驗算</h2><table><thead><tr><th>排名</th><th>號碼</th><th>總分</th><th>交叉來源</th><th>狀態</th></tr></thead><tbody>{rows}</tbody></table></div>
 <div class='band' id='packs'><h2>強牌組精算</h2><table><thead><tr><th>類型</th><th>號碼</th><th>顆數</th><th>狀態</th></tr></thead><tbody>{packrows}</tbody></table></div>
 <div class='band' id='hits'><h2>最新命中結果與近期命中對照</h2><table><thead><tr><th>開獎日</th><th>當期預測前九</th><th>實際開獎</th><th>命中號</th><th>前九命中</th></tr></thead><tbody>{recent_html}</tbody></table></div>
 <div class='band' id='low'><h2>低機率精準暫避</h2><table><thead><tr><th>暫避包</th><th>號碼</th><th>信心</th><th>判定</th></tr></thead><tbody>{lowrows}</tbody></table></div>
 <div class='band' id='models'><h2>公式模型實驗室</h2><p>各模組只在滾動盲測後參與排序，無效模組不強行放行。</p><table><thead><tr><th>公式</th><th>驗證</th><th>本期權重</th><th>動作</th></tr></thead><tbody>{formula_rows}</tbody></table></div>
-<div class='band warn'><h2>實戰失準回灌重排</h2><p>最近 {bt['samples']} 期、每期 {len(tickets)} 組，最佳組平均命中 {bt['avg_best_hits']}；{dist}。失準號於下一輪重新評分，不直接沿用。</p></div>
+<div class='band warn'><h2>實戰失準回灌重排</h2><p>隔離保留 {bt['samples']} 期：獨隻 {bt.get('single_hits',0)} 中、前5平均 {bt.get('top5_avg_hits',0)}（隨機 {bt.get('top5_random_baseline',0)}）、前9平均 {bt.get('top9_avg_hits',0)}（隨機 {bt.get('top9_random_baseline',0)}）。每期 {len(tickets)} 組最佳組平均命中 {bt['avg_best_hits']}；{dist}。</p><p><b>權重只用保留期以前資料決定，禁止同一批資料選模又報成績。</b></p></div>
 <div class='band'><h2>雙軌模型對照</h2><div class='grid'><div class='card'><div class='label'>候選模型數</div><div class='value'>{len(quality)}</div></div><div class='card'><div class='label'>候選回測分數</div><div class='value'>{' / '.join(str(round(x,1)) for x in quality)}</div></div><div class='card'><div class='label'>採用原則</div><div class='value'>盲測最高者</div></div></div></div>
 <div class='band' id='gate'><h2>鐵律守門</h2><table><thead><tr><th>項目</th><th>結果</th><th>說明</th></tr></thead><tbody><tr><td>重新運算</td><td>已完成</td><td>依最新資料重算，不沿用上期答案</td></tr><tr><td>資料完整性</td><td>通過</td><td>去重、日期排序、號碼1至39、每期5個不重複</td></tr><tr><td>未來資料隔離</td><td>通過</td><td>時間序列逐期盲測</td></tr><tr><td>高信心包裝</td><td>禁止</td><td>未達實戰門檻只列研究觀察</td></tr></tbody></table></div>
+<div class='band warn'><h2>模型健康與發布狀態</h2><table><thead><tr><th>項目</th><th>目前數據</th><th>判定</th></tr></thead><tbody><tr><td>獨隻隔離命中率</td><td>{100*bt.get('single_rate',0):.2f}%（隨機 {100*bt.get('single_random_baseline',0):.2f}%）</td><td>{single_status}</td></tr><tr><td>前5隔離平均</td><td>{bt.get('top5_avg_hits',0)}（隨機 {bt.get('top5_random_baseline',0)}）</td><td>研究觀察</td></tr><tr><td>前9隔離平均</td><td>{bt.get('top9_avg_hits',0)}（隨機 {bt.get('top9_random_baseline',0)}）</td><td>研究觀察</td></tr><tr><td>正式發布</td><td>{'允許' if single_allowed else '禁止'}</td><td>沒有樣本外優勢不得發布高信心號碼</td></tr></tbody></table></div>
 <div class='band warn'><h2>實戰門檻與風險聲明</h2><p>今彩539為隨機遊戲，每組合法號碼理論機率相同；本戰報只供統計研究，不保證中獎或獲利。請設定固定娛樂預算。</p></div></main></html>"""
 
 
@@ -192,11 +225,44 @@ def main() -> None:
     ap = argparse.ArgumentParser(); ap.add_argument("--data", type=Path, default=DATA); ap.add_argument("--tickets", type=int, default=8); ap.add_argument("--backtest", type=int, default=360)
     a = ap.parse_args(); draws = load_draws(a.data)
     if len(draws) < 350: raise SystemExit("至少需要 350 期有效資料")
-    weights, quality = choose_weights(draws, min(a.backtest, 360)); sc = scores(draws, weights)
+    holdout = min(a.backtest, 360)
+    # 稽核權重只用保留期以前的資料選定，徹底隔離報表成績。
+    audit_history = draws[:-holdout]
+    if len(audit_history) < 500: raise SystemExit("資料不足以切割模型選擇期與隔離保留期")
+    audit_weights, audit_quality = choose_weights(audit_history, min(180, len(audit_history)-320))
+    bt = backtest(draws, audit_weights, holdout, max(1, min(a.tickets, 30)))
+    # 正式下期模型可以使用所有已知歷史資料，但不得拿來回報同窗成績。
+    weights, quality = choose_weights(draws, min(360, len(draws)-320)); sc = scores(draws, weights)
     tickets = make_tickets(sc, max(1, min(a.tickets, 30)), draws[-1]["period"])
-    bt = backtest(draws, weights, a.backtest, len(tickets)); OUT.mkdir(parents=True, exist_ok=True)
+    OUT.mkdir(parents=True, exist_ok=True)
     report = OUT / "最新539科學預測戰報.html"; report.write_text(render(draws, weights, quality, sc, tickets, bt), encoding="utf-8")
-    result = {"data_latest": draws[-1], "draw_count": len(draws), "weights": weights, "tickets": tickets, "backtest": bt}
+    ranked = sorted(sc, key=sc.get, reverse=True)
+    target = datetime.strptime(draws[-1]["date"], "%Y-%m-%d").date() + timedelta(days=1)
+    while target.weekday() == 6: target += timedelta(days=1)
+    fingerprint_payload = json.dumps({"based_on": draws[-1]["period"], "weights": weights, "top15": ranked[:15]}, sort_keys=True)
+    fingerprint = hashlib.sha256(fingerprint_payload.encode()).hexdigest()[:16]
+    result = {
+        "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "based_on_period": draws[-1]["period"],
+        "target_draw_date": target.isoformat(),
+        "recalculation_fingerprint": fingerprint,
+        "data_latest": draws[-1],
+        "draw_count": len(draws),
+        "production_weights": weights,
+        "audit_weights": audit_weights,
+        "audit_candidate_quality": audit_quality,
+        "ranked_top15": ranked[:15],
+        "single_candidate": ranked[0],
+        "single_published": ranked[0] if bt["single_release_allowed"] else None,
+        "release_policy": {
+            "official_release_allowed": bool(bt["single_release_allowed"]),
+            "single": "allowed" if bt["single_release_allowed"] else "blocked_no_verified_edge",
+            "top5": "research_only",
+            "top9": "research_only"
+        },
+        "tickets": tickets,
+        "backtest": bt
+    }
     (OUT / "最新結果.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"完成：{report}")
 
