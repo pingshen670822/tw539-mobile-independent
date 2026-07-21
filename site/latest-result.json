@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-21T04:45:29+00:00",
+  "generated_at": "2026-07-21T13:14:50+08:00",
   "based_on_period": "115000175",
   "target_draw_date": "2026-07-21",
-  "recalculation_fingerprint": "10ceacad475965dd",
+  "recalculation_fingerprint": "a80d590c9a35a318",
   "data_latest": {
     "period": "115000175",
     "date": "2026-07-20",
@@ -25,60 +25,196 @@
     "global_history_blend": 1.0,
     "global_history_features": [
       "full_freq",
-      "full_bayes",
       "full_overdue",
-      "full_association",
-      "full_transition",
+      "full_reversion",
       "full_similarity",
-      "full_reversion"
+      "full_transition"
     ]
   },
   "production_weights": {
-    "full_freq": 0.08,
-    "full_bayes": 0.07,
-    "full_overdue": 0.12,
-    "full_association": 0.13,
-    "full_transition": 0.15,
-    "full_similarity": 0.3,
-    "full_reversion": 0.15
+    "full_freq": 1.0
   },
   "audit_weights": {
-    "full_freq": 0.08,
-    "full_bayes": 0.07,
-    "full_overdue": 0.28,
-    "full_association": 0.12,
-    "full_transition": 0.12,
-    "full_similarity": 0.18,
-    "full_reversion": 0.15
+    "full_freq": 1.0
   },
   "audit_candidate_quality": [
-    1625.0,
-    1732.0,
-    1817.0,
-    2029.0,
-    1995.0,
-    1712.0,
-    1699.0
+    196.923,
+    -590.477,
+    -90.677,
+    -640.677,
+    -249.877,
+    -323.677,
+    15.523
   ],
+  "weight_selection_diagnostics": [
+    {
+      "weights": {
+        "full_freq": 1.0
+      },
+      "fold_lifts": [
+        84,
+        -60,
+        30,
+        38,
+        30,
+        -63
+      ],
+      "positive_folds": 4,
+      "fold_count": 6,
+      "direction_lift": 59,
+      "avg_actual_rank": 19.9153,
+      "stable": true,
+      "composite": 196.923,
+      "selected": true
+    },
+    {
+      "weights": {
+        "full_reversion": 1.0
+      },
+      "fold_lifts": [
+        -135,
+        7,
+        -45,
+        -46,
+        24,
+        24
+      ],
+      "positive_folds": 3,
+      "fold_count": 6,
+      "direction_lift": -171,
+      "avg_actual_rank": 20.1322,
+      "stable": false,
+      "composite": -590.477
+    },
+    {
+      "weights": {
+        "full_similarity": 1.0
+      },
+      "fold_lifts": [
+        46,
+        28,
+        -16,
+        30,
+        -40,
+        -110
+      ],
+      "positive_folds": 3,
+      "fold_count": 6,
+      "direction_lift": -62,
+      "avg_actual_rank": 19.9886,
+      "stable": false,
+      "composite": -90.677
+    },
+    {
+      "weights": {
+        "full_transition": 1.0
+      },
+      "fold_lifts": [
+        47,
+        -31,
+        32,
+        -7,
+        -115,
+        -190
+      ],
+      "positive_folds": 2,
+      "fold_count": 6,
+      "direction_lift": -264,
+      "avg_actual_rank": 20.0483,
+      "stable": false,
+      "composite": -640.677
+    },
+    {
+      "weights": {
+        "full_overdue": 1.0
+      },
+      "fold_lifts": [
+        -97,
+        -45,
+        -27,
+        114,
+        2,
+        31
+      ],
+      "positive_folds": 3,
+      "fold_count": 6,
+      "direction_lift": -22,
+      "avg_actual_rank": 20.0533,
+      "stable": false,
+      "composite": -249.877
+    },
+    {
+      "weights": {
+        "full_freq": 0.5,
+        "full_similarity": 0.5
+      },
+      "fold_lifts": [
+        36,
+        -11,
+        -83,
+        32,
+        -95,
+        -120
+      ],
+      "positive_folds": 2,
+      "fold_count": 6,
+      "direction_lift": -241,
+      "avg_actual_rank": 19.9719,
+      "stable": false,
+      "composite": -323.677
+    },
+    {
+      "weights": {
+        "full_freq": 0.35,
+        "full_similarity": 0.4,
+        "full_reversion": 0.25
+      },
+      "fold_lifts": [
+        60,
+        -18,
+        -84,
+        8,
+        -35,
+        -30
+      ],
+      "positive_folds": 2,
+      "fold_count": 6,
+      "direction_lift": -99,
+      "avg_actual_rank": 19.9475,
+      "stable": false,
+      "composite": 15.523
+    }
+  ],
+  "model_selection_cutoff": {
+    "period": "114000131",
+    "date": "2025-05-29",
+    "nums": [
+      4,
+      18,
+      28,
+      30,
+      31
+    ]
+  },
   "ranked_top15": [
-    5,
-    2,
-    8,
-    39,
-    27,
-    38,
     37,
+    5,
     34,
+    17,
     1,
-    6,
+    4,
     36,
+    27,
     23,
+    38,
     25,
-    31,
-    4
+    12,
+    35,
+    20,
+    14
   ],
-  "single_candidate": 5,
-  "single_published": 5,
+  "single_candidate": 37,
+  "single_published": 37,
   "release_policy": {
     "official_release_allowed": true,
     "single": "published_every_draw",
@@ -88,82 +224,90 @@
   },
   "tickets": [
     [
-      6,
-      13,
-      23,
-      38,
-      39
+      5,
+      14,
+      25,
+      37,
+      38
+    ],
+    [
+      1,
+      10,
+      11,
+      36,
+      37
     ],
     [
       5,
       8,
       13,
-      28,
-      30
+      34,
+      35
     ],
     [
-      8,
+      7,
       18,
       27,
-      28,
-      39
+      34,
+      38
+    ],
+    [
+      4,
+      20,
+      26,
+      27,
+      37
     ],
     [
       1,
       2,
       4,
-      21,
-      39
+      23,
+      38
     ],
     [
-      5,
-      10,
-      22,
-      23,
+      17,
+      18,
+      28,
+      34,
       37
     ],
     [
       4,
-      15,
-      30,
-      32,
-      35
-    ],
-    [
-      9,
-      12,
-      19,
-      26,
+      8,
+      23,
+      25,
       37
-    ],
-    [
-      6,
-      14,
-      26,
-      31,
-      39
     ]
   ],
   "backtest": {
     "samples": 360,
     "evaluation": "隔離保留期；模型權重只用更早資料選定",
     "distribution": {
-      "0": 0,
-      "1": 127,
-      "2": 204,
-      "3": 25,
-      "4": 4,
+      "0": 8,
+      "1": 158,
+      "2": 173,
+      "3": 21,
+      "4": 0,
       "5": 0
     },
-    "avg_best_hits": 1.739,
-    "single_hits": 48,
-    "single_rate": 0.1333,
+    "avg_best_hits": 1.575,
+    "single_hits": 49,
+    "single_rate": 0.1361,
     "single_random_baseline": 0.1282,
-    "single_wilson_lower95": 0.1021,
+    "single_wilson_lower95": 0.1045,
     "single_release_allowed": false,
-    "top5_avg_hits": 0.5861,
+    "bottom1_hits": 42,
+    "top5_avg_hits": 0.5944,
     "top5_random_baseline": 0.641,
-    "top9_avg_hits": 1.1194,
-    "top9_random_baseline": 1.1538
+    "bottom5_avg_hits": 0.6194,
+    "top9_avg_hits": 1.1139,
+    "top9_random_baseline": 1.1538,
+    "bottom9_avg_hits": 1.1306,
+    "avg_actual_rank": 19.9967,
+    "ranking_direction_valid": false,
+    "backtest_weights": {
+      "full_freq": 1.0
+    }
   }
 }

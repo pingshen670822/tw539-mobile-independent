@@ -72,6 +72,7 @@ def settle_previous(previous, latest):
         'based_on_period':previous.get('based_on_period'),'fingerprint':previous.get('recalculation_fingerprint'),
         'single_published':previous.get('single_published'),
         'single_hit':bool(previous.get('single_published') in actual) if previous.get('single_published') else None,
+        'top5_published':top[:5],'top9_published':top[:9],
         'top5_hits':sorted(actual.intersection(top[:5])),'top9_hits':sorted(actual.intersection(top[:9])),
         'settled_at':datetime.now().astimezone().isoformat(timespec='seconds')
     }
@@ -79,12 +80,13 @@ def settle_previous(previous, latest):
     return item
 
 def build_site(latest, changed, previous=None):
+    settlement=settle_previous(previous,latest)
     subprocess.run([sys.executable,str(ROOT/'tw539_ultra.py'),'--backtest','360'],check=True,cwd=ROOT)
     current=read_json(REPORTS/'最新結果.json') or {}
     append_jsonl(REPORTS/'prediction-history.jsonl',current,lambda x:(x.get('target_draw_date'),x.get('recalculation_fingerprint')),replace=True)
-    settlement=settle_previous(previous,latest)
     backtest=current.get('backtest') or {}
-    degraded=(backtest.get('single_rate',0)<=backtest.get('single_random_baseline',0) and backtest.get('top9_avg_hits',0)<=backtest.get('top9_random_baseline',0))
+    direction_ok=bool(backtest.get('ranking_direction_valid'))
+    degraded=(not direction_ok) or (backtest.get('single_rate',0)<=backtest.get('single_random_baseline',0) and backtest.get('top9_avg_hits',0)<=backtest.get('top9_random_baseline',0))
     health={
         'status':'healthy_model_degraded' if degraded else 'healthy','checked_at':datetime.now().astimezone().isoformat(timespec='seconds'),
         'latest_period':latest['period'],'latest_draw_date':latest['draw_date'],'expected_latest_date':expected_latest_date(),
@@ -92,7 +94,11 @@ def build_site(latest, changed, previous=None):
         'model_release_allowed':True,
         'single_release_allowed':True,
         'single_edge_verified':bool((current.get('backtest') or {}).get('single_release_allowed')),
-        'model_drift':'no_verified_edge' if degraded else 'stable_or_observing',
+        'ranking_direction_valid':direction_ok,
+        'top1_hits':backtest.get('single_hits'),'bottom1_hits':backtest.get('bottom1_hits'),
+        'top5_avg_hits':backtest.get('top5_avg_hits'),'bottom5_avg_hits':backtest.get('bottom5_avg_hits'),
+        'top9_avg_hits':backtest.get('top9_avg_hits'),'bottom9_avg_hits':backtest.get('bottom9_avg_hits'),
+        'model_drift':'ranking_direction_invalid' if not direction_ok else ('no_verified_edge' if degraded else 'stable_or_observing'),
         'recalculation_fingerprint':current.get('recalculation_fingerprint'),'settled_previous':settlement is not None
     }
     coverage=current.get('history_coverage') or {}

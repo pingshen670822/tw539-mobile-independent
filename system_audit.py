@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from cloud_pipeline import expected_latest_date
-from tw539_ultra import GLOBAL_HISTORY_BLEND, GLOBAL_HISTORY_WEIGHTS, load_draws, valid_ticket
+from tw539_ultra import FORMAL_FEATURE_KEYS, GLOBAL_HISTORY_BLEND, load_draws, rank_numbers, scores, valid_ticket
 
 ROOT=Path(__file__).resolve().parent
 CSV=ROOT/'data'/'539.csv'
@@ -56,6 +56,9 @@ health=read_json(REPORTS/'system-health.json')
 site_health=read_json(SITE/'system-health.json')
 version=read_json(SITE/'version.json')
 latest=draws[-1]
+equal_scores={n:0.0 for n in range(1,40)}
+tie_order=rank_numbers(equal_scores,latest['period'])
+if tie_order!=rank_numbers(equal_scores,latest['period']) or tie_order in (list(range(1,40)),list(range(39,0,-1))): fail('公平破同分規則不穩定或仍固定偏向號碼大小')
 
 if result.get('data_latest',{}).get('period')!=latest['period'] or result.get('data_latest',{}).get('date')!=latest['date']:
     fail('最新結果未對應歷史資料庫末期')
@@ -65,8 +68,13 @@ if coverage.get('mode')!='all_available_history_for_every_prediction': fail('正
 if coverage.get('draws_used')!=len(draws) or coverage.get('numbers_used')!=len(draws)*5: fail('全歷史使用量不符')
 if coverage.get('global_history_blend')!=GLOBAL_HISTORY_BLEND or GLOBAL_HISTORY_BLEND!=1.0: fail('全歷史正式權重不是百分之百')
 weights=result.get('production_weights') or {}
-if set(weights)!=set(GLOBAL_HISTORY_WEIGHTS): fail('正式模型混入非全歷史特徵或缺少全歷史特徵')
+if not weights or not set(weights).issubset(set(FORMAL_FEATURE_KEYS)): fail('正式模型混入非全歷史或未核准特徵')
 if abs(sum(float(x) for x in weights.values())-1)>1e-9: fail('正式模型權重總和不是一')
+if result.get('audit_weights')!=weights: fail('正式主選與隔離回測不是同一組權重')
+cutoff=result.get('model_selection_cutoff') or {}
+if cutoff.get('period')!=draws[-361]['period'] or cutoff.get('date')!=draws[-361]['date']: fail('正式權重沒有在隔離保留期以前凍結')
+diagnostics=result.get('weight_selection_diagnostics') or []
+if len(diagnostics)!=7 or sum(bool(x.get('selected')) for x in diagnostics)!=1: fail('多區段穩定性選模紀錄不完整')
 
 history_payload='|'.join(f"{x['period']}:{x['date']}:{','.join(map(str,x['nums']))}" for x in draws)
 database_hash=hashlib.sha256(history_payload.encode()).hexdigest()
@@ -76,6 +84,7 @@ if health.get('history_database_sha256')!=database_hash or site_health.get('hist
 ranked=result.get('ranked_top15') or []
 if len(ranked)!=15 or len(set(ranked))!=15 or any(not 1<=int(n)<=39 for n in ranked): fail('前十五名資料錯誤')
 elif result.get('single_candidate')!=ranked[0] or result.get('single_published')!=ranked[0]: fail('1中1主選未固定產出並公開')
+if ranked!=rank_numbers(scores(draws,weights),latest['period'])[:15]: fail('正式排名未使用公平破同分規則或結果不可重現')
 if not (result.get('release_policy') or {}).get('official_release_allowed'): fail('主選公開狀態遭門檻封鎖')
 
 target=datetime.strptime(latest['date'],'%Y-%m-%d').date()+timedelta(days=1)
@@ -95,6 +104,11 @@ if backtest.get('samples')!=360: fail('隔離回測不是三百六十期')
 if sum(int(v) for v in (backtest.get('distribution') or {}).values())!=backtest.get('samples'): fail('隔離回測分布加總錯誤')
 for key in ('single_rate','single_random_baseline','single_wilson_lower95'):
     if not 0<=float(backtest.get(key,-1))<=1: fail(f'隔離回測數值錯誤：{key}')
+for key in ('bottom1_hits','bottom5_avg_hits','bottom9_avg_hits','avg_actual_rank','ranking_direction_valid','backtest_weights'):
+    if key not in backtest: fail(f'隔離回測缺少高低分方向欄位：{key}')
+calculated_direction=(backtest.get('single_hits',0)>backtest.get('bottom1_hits',0) and backtest.get('top5_avg_hits',0)>backtest.get('bottom5_avg_hits',0) and backtest.get('top9_avg_hits',0)>backtest.get('bottom9_avg_hits',0) and backtest.get('avg_actual_rank',99)<20)
+if bool(backtest.get('ranking_direction_valid'))!=calculated_direction: fail('高低分方向判定與實際數據不符')
+if backtest.get('backtest_weights')!=weights: fail('隔離回測權重與正式主選權重不同')
 
 if site_result!=result: fail('手機結果與戰報結果不同步')
 if site_health!=health: fail('手機健康檔與戰報健康檔不同步')
@@ -103,14 +117,18 @@ for label,item in (('戰報健康檔',health),('手機健康檔',site_health)):
     if not item.get('full_history_mode'): fail(f'{label}不是全歷史模式')
     if not item.get('model_release_allowed') or not item.get('single_release_allowed'): fail(f'{label}仍會封鎖主選公開')
     if not item.get('freshness_ok') or latest['date']<expected_latest_date(): fail(f'{label}資料新鮮度錯誤')
+    if bool(item.get('ranking_direction_valid'))!=bool(backtest.get('ranking_direction_valid')): fail(f'{label}未同步排序方向狀態')
 if version.get('latest_period')!=latest['period'] or version.get('latest_draw_date')!=latest['date']: fail('手機版本檔期別日期錯誤')
 
 for path in (REPORTS/'最新539科學預測戰報.html',SITE/'index.html'):
     visible=visible_text(path)
     english=sorted(set(re.findall(r'[A-Za-z][A-Za-z0-9_-]*',visible)))
     if english: fail(f'{path.name} 可見文字含英文：'+','.join(english))
-    for term in ('1中1主選','公開狀態','已公開','全歷史核心占比','每期固定產出並公開'):
+    for term in ('1中1主選','公開狀態','已公開','全歷史核心占比','每期固定產出並公開','相對指數（非機率）','開獎前封存實戰紀錄','排序後段對照'):
         if term not in visible: fail(f'{path.name} 缺少：{term}')
+    expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'
+    if expected_direction not in visible: fail(f'{path.name} 未照實顯示高低分方向')
+    if '低機率精準暫避' in visible or '當期預測前九' in visible: fail(f'{path.name} 仍含事後回算或未驗證低機率標示')
     if ranked and f'{int(ranked[0]):02}' not in visible: fail(f'{path.name} 未顯示當期1中1主選')
 
 service=(SITE/'service-worker.js').read_text(encoding='utf-8')
@@ -131,9 +149,9 @@ if settlements.exists():
         for line in settlements.read_text(encoding='utf-8').splitlines():
             if not line.strip(): continue
             item=json.loads(line)
-            if item.get('single_published') is None or item.get('single_hit') not in (True,False): fail('已結算紀錄缺少1中1公開主選或命中結果')
+            if item.get('single_published') is None or item.get('single_hit') not in (True,False) or len(item.get('top5_published') or [])!=5: fail('已結算紀錄缺少開獎前封存主選或前5')
     except Exception as exc: fail(f'已結算紀錄無法驗證：{exc}')
 
 if errors:
     raise SystemExit('整套系統驗收失敗：'+'；'.join(dict.fromkeys(errors)))
-print(json.dumps({'全面驗收':'通過','歷史期數':len(draws),'最新期別':latest['period'],'全歷史占比':'100%','1中1主選':result['single_published'],'戰報可見英文':0},ensure_ascii=False))
+print(json.dumps({'全面驗收':'通過','歷史期數':len(draws),'最新期別':latest['period'],'全歷史占比':'100%','1中1主選':result['single_published'],'排序方向':'通過' if backtest.get('ranking_direction_valid') else '未通過','戰報可見英文':0},ensure_ascii=False))
