@@ -80,6 +80,10 @@ def build_site(latest, changed, previous=None):
         'model_drift':'no_verified_edge' if degraded else 'stable_or_observing',
         'recalculation_fingerprint':current.get('recalculation_fingerprint'),'settled_previous':settlement is not None
     }
+    coverage=current.get('history_coverage') or {}
+    health['full_history_mode']=coverage.get('mode')=='all_available_history_for_every_prediction'
+    health['history_draws_used']=coverage.get('draws_used')
+    health['history_database_sha256']=coverage.get('database_sha256')
     (REPORTS/'system-health.json').write_text(json.dumps(health,ensure_ascii=False,indent=2),encoding='utf-8')
     SITE.mkdir(exist_ok=True); shutil.copy2(REPORT,SITE/'index.html'); shutil.copy2(REPORTS/'最新結果.json',SITE/'latest-result.json'); shutil.copy2(REPORTS/'system-health.json',SITE/'system-health.json')
     for name in ('prediction-history.jsonl','published-settlements.jsonl'):

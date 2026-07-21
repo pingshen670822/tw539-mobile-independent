@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-21T01:29:42+00:00",
+  "generated_at": "2026-07-21T11:58:32+08:00",
   "based_on_period": "115000175",
   "target_draw_date": "2026-07-21",
-  "recalculation_fingerprint": "d42f4b752909eae7",
+  "recalculation_fingerprint": "e5f8f6e31279e06d",
   "data_latest": {
     "period": "115000175",
     "date": "2026-07-20",
@@ -15,52 +15,72 @@
     ]
   },
   "draw_count": 5919,
+  "history_coverage": {
+    "mode": "all_available_history_for_every_prediction",
+    "first_draw_date": "2007-01-01",
+    "last_draw_date": "2026-07-20",
+    "draws_used": 5919,
+    "numbers_used": 29595,
+    "database_sha256": "e331e6b82d9edd6837b0a5b2dae2f24327d4c4f94c807075b97f484228079720",
+    "global_history_blend": 0.6,
+    "global_history_features": [
+      "full_freq",
+      "full_bayes",
+      "full_overdue",
+      "full_association",
+      "full_transition",
+      "full_similarity",
+      "full_reversion"
+    ]
+  },
   "production_weights": {
-    "freq10": 0.2,
-    "freq30": 0.25,
-    "freq100": 0.15,
-    "gap": 0.1,
-    "momentum": 0.15,
-    "reversion": 0.1,
+    "freq10": 0.05,
+    "freq30": 0.15,
+    "freq100": 0.35,
+    "gap": 0.05,
+    "momentum": 0.05,
+    "reversion": 0.3,
     "association": 0.05
   },
   "audit_weights": {
     "freq30": 0.1,
     "freq100": 0.1,
-    "gap": 0.05,
     "reversion": 0.15,
-    "association": 0.05,
-    "ewma": 0.2,
-    "bayes": 0.2,
-    "transition": 0.15
+    "ewma": 0.15,
+    "bayes": 0.15,
+    "transition": 0.1,
+    "tail_balance": 0.08,
+    "neighbor": 0.07,
+    "zone_balance": 0.05,
+    "cycle": 0.05
   },
   "audit_candidate_quality": [
-    3042.0,
-    2873.0,
-    2813.0,
-    3627.0,
-    3399.0,
-    3102.0,
-    2915.0
+    2769.0,
+    2469.0,
+    2858.0,
+    2836.0,
+    2938.0,
+    2951.0,
+    2683.0
   ],
   "ranked_top15": [
-    37,
-    13,
-    34,
-    1,
-    35,
-    10,
-    21,
-    30,
-    15,
+    8,
     6,
+    2,
     25,
-    28,
-    29,
+    1,
+    34,
     31,
-    12
+    36,
+    14,
+    7,
+    15,
+    4,
+    37,
+    35,
+    21
   ],
-  "single_candidate": 37,
+  "single_candidate": 8,
   "single_published": null,
   "release_policy": {
     "official_release_allowed": false,
@@ -70,59 +90,59 @@
   },
   "tickets": [
     [
+      2,
+      15,
+      18,
+      22,
+      25
+    ],
+    [
+      6,
+      13,
+      23,
+      38,
+      39
+    ],
+    [
       1,
+      10,
       12,
-      13,
-      32,
-      37
-    ],
-    [
-      6,
-      10,
-      13,
-      29,
-      31
-    ],
-    [
-      15,
-      18,
-      28,
       31,
       37
     ],
     [
-      1,
-      6,
-      18,
-      24,
-      35
-    ],
-    [
+      5,
       8,
-      14,
-      31,
-      33,
-      37
+      12,
+      27,
+      29
+    ],
+    [
+      9,
+      18,
+      27,
+      28,
+      39
     ],
     [
       1,
-      13,
-      16,
-      21,
-      32
-    ],
-    [
+      2,
       4,
-      11,
-      15,
       21,
-      34
+      39
     ],
     [
       10,
-      13,
-      21,
-      28,
+      14,
+      25,
+      29,
+      36
+    ],
+    [
+      5,
+      7,
+      30,
+      34,
       36
     ]
   ],
@@ -130,22 +150,22 @@
     "samples": 360,
     "evaluation": "隔離保留期；模型權重只用更早資料選定",
     "distribution": {
-      "0": 1,
-      "1": 126,
-      "2": 199,
-      "3": 33,
-      "4": 1,
+      "0": 2,
+      "1": 124,
+      "2": 209,
+      "3": 25,
+      "4": 0,
       "5": 0
     },
-    "avg_best_hits": 1.742,
-    "single_hits": 42,
-    "single_rate": 0.1167,
+    "avg_best_hits": 1.714,
+    "single_hits": 46,
+    "single_rate": 0.1278,
     "single_random_baseline": 0.1282,
-    "single_wilson_lower95": 0.0875,
+    "single_wilson_lower95": 0.0972,
     "single_release_allowed": false,
-    "top5_avg_hits": 0.6417,
+    "top5_avg_hits": 0.6222,
     "top5_random_baseline": 0.641,
-    "top9_avg_hits": 1.1472,
+    "top9_avg_hits": 1.1528,
     "top9_random_baseline": 1.1538
   }
 }

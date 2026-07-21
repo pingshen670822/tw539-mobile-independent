@@ -1,6 +1,6 @@
 {
   "status": "healthy_model_degraded",
-  "checked_at": "2026-07-21T01:29:42+00:00",
+  "checked_at": "2026-07-21T11:58:32+08:00",
   "latest_period": "115000175",
   "latest_draw_date": "2026-07-20",
   "expected_latest_date": "2026-07-20",
@@ -9,6 +9,9 @@
   "model_release_allowed": false,
   "single_release_allowed": false,
   "model_drift": "no_verified_edge",
-  "recalculation_fingerprint": "d42f4b752909eae7",
-  "settled_previous": false
+  "recalculation_fingerprint": "e5f8f6e31279e06d",
+  "settled_previous": false,
+  "full_history_mode": true,
+  "history_draws_used": 5919,
+  "history_database_sha256": "e331e6b82d9edd6837b0a5b2dae2f24327d4c4f94c807075b97f484228079720"
 }
