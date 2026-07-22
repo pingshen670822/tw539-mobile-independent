@@ -8,13 +8,13 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parent
 checks={
     ROOT/'.github/workflows/auto-update.yml':['--strict-freshness','--structure-only','鐵律最終驗證','ironlaw_guard.py','issues: write','actions/checkout@v7','actions/setup-python@v7','actions/configure-pages@v6','actions/upload-pages-artifact@v5','actions/deploy-pages@v5'],
-    ROOT/'cloud_pipeline.py':['verify_freshness','verify_publication','expected_latest_date','prediction-history.jsonl','published-settlements.jsonl','full_history_mode','replace=True','ranking_direction_valid','datetime.now(TAIPEI)'],
-    ROOT/'tw539_ultra.py':['FORMAL_FEATURE_KEYS','GLOBAL_HISTORY_BLEND = 1.00','FEATURE_LABELS','短期視窗不得參與正式排名','all_available_history_for_every_prediction','history_coverage','"single_published": ranked[0]','bottom1_hits','bottom5_avg_hits','ranking_direction_valid','model_selection_cutoff','正式主選與隔離回測必須使用同一權重','強制投注排除名單','禁止進入任何推薦牌組','full_history_scan','model_score_with_repeat_qualification','連莊資格驗算','相對指數至少75','全歷史連莊率不低於12.82%','repeat_backtest_pass','不做補位','def rank_numbers','禁止固定偏向小號或大號'],
-    ROOT/'system_audit.py':['整套系統驗收失敗','1中1主選未固定產出並公開','戰報可見英文','正式主選與隔離回測不是同一組權重','推薦牌組含強制投注排除號碼'],
+    ROOT/'cloud_pipeline.py':['verify_freshness','verify_publication','expected_latest_date','prediction-history.jsonl','published-settlements.jsonl','compact_prediction_history','enrich_settlement','completed_from_pre_draw_seal','no_post_draw_substitution','rolling_adjustment','full_history_mode','replace=True','ranking_direction_valid','datetime.now(TAIPEI)'],
+    ROOT/'tw539_ultra.py':['FORMAL_FEATURE_KEYS','GLOBAL_HISTORY_BLEND = 1.00','MODEL_SEARCH_CANDIDATE_COUNT = 286','select_rolling_weights','select_rolling_learning_rate','rolling_weight_update','pre_draw_prediction_then_post_draw_module_error_update','每期開獎命中檢討與滾動修正','禁止開獎後換號或補號','FEATURE_LABELS','短期視窗不得參與正式排名','all_available_history_for_every_prediction','history_coverage','"single_published": ranked[0]','bottom1_hits','bottom5_avg_hits','ranking_direction_valid','model_selection_cutoff','回測終點權重必須等於畫面主選權重','強制投注排除名單','禁止進入任何推薦牌組','full_history_scan','model_score_with_repeat_qualification','連莊資格驗算','相對指數至少75','全歷史連莊率不低於12.82%','repeat_backtest_pass','不做補位','def rank_numbers','禁止固定偏向小號或大號'],
+    ROOT/'system_audit.py':['整套系統驗收失敗','1中1主選未固定產出並公開','戰報可見英文','正式主選與隔離回測不是同一組權重','最新開獎錯誤沒有回灌到下一期權重','命中檢討','推薦牌組含強制投注排除號碼'],
     ROOT/'site/service-worker.js':["cache:'no-store'",'tw539-mobile-ironlaw-v3','system-health.json'],
     ROOT/'site/mobile-sync.js':['setInterval(checkVersion,30000)','同步正常','網路中斷，顯示最近資料'],
     ROOT/'.github/workflows/watchdog.yml':['watchdog.py','auto-update.yml','actions: write','actions/checkout@v7','actions/setup-python@v7'],
-    ROOT/'watchdog.py':['system-health.json','full_history_mode','latest_period','戰報可見文字含英文'],
+    ROOT/'watchdog.py':['system-health.json','published-settlements.jsonl','full_history_mode','latest_period','最新開獎錯誤沒有逐期回灌','每期開獎命中檢討與滾動修正','戰報可見文字含英文'],
 }
 parser=argparse.ArgumentParser()
 parser.add_argument('--structure-only',action='store_true')

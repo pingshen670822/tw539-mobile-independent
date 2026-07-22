@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """官方最新開獎 -> 驗證 -> 重算 -> 產生獨立 PWA。僅使用 Python 標準庫。"""
 from __future__ import annotations
-import argparse, csv, json, shutil, subprocess, sys, time, urllib.request
+import argparse, csv, hashlib, json, shutil, subprocess, sys, time, urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -54,15 +54,135 @@ def append_jsonl(path, item, unique_key, replace=False):
         for line in path.read_text(encoding='utf-8').splitlines():
             try: old.append(json.loads(line))
             except Exception: pass
-    for index,existing in enumerate(old):
-        if unique_key(existing)==unique_key(item):
-            if not replace: return False
-            old[index]=item
-            path.write_text('\n'.join(json.dumps(x,ensure_ascii=False) for x in old)+'\n',encoding='utf-8')
-            return True
+    matches=[index for index,existing in enumerate(old) if unique_key(existing)==unique_key(item)]
+    if matches:
+        if not replace: return False
+        first=matches[0]
+        old=[x for x in old if unique_key(x)!=unique_key(item)]
+        old.insert(min(first,len(old)),item)
+        path.write_text('\n'.join(json.dumps(x,ensure_ascii=False) for x in old)+'\n',encoding='utf-8')
+        return True
     old.append(item)
     path.write_text('\n'.join(json.dumps(x,ensure_ascii=False) for x in old)+'\n',encoding='utf-8')
     return True
+
+def read_jsonl(path):
+    rows=[]
+    if path.exists():
+        for line in path.read_text(encoding='utf-8').splitlines():
+            try: rows.append(json.loads(line))
+            except Exception: pass
+    return rows
+
+def reconstruct_pre_draw_snapshot(prediction):
+    """舊封存只准用目標日前資料精確重建，且原前15名與指紋必須完全一致。"""
+    from tw539_ultra import (load_draws, formal_history_state, scores_from_features,
+                             apply_repeat_qualification, rank_numbers, build_number_diagnostics)
+    draws=load_draws(CSV)
+    index=next((i for i,x in enumerate(draws) if str(x['period'])==str(prediction.get('based_on_period'))),-1)
+    if index<0: raise RuntimeError('找不到封存預測所依據的歷史期別')
+    history=draws[:index+1]
+    if history[-1]['date'] >= prediction.get('target_draw_date',''):
+        raise RuntimeError('封存預測包含目標開獎日資料')
+    history_payload='|'.join(f"{x['period']}:{x['date']}:{','.join(map(str,x['nums']))}" for x in history)
+    history_hash=hashlib.sha256(history_payload.encode()).hexdigest()
+    stored_hash=(prediction.get('history_coverage') or {}).get('database_sha256')
+    if stored_hash and stored_hash!=history_hash: raise RuntimeError('封存預測歷史資料庫指紋不符')
+    weights=prediction.get('production_weights') or {}
+    if not weights: raise RuntimeError('封存預測缺少正式權重')
+    state=formal_history_state(history); features=state.features(); raw=scores_from_features(features,weights)
+    adjusted,_=apply_repeat_qualification(raw,features,weights,history[-1]['nums'],history[-1]['period'],state.repeat_exposure,state.repeat_hits)
+    ranked=rank_numbers(adjusted,history[-1]['period'])
+    if ranked[:15] != list(prediction.get('ranked_top15') or []):
+        raise RuntimeError('舊封存預測無法精確重建原始前15名')
+    old_payload=json.dumps({'based_on':history[-1]['period'],'weights':weights,'top15':ranked[:15]},sort_keys=True)
+    old_fingerprint=hashlib.sha256(old_payload.encode()).hexdigest()[:16]
+    if not prediction.get('pre_draw_seal') and old_fingerprint!=prediction.get('recalculation_fingerprint'):
+        raise RuntimeError('舊封存預測指紋驗證失敗')
+    diagnostics=build_number_diagnostics(ranked,adjusted,raw,features,weights)
+    legacy_payload={'based_on_period':history[-1]['period'],'target_draw_date':prediction.get('target_draw_date'),
+                    'history_database_sha256':history_hash,'ranked_all':ranked,
+                    'number_diagnostics':diagnostics,'production_weights':weights,
+                    'legacy_fingerprint':prediction.get('recalculation_fingerprint')}
+    legacy_hash=hashlib.sha256(json.dumps(legacy_payload,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    return ranked,diagnostics,legacy_hash
+
+def enrich_settlement(item, prediction, latest):
+    if not prediction: raise RuntimeError('命中檢討找不到對應的開獎前封存預測')
+    if prediction.get('target_draw_date')!=latest['draw_date']: raise RuntimeError('封存預測目標日與實際開獎日不同')
+    if str(prediction.get('based_on_period'))==str(latest['period']): raise RuntimeError('禁止使用開獎後資料冒充預測')
+    ranked=list(prediction.get('ranked_all') or [])
+    diagnostics=list(prediction.get('number_diagnostics') or [])
+    legacy_hash=None
+    if len(ranked)!=39 or set(ranked)!=set(range(1,40)) or len(diagnostics)!=39:
+        ranked,diagnostics,legacy_hash=reconstruct_pre_draw_snapshot(prediction)
+    diagnostics_by_number={int(x['number']):x for x in diagnostics}
+    if set(diagnostics_by_number)!=set(range(1,40)): raise RuntimeError('開獎前39碼診斷不完整')
+    actual=set(latest['nums']); top5=ranked[:5]; missed=[n for n in top5 if n not in actual]
+    weights=prediction.get('production_weights') or {}
+    actual_rankings=[]
+    for number in latest['nums']:
+        row=diagnostics_by_number[number]
+        actual_rankings.append({'number':number,'rank':row['rank'],'relative_index':row['relative_index'],
+                                'final_score':row['final_score'],'weighted_contributions':row['weighted_contributions']})
+    module_review=[]; error_modules=[]
+    for key in weights:
+        actual_mean=sum(float(diagnostics_by_number[n]['weighted_contributions'][key]) for n in actual)/5
+        comparison=missed or [n for n in ranked[:5] if n not in actual]
+        missed_mean=sum(float(diagnostics_by_number[n]['weighted_contributions'][key]) for n in comparison)/max(1,len(comparison))
+        gap=actual_mean-missed_mean; error=gap<0
+        if error: error_modules.append(key)
+        module_review.append({'module':key,'actual_mean':round(actual_mean,9),'missed_top5_mean':round(missed_mean,9),
+                              'discrimination_gap':round(gap,9),'error_flag':error})
+    item.update({
+        'official_period':latest['period'],'actual_numbers':latest['nums'],
+        'top5_published':top5,'top9_published':ranked[:9],
+        'single_published':prediction.get('single_published'),
+        'single_hit':bool(prediction.get('single_published') in actual),
+        'top5_hits':sorted(actual.intersection(top5)),'top9_hits':sorted(actual.intersection(ranked[:9])),
+        'actual_rankings':actual_rankings,'average_actual_rank':round(sum(x['rank'] for x in actual_rankings)/5,4),
+        'missed_top5':missed,'module_review':module_review,'error_modules':error_modules,
+        'production_weights_before':weights,
+        'pre_draw_seal_sha256':(prediction.get('pre_draw_seal') or {}).get('sha256'),
+        'legacy_reconstruction_sha256':legacy_hash,
+        'review_status':'completed_from_pre_draw_seal','rolling_recalculation_required':True,
+        'data_integrity':{'based_on_period':prediction.get('based_on_period'),'official_period':latest['period'],
+                          'target_draw_date':latest['draw_date'],'official_actual_numbers':latest['nums'],
+                          'no_post_draw_substitution':True},
+    })
+    evidence={k:v for k,v in item.items() if k!='review_evidence_sha256'}
+    item['review_evidence_sha256']=hashlib.sha256(json.dumps(evidence,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    return item
+
+def find_prediction_for_item(item):
+    history=read_jsonl(REPORTS/'prediction-history.jsonl')
+    exact=[x for x in history if x.get('target_draw_date')==item.get('target_draw_date') and
+           x.get('recalculation_fingerprint')==item.get('fingerprint')]
+    return exact[-1] if exact else None
+
+def compact_prediction_history(current):
+    """每個目標日只保留真正正式版；已結算日以結算指紋為準，未結算日以本次最終版為準。"""
+    path=REPORTS/'prediction-history.jsonl'; rows=read_jsonl(path)
+    settlement_fingerprints={x.get('target_draw_date'):x.get('fingerprint') for x in read_jsonl(REPORTS/'published-settlements.jsonl')}
+    targets=[]
+    for row in rows:
+        target=row.get('target_draw_date')
+        if target not in targets: targets.append(target)
+    chosen=[]
+    for target in targets:
+        group=[x for x in rows if x.get('target_draw_date')==target]
+        fingerprint=settlement_fingerprints.get(target)
+        if fingerprint:
+            exact=[x for x in group if x.get('recalculation_fingerprint')==fingerprint]
+            if len(exact)!=1: raise RuntimeError(f'已結算日{target}找不到唯一正式封存預測')
+            chosen.append(exact[0])
+        elif target==current.get('target_draw_date'):
+            chosen.append(current)
+        else:
+            published=[x for x in group if x.get('single_published') is not None]
+            chosen.append((published or group)[-1])
+    if current.get('target_draw_date') not in targets: chosen.append(current)
+    path.write_text('\n'.join(json.dumps(x,ensure_ascii=False) for x in chosen)+'\n',encoding='utf-8')
 
 def settle_previous(previous, latest):
     if not previous or previous.get('target_draw_date') != latest['draw_date']: return None
@@ -76,14 +196,38 @@ def settle_previous(previous, latest):
         'top5_hits':sorted(actual.intersection(top[:5])),'top9_hits':sorted(actual.intersection(top[:9])),
         'settled_at':datetime.now(TAIPEI).isoformat(timespec='seconds')
     }
-    append_jsonl(REPORTS/'published-settlements.jsonl',item,lambda x:(x.get('target_draw_date'),x.get('fingerprint')))
+    item=enrich_settlement(item,previous,latest)
+    append_jsonl(REPORTS/'published-settlements.jsonl',item,lambda x:(x.get('target_draw_date'),x.get('fingerprint')),replace=True)
+    return item
+
+def refresh_latest_settlement(latest):
+    rows=read_jsonl(REPORTS/'published-settlements.jsonl')
+    matches=[x for x in rows if x.get('target_draw_date')==latest['draw_date']]
+    if not matches: return None
+    item=matches[-1]
+    item=enrich_settlement(item,find_prediction_for_item(item),latest)
+    append_jsonl(REPORTS/'published-settlements.jsonl',item,lambda x:(x.get('target_draw_date'),x.get('fingerprint')),replace=True)
     return item
 
 def build_site(latest, changed, previous=None):
-    settlement=settle_previous(previous,latest)
+    settlement=settle_previous(previous,latest) or refresh_latest_settlement(latest)
     subprocess.run([sys.executable,str(ROOT/'tw539_ultra.py'),'--backtest','360'],check=True,cwd=ROOT)
     current=read_json(REPORTS/'最新結果.json') or {}
-    append_jsonl(REPORTS/'prediction-history.jsonl',current,lambda x:(x.get('target_draw_date'),x.get('recalculation_fingerprint')),replace=True)
+    if settlement:
+        diagnostic=(current.get('weight_selection_diagnostics') or [{}])[0]
+        settlement['rolling_adjustment']={
+            'completed':True,'candidate_count':diagnostic.get('candidate_count'),
+            'weights_before':settlement.get('production_weights_before'),
+            'weights_after':current.get('production_weights'),
+            'calibration_window':diagnostic.get('calibration_window'),
+            'holdout_window':diagnostic.get('holdout_window'),
+            'next_single':current.get('single_published'),
+            'next_prediction_seal_sha256':(current.get('pre_draw_seal') or {}).get('sha256')}
+        evidence={k:v for k,v in settlement.items() if k!='review_evidence_sha256'}
+        settlement['review_evidence_sha256']=hashlib.sha256(json.dumps(evidence,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        append_jsonl(REPORTS/'published-settlements.jsonl',settlement,lambda x:(x.get('target_draw_date'),x.get('fingerprint')),replace=True)
+    append_jsonl(REPORTS/'prediction-history.jsonl',current,lambda x:x.get('target_draw_date'),replace=True)
+    compact_prediction_history(current)
     backtest=current.get('backtest') or {}
     direction_ok=bool(backtest.get('ranking_direction_valid'))
     degraded=(not direction_ok) or (backtest.get('single_rate',0)<=backtest.get('single_random_baseline',0) and backtest.get('top9_avg_hits',0)<=backtest.get('top9_random_baseline',0))
@@ -99,7 +243,8 @@ def build_site(latest, changed, previous=None):
         'top5_avg_hits':backtest.get('top5_avg_hits'),'bottom5_avg_hits':backtest.get('bottom5_avg_hits'),
         'top9_avg_hits':backtest.get('top9_avg_hits'),'bottom9_avg_hits':backtest.get('bottom9_avg_hits'),
         'model_drift':'ranking_direction_invalid' if not direction_ok else ('no_verified_edge' if degraded else 'stable_or_observing'),
-        'recalculation_fingerprint':current.get('recalculation_fingerprint'),'settled_previous':settlement is not None
+        'recalculation_fingerprint':current.get('recalculation_fingerprint'),
+        'settled_previous':bool(settlement and settlement.get('review_status')=='completed_from_pre_draw_seal')
     }
     coverage=current.get('history_coverage') or {}
     health['full_history_mode']=coverage.get('mode')=='all_available_history_for_every_prediction'
