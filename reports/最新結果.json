@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-22T10:53:07+08:00",
+  "generated_at": "2026-07-22T11:03:44+08:00",
   "based_on_period": "115000176",
   "target_draw_date": "2026-07-22",
   "recalculation_fingerprint": "1241dce26d364fe8",
@@ -1375,10 +1375,10 @@
                 "full_overdue_correction": 0.3
               },
               "end_weights": {
-                "full_frequency_balance": 0.151196219945744,
-                "full_transition_correction": 0.3839880027097218,
+                "full_frequency_balance": 0.15119621994574395,
+                "full_transition_correction": 0.3839880027097217,
                 "full_signature_correction": 0.1273484610314113,
-                "full_overdue_correction": 0.337467316313123
+                "full_overdue_correction": 0.3374673163131231
               },
               "rolling_update_count": 360,
               "rolling_learning_rate": 0.002,
@@ -1406,9 +1406,9 @@
                 },
                 "end_weights": {
                   "full_frequency_balance": 0.11590600590484801,
-                  "full_transition_correction": 0.455425754151255,
+                  "full_transition_correction": 0.45542575415125497,
                   "full_signature_correction": 0.1100407785972856,
-                  "full_overdue_correction": 0.3186274613466114
+                  "full_overdue_correction": 0.31862746134661146
                 },
                 "rolling_update_count": 120,
                 "rolling_learning_rate": 0.002,
@@ -1432,10 +1432,10 @@
                   "full_overdue_correction": 0.3
                 },
                 "end_weights": {
-                  "full_frequency_balance": 0.11840595604938614,
-                  "full_transition_correction": 0.45262592900803433,
-                  "full_signature_correction": 0.11056247312905837,
-                  "full_overdue_correction": 0.31840564181352116
+                  "full_frequency_balance": 0.11840595604938613,
+                  "full_transition_correction": 0.4526259290080344,
+                  "full_signature_correction": 0.1105624731290584,
+                  "full_overdue_correction": 0.3184056418135211
                 },
                 "rolling_update_count": 120,
                 "rolling_learning_rate": 0.002,
@@ -1491,14 +1491,14 @@
                 "full_overdue_correction": 0.3
               },
               "end_weights": {
-                "full_frequency_balance": 0.17401193807806734,
-                "full_transition_correction": 0.3487844545087173,
-                "full_signature_correction": 0.13631251727537938,
-                "full_overdue_correction": 0.340891090137836
+                "full_frequency_balance": 0.17401193807806722,
+                "full_transition_correction": 0.3487844545087175,
+                "full_signature_correction": 0.13631251727537944,
+                "full_overdue_correction": 0.34089109013783586
               },
               "rolling_update_count": 360,
               "rolling_learning_rate": 0.003,
-              "rolling_path_sha256": "1b34853b613d7064108886f68bada9acb4a860e7c05103088935049c72ce4dd4",
+              "rolling_path_sha256": "db568370c27689f7d6b1948936315faf9b5307f0ca1f6a8205bca74c2100c738",
               "method": "pre_draw_prediction_then_post_draw_module_error_update"
             },
             "folds_all_valid": true,
@@ -1521,9 +1521,9 @@
                   "full_overdue_correction": 0.3
                 },
                 "end_weights": {
-                  "full_frequency_balance": 0.12396722867758396,
-                  "full_transition_correction": 0.43576385953855007,
-                  "full_signature_correction": 0.11470934643681381,
+                  "full_frequency_balance": 0.12396722867758393,
+                  "full_transition_correction": 0.4357638595385501,
+                  "full_signature_correction": 0.11470934643681384,
                   "full_overdue_correction": 0.3255595653470521
                 },
                 "rolling_update_count": 120,
@@ -1608,9 +1608,9 @@
               },
               "end_weights": {
                 "full_frequency_balance": 0.2122419490903443,
-                "full_transition_correction": 0.29963286042792914,
+                "full_transition_correction": 0.29963286042792925,
                 "full_signature_correction": 0.1507111381140241,
-                "full_overdue_correction": 0.33741405236770244
+                "full_overdue_correction": 0.33741405236770233
               },
               "rolling_update_count": 360,
               "rolling_learning_rate": 0.005,
@@ -1664,10 +1664,10 @@
                   "full_overdue_correction": 0.3
                 },
                 "end_weights": {
-                  "full_frequency_balance": 0.1448915054411087,
+                  "full_frequency_balance": 0.14489150544110874,
                   "full_transition_correction": 0.3980716125209944,
                   "full_signature_correction": 0.12266746640282711,
-                  "full_overdue_correction": 0.33436941563506983
+                  "full_overdue_correction": 0.3343694156350698
                 },
                 "rolling_update_count": 120,
                 "rolling_learning_rate": 0.005,
@@ -1723,9 +1723,9 @@
                 "full_overdue_correction": 0.3
               },
               "end_weights": {
-                "full_frequency_balance": 0.2660000854187589,
-                "full_transition_correction": 0.24850788380675817,
-                "full_signature_correction": 0.16799250048931777,
+                "full_frequency_balance": 0.2660000854187591,
+                "full_transition_correction": 0.24850788380675823,
+                "full_signature_correction": 0.16799250048931766,
                 "full_overdue_correction": 0.3174995302851651
               },
               "rolling_update_count": 360,
@@ -1781,9 +1781,9 @@
                 },
                 "end_weights": {
                   "full_frequency_balance": 0.18427419904280923,
-                  "full_transition_correction": 0.3370656545262159,
+                  "full_transition_correction": 0.33706565452621584,
                   "full_signature_correction": 0.13800156250452278,
-                  "full_overdue_correction": 0.34065858392645215
+                  "full_overdue_correction": 0.3406585839264522
                 },
                 "rolling_update_count": 120,
                 "rolling_learning_rate": 0.01,
@@ -2297,10 +2297,10 @@
                 "full_overdue_correction": 0.3
               },
               "end_weights": {
-                "full_frequency_balance": 0.151196219945744,
-                "full_transition_correction": 0.3839880027097218,
+                "full_frequency_balance": 0.15119621994574395,
+                "full_transition_correction": 0.3839880027097217,
                 "full_signature_correction": 0.1273484610314113,
-                "full_overdue_correction": 0.337467316313123
+                "full_overdue_correction": 0.3374673163131231
               },
               "rolling_update_count": 360,
               "rolling_learning_rate": 0.002,
@@ -2328,9 +2328,9 @@
                 },
                 "end_weights": {
                   "full_frequency_balance": 0.11590600590484801,
-                  "full_transition_correction": 0.455425754151255,
+                  "full_transition_correction": 0.45542575415125497,
                   "full_signature_correction": 0.1100407785972856,
-                  "full_overdue_correction": 0.3186274613466114
+                  "full_overdue_correction": 0.31862746134661146
                 },
                 "rolling_update_count": 120,
                 "rolling_learning_rate": 0.002,
@@ -2354,10 +2354,10 @@
                   "full_overdue_correction": 0.3
                 },
                 "end_weights": {
-                  "full_frequency_balance": 0.11840595604938614,
-                  "full_transition_correction": 0.45262592900803433,
-                  "full_signature_correction": 0.11056247312905837,
-                  "full_overdue_correction": 0.31840564181352116
+                  "full_frequency_balance": 0.11840595604938613,
+                  "full_transition_correction": 0.4526259290080344,
+                  "full_signature_correction": 0.1105624731290584,
+                  "full_overdue_correction": 0.3184056418135211
                 },
                 "rolling_update_count": 120,
                 "rolling_learning_rate": 0.002,
@@ -2413,14 +2413,14 @@
                 "full_overdue_correction": 0.3
               },
               "end_weights": {
-                "full_frequency_balance": 0.17401193807806734,
-                "full_transition_correction": 0.3487844545087173,
-                "full_signature_correction": 0.13631251727537938,
-                "full_overdue_correction": 0.340891090137836
+                "full_frequency_balance": 0.17401193807806722,
+                "full_transition_correction": 0.3487844545087175,
+                "full_signature_correction": 0.13631251727537944,
+                "full_overdue_correction": 0.34089109013783586
               },
               "rolling_update_count": 360,
               "rolling_learning_rate": 0.003,
-              "rolling_path_sha256": "1b34853b613d7064108886f68bada9acb4a860e7c05103088935049c72ce4dd4",
+              "rolling_path_sha256": "db568370c27689f7d6b1948936315faf9b5307f0ca1f6a8205bca74c2100c738",
               "method": "pre_draw_prediction_then_post_draw_module_error_update"
             },
             "folds_all_valid": true,
@@ -2443,9 +2443,9 @@
                   "full_overdue_correction": 0.3
                 },
                 "end_weights": {
-                  "full_frequency_balance": 0.12396722867758396,
-                  "full_transition_correction": 0.43576385953855007,
-                  "full_signature_correction": 0.11470934643681381,
+                  "full_frequency_balance": 0.12396722867758393,
+                  "full_transition_correction": 0.4357638595385501,
+                  "full_signature_correction": 0.11470934643681384,
                   "full_overdue_correction": 0.3255595653470521
                 },
                 "rolling_update_count": 120,
@@ -2530,9 +2530,9 @@
               },
               "end_weights": {
                 "full_frequency_balance": 0.2122419490903443,
-                "full_transition_correction": 0.29963286042792914,
+                "full_transition_correction": 0.29963286042792925,
                 "full_signature_correction": 0.1507111381140241,
-                "full_overdue_correction": 0.33741405236770244
+                "full_overdue_correction": 0.33741405236770233
               },
               "rolling_update_count": 360,
               "rolling_learning_rate": 0.005,
@@ -2586,10 +2586,10 @@
                   "full_overdue_correction": 0.3
                 },
                 "end_weights": {
-                  "full_frequency_balance": 0.1448915054411087,
+                  "full_frequency_balance": 0.14489150544110874,
                   "full_transition_correction": 0.3980716125209944,
                   "full_signature_correction": 0.12266746640282711,
-                  "full_overdue_correction": 0.33436941563506983
+                  "full_overdue_correction": 0.3343694156350698
                 },
                 "rolling_update_count": 120,
                 "rolling_learning_rate": 0.005,
@@ -2645,9 +2645,9 @@
                 "full_overdue_correction": 0.3
               },
               "end_weights": {
-                "full_frequency_balance": 0.2660000854187589,
-                "full_transition_correction": 0.24850788380675817,
-                "full_signature_correction": 0.16799250048931777,
+                "full_frequency_balance": 0.2660000854187591,
+                "full_transition_correction": 0.24850788380675823,
+                "full_signature_correction": 0.16799250048931766,
                 "full_overdue_correction": 0.3174995302851651
               },
               "rolling_update_count": 360,
@@ -2703,9 +2703,9 @@
                 },
                 "end_weights": {
                   "full_frequency_balance": 0.18427419904280923,
-                  "full_transition_correction": 0.3370656545262159,
+                  "full_transition_correction": 0.33706565452621584,
                   "full_signature_correction": 0.13800156250452278,
-                  "full_overdue_correction": 0.34065858392645215
+                  "full_overdue_correction": 0.3406585839264522
                 },
                 "rolling_update_count": 120,
                 "rolling_learning_rate": 0.01,
@@ -3185,10 +3185,10 @@
               "full_overdue_correction": 0.3
             },
             "end_weights": {
-              "full_frequency_balance": 0.151196219945744,
-              "full_transition_correction": 0.3839880027097218,
+              "full_frequency_balance": 0.15119621994574395,
+              "full_transition_correction": 0.3839880027097217,
               "full_signature_correction": 0.1273484610314113,
-              "full_overdue_correction": 0.337467316313123
+              "full_overdue_correction": 0.3374673163131231
             },
             "rolling_update_count": 360,
             "rolling_learning_rate": 0.002,
@@ -3216,9 +3216,9 @@
               },
               "end_weights": {
                 "full_frequency_balance": 0.11590600590484801,
-                "full_transition_correction": 0.455425754151255,
+                "full_transition_correction": 0.45542575415125497,
                 "full_signature_correction": 0.1100407785972856,
-                "full_overdue_correction": 0.3186274613466114
+                "full_overdue_correction": 0.31862746134661146
               },
               "rolling_update_count": 120,
               "rolling_learning_rate": 0.002,
@@ -3242,10 +3242,10 @@
                 "full_overdue_correction": 0.3
               },
               "end_weights": {
-                "full_frequency_balance": 0.11840595604938614,
-                "full_transition_correction": 0.45262592900803433,
-                "full_signature_correction": 0.11056247312905837,
-                "full_overdue_correction": 0.31840564181352116
+                "full_frequency_balance": 0.11840595604938613,
+                "full_transition_correction": 0.4526259290080344,
+                "full_signature_correction": 0.1105624731290584,
+                "full_overdue_correction": 0.3184056418135211
               },
               "rolling_update_count": 120,
               "rolling_learning_rate": 0.002,
@@ -3301,14 +3301,14 @@
               "full_overdue_correction": 0.3
             },
             "end_weights": {
-              "full_frequency_balance": 0.17401193807806734,
-              "full_transition_correction": 0.3487844545087173,
-              "full_signature_correction": 0.13631251727537938,
-              "full_overdue_correction": 0.340891090137836
+              "full_frequency_balance": 0.17401193807806722,
+              "full_transition_correction": 0.3487844545087175,
+              "full_signature_correction": 0.13631251727537944,
+              "full_overdue_correction": 0.34089109013783586
             },
             "rolling_update_count": 360,
             "rolling_learning_rate": 0.003,
-            "rolling_path_sha256": "1b34853b613d7064108886f68bada9acb4a860e7c05103088935049c72ce4dd4",
+            "rolling_path_sha256": "db568370c27689f7d6b1948936315faf9b5307f0ca1f6a8205bca74c2100c738",
             "method": "pre_draw_prediction_then_post_draw_module_error_update"
           },
           "folds_all_valid": true,
@@ -3331,9 +3331,9 @@
                 "full_overdue_correction": 0.3
               },
               "end_weights": {
-                "full_frequency_balance": 0.12396722867758396,
-                "full_transition_correction": 0.43576385953855007,
-                "full_signature_correction": 0.11470934643681381,
+                "full_frequency_balance": 0.12396722867758393,
+                "full_transition_correction": 0.4357638595385501,
+                "full_signature_correction": 0.11470934643681384,
                 "full_overdue_correction": 0.3255595653470521
               },
               "rolling_update_count": 120,
@@ -3418,9 +3418,9 @@
             },
             "end_weights": {
               "full_frequency_balance": 0.2122419490903443,
-              "full_transition_correction": 0.29963286042792914,
+              "full_transition_correction": 0.29963286042792925,
               "full_signature_correction": 0.1507111381140241,
-              "full_overdue_correction": 0.33741405236770244
+              "full_overdue_correction": 0.33741405236770233
             },
             "rolling_update_count": 360,
             "rolling_learning_rate": 0.005,
@@ -3474,10 +3474,10 @@
                 "full_overdue_correction": 0.3
               },
               "end_weights": {
-                "full_frequency_balance": 0.1448915054411087,
+                "full_frequency_balance": 0.14489150544110874,
                 "full_transition_correction": 0.3980716125209944,
                 "full_signature_correction": 0.12266746640282711,
-                "full_overdue_correction": 0.33436941563506983
+                "full_overdue_correction": 0.3343694156350698
               },
               "rolling_update_count": 120,
               "rolling_learning_rate": 0.005,
@@ -3533,9 +3533,9 @@
               "full_overdue_correction": 0.3
             },
             "end_weights": {
-              "full_frequency_balance": 0.2660000854187589,
-              "full_transition_correction": 0.24850788380675817,
-              "full_signature_correction": 0.16799250048931777,
+              "full_frequency_balance": 0.2660000854187591,
+              "full_transition_correction": 0.24850788380675823,
+              "full_signature_correction": 0.16799250048931766,
               "full_overdue_correction": 0.3174995302851651
             },
             "rolling_update_count": 360,
@@ -3591,9 +3591,9 @@
               },
               "end_weights": {
                 "full_frequency_balance": 0.18427419904280923,
-                "full_transition_correction": 0.3370656545262159,
+                "full_transition_correction": 0.33706565452621584,
                 "full_signature_correction": 0.13800156250452278,
-                "full_overdue_correction": 0.34065858392645215
+                "full_overdue_correction": 0.3406585839264522
               },
               "rolling_update_count": 120,
               "rolling_learning_rate": 0.01,
@@ -3912,10 +3912,10 @@
               "full_overdue_correction": 0.3
             },
             "end_weights": {
-              "full_frequency_balance": 0.151196219945744,
-              "full_transition_correction": 0.3839880027097218,
+              "full_frequency_balance": 0.15119621994574395,
+              "full_transition_correction": 0.3839880027097217,
               "full_signature_correction": 0.1273484610314113,
-              "full_overdue_correction": 0.337467316313123
+              "full_overdue_correction": 0.3374673163131231
             },
             "rolling_update_count": 360,
             "rolling_learning_rate": 0.002,
@@ -3943,9 +3943,9 @@
               },
               "end_weights": {
                 "full_frequency_balance": 0.11590600590484801,
-                "full_transition_correction": 0.455425754151255,
+                "full_transition_correction": 0.45542575415125497,
                 "full_signature_correction": 0.1100407785972856,
-                "full_overdue_correction": 0.3186274613466114
+                "full_overdue_correction": 0.31862746134661146
               },
               "rolling_update_count": 120,
               "rolling_learning_rate": 0.002,
@@ -3969,10 +3969,10 @@
                 "full_overdue_correction": 0.3
               },
               "end_weights": {
-                "full_frequency_balance": 0.11840595604938614,
-                "full_transition_correction": 0.45262592900803433,
-                "full_signature_correction": 0.11056247312905837,
-                "full_overdue_correction": 0.31840564181352116
+                "full_frequency_balance": 0.11840595604938613,
+                "full_transition_correction": 0.4526259290080344,
+                "full_signature_correction": 0.1105624731290584,
+                "full_overdue_correction": 0.3184056418135211
               },
               "rolling_update_count": 120,
               "rolling_learning_rate": 0.002,
@@ -4028,14 +4028,14 @@
               "full_overdue_correction": 0.3
             },
             "end_weights": {
-              "full_frequency_balance": 0.17401193807806734,
-              "full_transition_correction": 0.3487844545087173,
-              "full_signature_correction": 0.13631251727537938,
-              "full_overdue_correction": 0.340891090137836
+              "full_frequency_balance": 0.17401193807806722,
+              "full_transition_correction": 0.3487844545087175,
+              "full_signature_correction": 0.13631251727537944,
+              "full_overdue_correction": 0.34089109013783586
             },
             "rolling_update_count": 360,
             "rolling_learning_rate": 0.003,
-            "rolling_path_sha256": "1b34853b613d7064108886f68bada9acb4a860e7c05103088935049c72ce4dd4",
+            "rolling_path_sha256": "db568370c27689f7d6b1948936315faf9b5307f0ca1f6a8205bca74c2100c738",
             "method": "pre_draw_prediction_then_post_draw_module_error_update"
           },
           "folds_all_valid": true,
@@ -4058,9 +4058,9 @@
                 "full_overdue_correction": 0.3
               },
               "end_weights": {
-                "full_frequency_balance": 0.12396722867758396,
-                "full_transition_correction": 0.43576385953855007,
-                "full_signature_correction": 0.11470934643681381,
+                "full_frequency_balance": 0.12396722867758393,
+                "full_transition_correction": 0.4357638595385501,
+                "full_signature_correction": 0.11470934643681384,
                 "full_overdue_correction": 0.3255595653470521
               },
               "rolling_update_count": 120,
@@ -4145,9 +4145,9 @@
             },
             "end_weights": {
               "full_frequency_balance": 0.2122419490903443,
-              "full_transition_correction": 0.29963286042792914,
+              "full_transition_correction": 0.29963286042792925,
               "full_signature_correction": 0.1507111381140241,
-              "full_overdue_correction": 0.33741405236770244
+              "full_overdue_correction": 0.33741405236770233
             },
             "rolling_update_count": 360,
             "rolling_learning_rate": 0.005,
@@ -4201,10 +4201,10 @@
                 "full_overdue_correction": 0.3
               },
               "end_weights": {
-                "full_frequency_balance": 0.1448915054411087,
+                "full_frequency_balance": 0.14489150544110874,
                 "full_transition_correction": 0.3980716125209944,
                 "full_signature_correction": 0.12266746640282711,
-                "full_overdue_correction": 0.33436941563506983
+                "full_overdue_correction": 0.3343694156350698
               },
               "rolling_update_count": 120,
               "rolling_learning_rate": 0.005,
@@ -4260,9 +4260,9 @@
               "full_overdue_correction": 0.3
             },
             "end_weights": {
-              "full_frequency_balance": 0.2660000854187589,
-              "full_transition_correction": 0.24850788380675817,
-              "full_signature_correction": 0.16799250048931777,
+              "full_frequency_balance": 0.2660000854187591,
+              "full_transition_correction": 0.24850788380675823,
+              "full_signature_correction": 0.16799250048931766,
               "full_overdue_correction": 0.3174995302851651
             },
             "rolling_update_count": 360,
@@ -4318,9 +4318,9 @@
               },
               "end_weights": {
                 "full_frequency_balance": 0.18427419904280923,
-                "full_transition_correction": 0.3370656545262159,
+                "full_transition_correction": 0.33706565452621584,
                 "full_signature_correction": 0.13800156250452278,
-                "full_overdue_correction": 0.34065858392645215
+                "full_overdue_correction": 0.3406585839264522
               },
               "rolling_update_count": 120,
               "rolling_learning_rate": 0.01,
