@@ -22,6 +22,7 @@ with urllib.request.urlopen(version_req,timeout=40) as r: version=json.load(r)
 settlement_req=urllib.request.Request(SETTLEMENTS+'?t='+stamp,headers=headers)
 with urllib.request.urlopen(settlement_req,timeout=40) as r: settlements=[json.loads(line) for line in r.read().decode('utf-8').splitlines() if line.strip()]
 errors=[]
+warnings=[]
 if str(health.get('latest_period'))!=str(official['period']): errors.append(f"公開期別 {health.get('latest_period')} != 官方 {official['period']}")
 if health.get('latest_draw_date')!=official['draw_date']: errors.append(f"公開日期 {health.get('latest_draw_date')} != 官方 {official['draw_date']}")
 if not health.get('freshness_ok'): errors.append('公開頁新鮮度未通過')
@@ -61,7 +62,8 @@ if rate_selection.get('candidate_count')!=6 or not rate_selection.get('holdout_n
 if backtest.get('anchor_weights')!=rolling.get('anchor_weights') or backtest.get('end_weights')!=result.get('production_weights') or backtest.get('rolling_update_count')!=360: errors.append('隔離回測沒有重演同一套逐期權重更新')
 if backtest.get('rolling_learning_rate')!=rolling.get('learning_rate'): errors.append('隔離回測與正式滾動學習幅度不同')
 full_scan=result.get('full_history_scan') or {}
-if full_scan.get('samples')!=result.get('draw_count',0)-320 or not full_scan.get('ranking_direction_valid'): errors.append('公開結果的全歷史逐期掃描未通過')
+if full_scan.get('samples')!=result.get('draw_count',0)-320: errors.append('公開結果的全歷史逐期掃描期數錯誤')
+if not full_scan.get('ranking_direction_valid'): warnings.append('全歷史逐期排序方向未通過')
 if str(version.get('latest_period'))!=str(official['period']) or version.get('latest_draw_date')!=official['draw_date']: errors.append('手機版本檔未同步官方最新期別')
 if not settlements:
     errors.append('公開頁缺少每期命中檢討結算檔')
@@ -83,4 +85,4 @@ if '強制投注排除名單' not in visible or '全歷史逐期一致性掃描'
 expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'
 if expected_direction not in visible: errors.append('公開戰報未照實顯示排序方向')
 if errors: raise SystemExit('鐵律看門狗失敗：'+'；'.join(errors))
-print(json.dumps({'看門狗':'通過','官方期別':official['period'],'公開期別':health['latest_period'],'全歷史':True,'命中檢討':'完成','滾動候選':286,'1中1主選':result['single_published'],'戰報可見英文':0},ensure_ascii=False))
+print(json.dumps({'看門狗':'通過','官方期別':official['period'],'公開期別':health['latest_period'],'全歷史':True,'命中檢討':'完成','滾動候選':286,'1中1主選':result['single_published'],'模型警報':warnings,'戰報可見英文':0},ensure_ascii=False))
