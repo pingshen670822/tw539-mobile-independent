@@ -213,6 +213,8 @@ GLOBAL_HISTORY_WEIGHTS = {
 FORMAL_FEATURE_KEYS = tuple(GLOBAL_HISTORY_WEIGHTS)
 GLOBAL_HISTORY_BLEND = 1.00
 MODEL_SEARCH_CANDIDATE_COUNT = 286
+MAX_ANCHOR_MODULE_WEIGHT = .50
+ROLLING_ENSEMBLE_MEMBERS = 3
 ROLLING_CALIBRATION_DRAWS = 360
 ROLLING_HOLDOUT_DRAWS = 360
 ROLLING_CALIBRATION_FOLDS = 3
@@ -244,6 +246,64 @@ def rank_numbers(score: dict[int,float], seed: str) -> list[int]:
     """直接依重新精算分數排序；同分時公平破同分，不做事後補位。"""
     tie={n:hashlib.sha256(f"{seed}:{n}".encode()).hexdigest() for n in score}
     return sorted(score,key=lambda n:(score[n],tie[n]),reverse=True)
+
+
+def average_weights(weight_sets: list[dict[str, float]]) -> dict[str, float]:
+    """將多個正式模型壓成可讀的平均模組占比；實際排序仍使用名次共識。"""
+    if not weight_sets:
+        raise ValueError("多模型權重不可為空")
+    return {
+        key: sum(float(weights[key]) for weights in weight_sets) / len(weight_sets)
+        for key in FORMAL_FEATURE_KEYS
+    }
+
+
+def consensus_borda_score(rankings: list[list[int]]) -> dict[int, float]:
+    """以名次共識合併模型，避免單一權重組壟斷主選。"""
+    if not rankings:
+        raise ValueError("多模型排名不可為空")
+    score = {number: 0.0 for number in range(1, 40)}
+    for ranked in rankings:
+        for position, number in enumerate(ranked):
+            score[number] += 39 - position
+    return score
+
+
+def ensemble_scores_from_features(
+    features: dict[str, dict[int, float]],
+    weight_sets: list[dict[str, float]],
+    previous_nums: tuple[int, ...],
+    seed: str,
+    repeat_exposure: list[int],
+    repeat_hits: list[int],
+) -> tuple[dict[int, float], dict[int, float], list[dict], list[list[int]]]:
+    """各模型先獨立做連莊資格，再以名次共識重排並二次守門。"""
+    rankings = []
+    for weights in weight_sets:
+        raw = scores_from_features(features, weights)
+        adjusted, _ = apply_repeat_qualification(
+            raw,
+            features,
+            weights,
+            previous_nums,
+            seed,
+            repeat_exposure,
+            repeat_hits,
+        )
+        rankings.append(rank_numbers(adjusted, seed))
+    consensus = consensus_borda_score(rankings)
+    effective_weights = average_weights(weight_sets)
+    adjusted, repeat_audit = apply_repeat_qualification(
+        consensus,
+        features,
+        effective_weights,
+        previous_nums,
+        seed,
+        repeat_exposure,
+        repeat_hits,
+    )
+    raw_effective = scores_from_features(features, effective_weights)
+    return adjusted, raw_effective, repeat_audit, rankings
 
 
 def apply_repeat_qualification(score: dict[int,float], features: dict[str,dict[int,float]], weights: dict[str,float], previous_nums: tuple[int,...], seed: str, repeat_exposure: list[int], repeat_hits: list[int]) -> tuple[dict[int,float], list[dict]]:
@@ -289,8 +349,17 @@ def apply_repeat_qualification(score: dict[int,float], features: dict[str,dict[i
     return adjusted,audits
 
 
-def scores(history: list[dict], weights: dict[str, float]) -> dict[int, float]:
+def scores(history: list[dict], weights: dict[str, float] | list[dict[str, float]]) -> dict[int, float]:
     state=formal_history_state(history); features=state.features()
+    if isinstance(weights, list):
+        return ensemble_scores_from_features(
+            features,
+            weights,
+            history[-1]["nums"],
+            history[-1]["period"],
+            state.repeat_exposure,
+            state.repeat_hits,
+        )[0]
     raw=scores_from_features(features,weights)
     return apply_repeat_qualification(raw,features,weights,history[-1]["nums"],history[-1]["period"],state.repeat_exposure,state.repeat_hits)[0]
 
@@ -456,24 +525,36 @@ def select_rolling_weights(draws: list[dict], holdout: int = ROLLING_HOLDOUT_DRA
             "long_history_quality": long_quality,
             "quality": round(recent_quality * 1.5 + long_quality, 6),
         })
-    stable = [x for x in evaluated if x["validation"]["folds_all_valid"]
+    eligible = [
+        x for x in evaluated
+        if max(x["weights"].values()) <= MAX_ANCHOR_MODULE_WEIGHT + 1e-12
+    ]
+    stable = [x for x in eligible if x["validation"]["folds_all_valid"]
               and x["validation"]["ranking_direction_valid"]
               and x["long_history_validation"]["ranking_direction_valid"]
               and x["long_history_validation"]["positive_folds"] >= 6]
-    directional = [x for x in evaluated if x["validation"]["ranking_direction_valid"]
+    directional = [x for x in eligible if x["validation"]["ranking_direction_valid"]
                    and x["long_history_validation"]["ranking_direction_valid"]]
-    pool = stable or directional or evaluated
+    pool = stable or directional or eligible
     selected = max(pool, key=lambda x:(
         x["long_history_validation"]["ranking_direction_valid"], x["long_history_validation"]["positive_folds"],
         x["validation"]["folds_all_valid"], x["validation"]["positive_folds"], x["quality"],
         x["validation"]["single_hits"], -x["validation"]["avg_actual_rank"], -x["candidate_index"]))
-    leaderboard = sorted(evaluated, key=lambda x:(
+    ensemble_pool = directional or eligible
+    leaderboard = sorted(ensemble_pool, key=lambda x:(
         x["long_history_validation"]["ranking_direction_valid"], x["long_history_validation"]["positive_folds"],
         x["validation"]["folds_all_valid"], x["validation"]["positive_folds"], x["quality"],
         x["validation"]["single_hits"]), reverse=True)[:10]
+    ensemble_members = [dict(item["weights"]) for item in leaderboard[:ROLLING_ENSEMBLE_MEMBERS]]
+    if len(ensemble_members) != ROLLING_ENSEMBLE_MEMBERS:
+        raise RuntimeError("均衡多模型成員不足")
     diagnostic = {
         "selected": True,
         "candidate_count": len(candidates),
+        "eligible_candidate_count": len(eligible),
+        "max_anchor_module_weight": MAX_ANCHOR_MODULE_WEIGHT,
+        "ensemble_member_count": ROLLING_ENSEMBLE_MEMBERS,
+        "ensemble_members": ensemble_members,
         "candidate_grid_sha256": candidate_grid_sha256(candidates),
         "selected_candidate_index": selected["candidate_index"],
         "weights": selected["weights"],
@@ -483,7 +564,7 @@ def select_rolling_weights(draws: list[dict], holdout: int = ROLLING_HOLDOUT_DRA
         "long_history_quality": selected["long_history_quality"],
         "quality": selected["quality"],
         "selection_pool": "recent_and_long_history_stable" if stable else ("recent_and_long_history_directional" if directional else "best_available"),
-        "method": "rolling_all_history_286_grid_recent_three_fold_plus_long_history",
+        "method": "balanced_three_model_consensus_all_history_286_grid",
         "calibration_window": {
             "samples": len(cases),
             "first_period": draws[calibration_start]["period"],
@@ -547,7 +628,12 @@ def make_tickets(score: dict[int, float], count: int, seed: str, excluded: set[i
     return tickets
 
 
-def ranking_direction_metrics(draws: list[dict], weights: dict[str, float], start: int, end: int | None = None) -> dict:
+def ranking_direction_metrics(
+    draws: list[dict],
+    weights: dict[str, float] | list[dict[str, float]],
+    start: int,
+    end: int | None = None,
+) -> dict:
     """獨立重算指定隔離區段的高低分方向，不產生牌組也不讀既有戰報。"""
     end = min(len(draws), len(draws) if end is None else end)
     if not 1 <= start < end:
@@ -559,8 +645,19 @@ def ranking_direction_metrics(draws: list[dict], weights: dict[str, float], star
         if i == 0:
             state.update(draw)
             continue
-        features=state.features(); raw=scores_from_features(features, weights)
-        sc=apply_repeat_qualification(raw,features,weights,draws[i-1]["nums"],draws[i-1]["period"],state.repeat_exposure,state.repeat_hits)[0]
+        features=state.features()
+        if isinstance(weights,list):
+            sc=ensemble_scores_from_features(
+                features,
+                weights,
+                draws[i-1]["nums"],
+                draws[i-1]["period"],
+                state.repeat_exposure,
+                state.repeat_hits,
+            )[0]
+        else:
+            raw=scores_from_features(features, weights)
+            sc=apply_repeat_qualification(raw,features,weights,draws[i-1]["nums"],draws[i-1]["period"],state.repeat_exposure,state.repeat_hits)[0]
         if i >= start:
             order = rank_numbers(sc, draws[i - 1]["period"])
             actual = set(draw["nums"])
@@ -642,6 +739,81 @@ def rolling_direction_metrics(draws: list[dict], anchor_weights: dict[str,float]
     return result
 
 
+def rolling_ensemble_direction_metrics(
+    draws: list[dict],
+    anchor_weight_sets: list[dict[str, float]],
+    start: int,
+    end: int | None = None,
+    learning_rate: float = ROLLING_LEARNING_RATE,
+) -> dict:
+    """三個均衡模型各自於開獎後回灌，再以名次共識產生下一期排序。"""
+    end = min(len(draws), len(draws) if end is None else end)
+    state = ExpandingHistoryState()
+    current = [dict(weights) for weights in anchor_weight_sets]
+    total = _empty_metric()
+    path = []
+    for index, draw in enumerate(draws[:end]):
+        if index == 0:
+            state.update(draw)
+            continue
+        if index < start:
+            state.update(draw)
+            continue
+        features = state.features()
+        adjusted, _, _, member_rankings = ensemble_scores_from_features(
+            features,
+            current,
+            draws[index - 1]["nums"],
+            draws[index - 1]["period"],
+            state.repeat_exposure,
+            state.repeat_hits,
+        )
+        ranked = rank_numbers(adjusted, draws[index - 1]["period"])
+        actual = set(draw["nums"])
+        positions = {number: position + 1 for position, number in enumerate(ranked)}
+        total["samples"] += 1
+        total["single_hits"] += int(ranked[0] in actual)
+        total["bottom1_hits"] += int(ranked[-1] in actual)
+        total["top5_hits"] += len(actual.intersection(ranked[:5]))
+        total["bottom5_hits"] += len(actual.intersection(ranked[-5:]))
+        total["top9_hits"] += len(actual.intersection(ranked[:9]))
+        total["bottom9_hits"] += len(actual.intersection(ranked[-9:]))
+        total["rank_sum"] += sum(positions[number] for number in actual)
+        updates = []
+        for member_index, weights in enumerate(current):
+            current[member_index], update = rolling_weight_update(
+                weights,
+                features,
+                member_rankings[member_index],
+                actual,
+                learning_rate,
+            )
+            updates.append(update)
+        path.append({"period": draw["period"], "updates": updates})
+        state.update(draw)
+    result = _finish_metric(total)
+    result.update(
+        {
+            "anchor_weights": average_weights(anchor_weight_sets),
+            "anchor_ensemble_weights": anchor_weight_sets,
+            "end_weights": average_weights(current),
+            "end_ensemble_weights": current,
+            "rolling_update_count": len(path),
+            "rolling_learning_rate": learning_rate,
+            "rolling_path_sha256": hashlib.sha256(
+                json.dumps(
+                    path,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode()
+            ).hexdigest(),
+            "method": "three_balanced_models_borda_then_post_draw_module_error_update",
+        }
+    )
+    return result
+
+
 def rolling_rate_quality(metric: dict) -> float:
     n=metric['samples']
     return round((metric['single_hits']-metric['bottom1_hits'])*12
@@ -650,17 +822,26 @@ def rolling_rate_quality(metric: dict) -> float:
                  +(20-metric['avg_actual_rank'])*n*2,6)
 
 
-def select_rolling_learning_rate(draws: list[dict], anchor_weights: dict[str,float], holdout: int = ROLLING_HOLDOUT_DRAWS) -> tuple[float,dict]:
+def select_rolling_learning_rate(
+    draws: list[dict],
+    anchor_weights: dict[str, float] | list[dict[str, float]],
+    holdout: int = ROLLING_HOLDOUT_DRAWS,
+) -> tuple[float,dict]:
     """學習幅度只用末段隔離期以前的最近360期挑選，禁止查看隔離答案。"""
     holdout_start=len(draws)-min(ROLLING_HOLDOUT_DRAWS,holdout)
     start=holdout_start-ROLLING_CALIBRATION_DRAWS
     evaluated=[]
+    metric_function = (
+        rolling_ensemble_direction_metrics
+        if isinstance(anchor_weights, list)
+        else rolling_direction_metrics
+    )
     for rate in ROLLING_LEARNING_RATE_CANDIDATES:
-        metric=rolling_direction_metrics(draws,anchor_weights,start,holdout_start,rate)
+        metric=metric_function(draws,anchor_weights,start,holdout_start,rate)
         folds=[]
         for fold in range(ROLLING_CALIBRATION_FOLDS):
             a=start+fold*120; b=a+120
-            folds.append(rolling_direction_metrics(draws,anchor_weights,a,b,rate))
+            folds.append(metric_function(draws,anchor_weights,a,b,rate))
         evaluated.append({'learning_rate':rate,'validation':metric,
                           'folds_all_valid':all(x['ranking_direction_valid'] for x in folds),
                           'positive_folds':sum(x['ranking_direction_valid'] for x in folds),
@@ -671,7 +852,7 @@ def select_rolling_learning_rate(draws: list[dict], anchor_weights: dict[str,flo
     selected=max(pool,key=lambda x:(x['folds_all_valid'],x['positive_folds'],x['quality'],
                                     x['validation']['single_hits'],-x['learning_rate']))
     return selected['learning_rate'],{
-        'method':'pre_holdout_six_rate_three_fold_selection',
+        'method':'pre_holdout_three_model_six_rate_three_fold_selection' if isinstance(anchor_weights,list) else 'pre_holdout_six_rate_three_fold_selection',
         'candidate_count':len(ROLLING_LEARNING_RATE_CANDIDATES),
         'candidates':evaluated,
         'selected_learning_rate':selected['learning_rate'],
@@ -682,18 +863,36 @@ def select_rolling_learning_rate(draws: list[dict], anchor_weights: dict[str,flo
     }
 
 
-def backtest(draws: list[dict], weights: dict[str, float], tests: int = 180, ticket_count: int = 8,
+def backtest(draws: list[dict], weights: dict[str, float] | list[dict[str, float]], tests: int = 180, ticket_count: int = 8,
              learning_rate: float = ROLLING_LEARNING_RATE) -> dict:
     start = max(320, len(draws) - tests); hist = Counter(); total_hits = 0
     single_hits = top5_hits = top9_hits = 0
     bottom1_hits = bottom5_hits = bottom9_hits = rank_sum = 0
-    state = ExpandingHistoryState(); anchor=dict(weights); current=dict(weights); path=[]
+    state = ExpandingHistoryState()
+    ensemble_mode = isinstance(weights, list)
+    if ensemble_mode:
+        anchor_ensemble = [dict(item) for item in weights]
+        current_ensemble = [dict(item) for item in weights]
+        anchor = average_weights(anchor_ensemble)
+        current = dict(anchor)
+    else:
+        anchor_ensemble = []
+        current_ensemble = []
+        anchor = dict(weights)
+        current = dict(weights)
+    path=[]
     for i, draw in enumerate(draws):
         if i == 0:
             state.update(draw)
             continue
-        features = state.features(); raw=scores_from_features(features, current)
-        sc = apply_repeat_qualification(raw,features,current,draws[i-1]["nums"],draws[i-1]["period"],state.repeat_exposure,state.repeat_hits)[0]
+        features = state.features()
+        if ensemble_mode:
+            sc,_,_,member_rankings=ensemble_scores_from_features(
+                features,current_ensemble,draws[i-1]["nums"],draws[i-1]["period"],
+                state.repeat_exposure,state.repeat_hits)
+        else:
+            raw=scores_from_features(features, current)
+            sc = apply_repeat_qualification(raw,features,current,draws[i-1]["nums"],draws[i-1]["period"],state.repeat_exposure,state.repeat_hits)[0]
         if i < start:
             state.update(draw)
             continue
@@ -709,8 +908,17 @@ def backtest(draws: list[dict], weights: dict[str, float], tests: int = 180, tic
         ts = make_tickets(sc, ticket_count, draws[i - 1]["period"], set(ranked[-15:]))
         best = max(len(set(t) & actual) for t in ts)
         hist[best] += 1; total_hits += best
-        current,update=rolling_weight_update(current,features,ranked,actual,learning_rate)
-        path.append({"period":draw["period"],"update":update})
+        if ensemble_mode:
+            updates=[]
+            for member_index,member_weights in enumerate(current_ensemble):
+                current_ensemble[member_index],update=rolling_weight_update(
+                    member_weights,features,member_rankings[member_index],actual,learning_rate)
+                updates.append(update)
+            current=average_weights(current_ensemble)
+            path.append({"period":draw["period"],"updates":updates})
+        else:
+            current,update=rolling_weight_update(current,features,ranked,actual,learning_rate)
+            path.append({"period":draw["period"],"update":update})
         state.update(draw)
     n = sum(hist.values())
     p0 = 5 / 39
@@ -744,10 +952,12 @@ def backtest(draws: list[dict], weights: dict[str, float], tests: int = 180, tic
         "backtest_weights": current,
         "anchor_weights": anchor,
         "end_weights": current,
+        "anchor_ensemble_weights": anchor_ensemble,
+        "end_ensemble_weights": current_ensemble,
         "rolling_update_count": len(path),
         "rolling_learning_rate": learning_rate,
         "rolling_path_sha256": hashlib.sha256(json.dumps(path,ensure_ascii=False,sort_keys=True,separators=(",", ":")).encode()).hexdigest(),
-        "method": "pre_draw_prediction_then_post_draw_module_error_update",
+        "method": "three_balanced_models_borda_then_post_draw_module_error_update" if ensemble_mode else "pre_draw_prediction_then_post_draw_module_error_update",
     }
 
 
@@ -772,8 +982,8 @@ def build_number_diagnostics(ranked: list[int], score: dict[int, float], raw_sco
 
 
 def prediction_seal_payload(based_on_period: str, target_draw_date: str, history_hash: str,
-                            ranked_all: list[int], diagnostics: list[dict], weights: dict,
-                            selection: dict) -> dict:
+                             ranked_all: list[int], diagnostics: list[dict], weights: dict,
+                             selection: dict, ensemble_weights: list[dict] | None = None) -> dict:
     return {
         "based_on_period": based_on_period,
         "target_draw_date": target_draw_date,
@@ -781,6 +991,7 @@ def prediction_seal_payload(based_on_period: str, target_draw_date: str, history
         "ranked_all": ranked_all,
         "number_diagnostics": diagnostics,
         "production_weights": weights,
+        "production_ensemble_weights": ensemble_weights or [],
         "candidate_grid_sha256": selection["diagnostic"]["candidate_grid_sha256"],
         "calibration_window": selection["diagnostic"]["calibration_window"],
         "long_history_selection_window": selection["diagnostic"]["long_history_selection_window"],
@@ -821,7 +1032,7 @@ def _review_blocks(settlements: list[dict], current_weights: dict, selection: di
 <p>失準模組：{error_labels}。檢討只讀取開獎前封存的完整39碼排序、模組貢獻與資料庫指紋，禁止開獎後換號或補號。</p>
 <h3>實際開獎號碼原始排名</h3><table><thead><tr><th>號碼</th><th>開獎前排名</th><th>相對指數</th><th>區段</th></tr></thead><tbody>{actual_rows}</tbody></table>
 <h3>錯誤模組逐項檢討</h3><table><thead><tr><th>模組</th><th>開獎號平均貢獻</th><th>前5落空號平均貢獻</th><th>鑑別差</th><th>處理</th></tr></thead><tbody>{module_rows}</tbody></table>
-<h3>開獎後滾動權重重算</h3><p>本次已重新搜尋全部 {selection['diagnostic']['candidate_count']} 組權重；最近校正區間 {calibration['first_date']}～{calibration['last_date']} 共 {calibration['samples']} 期分三段驗算，再以 {long_window['source_first_date']}～{long_window['source_last_date']} 的更早長歷史抽取 {long_window['samples']} 個逐期樣本做九段穩定複驗。滾動幅度另以隔離期以前資料比較 {rate_selection['candidate_count']} 種候選，採用 {rate_selection['selected_learning_rate']:.4f}；權重與幅度鎖定後才用 {holdout['first_date']}～{holdout['last_date']} 共 {holdout['samples']} 期隔離驗收。</p>
+<h3>開獎後滾動權重重算</h3><p>本次已重新搜尋全部 {selection['diagnostic']['candidate_count']} 組權重，先排除單一模組超過五成的失衡組合，保留 {selection['diagnostic']['eligible_candidate_count']} 組均衡候選，再取前三個穩定模型做名次共識；最近校正區間 {calibration['first_date']}～{calibration['last_date']} 共 {calibration['samples']} 期分三段驗算，再以 {long_window['source_first_date']}～{long_window['source_last_date']} 的更早長歷史抽取 {long_window['samples']} 個逐期樣本做九段穩定複驗。三個模型各自於開獎後回灌，滾動幅度另以隔離期以前資料比較 {rate_selection['candidate_count']} 種候選，採用 {rate_selection['selected_learning_rate']:.4f}；全部參數鎖定後才用 {holdout['first_date']}～{holdout['last_date']} 共 {holdout['samples']} 期隔離驗收。</p>
 <table><thead><tr><th>模組</th><th>開獎前權重</th><th>重算後權重</th><th>調整</th></tr></thead><tbody>{weight_rows}</tbody></table>
 <p><b>資料證據：開獎前封存驗證碼 {seal_code}；檢討驗證碼 {review_code}。完整雜湊保存在結算資料檔供系統核驗，不在中文戰報顯示英文字母。</b></p>"""
     return recent_html, review_html
@@ -873,10 +1084,10 @@ def render(draws: list[dict], weights: dict, quality: list[float], score: dict, 
 <div class='band warn' id='review'><h2>每期開獎命中檢討與滾動修正</h2>{review_html}</div>
 <div class='band' id='low'><h2>強制投注排除名單</h2><p><b>以下後15名已從本系統全部推薦牌組強制排除，系統產生的任何牌組都不得包含。</b></p><table><thead><tr><th>區段</th><th>號碼</th><th>動作</th><th>鐵律</th></tr></thead><tbody>{lowrows}</tbody></table></div>
 <div class='band'><h2>連莊資格驗算</h2><p><b>上一期號碼必須同時符合：相對指數至少75、全歷史轉移貢獻為正、至少兩個正式模組正貢獻、該號碼全歷史連莊率不低於12.82%，且全系統5,599期掃描與最後360期隔離回測均通過，才准列入前9。</b>資格在正式排名前判定，不限制連莊顆數、不做事後補號。</p><table><thead><tr><th>上一期號碼</th><th>相對指數</th><th>轉移貢獻</th><th>正貢獻模組數</th><th>連莊命中／樣本</th><th>個別回測</th><th>資格</th><th>最終名次</th><th>結果</th></tr></thead><tbody>{repeat_rows}</tbody></table></div>
-<div class='band' id='models'><h2>公式模型實驗室</h2><p><b>每次預測與每一期回測都使用當時以前的全部歷史資料。</b>正式排名100%由逐期擴展全歷史模型產生；每期重新搜尋286組錨定權重，先以最近三百六十期分三段校正，再用更早長歷史做九段穩定複驗。末段三百六十期逐期先封存預測、開獎後才依錯誤模組更新下一期權重，回測終點權重必須等於畫面主選權重；一般號碼直接按重新精算分數排序，上一期號碼先通過連莊資格，不限制重複顆數、不做事後補位。同分號碼以當時已知期別公平破同分，禁止固定偏向小號或大號。</p><table><thead><tr><th>公式</th><th>資料範圍</th><th>實際權重</th><th>動作</th></tr></thead><tbody>{formula_rows}</tbody></table></div>
+<div class='band' id='models'><h2>公式模型實驗室</h2><p><b>每次預測與每一期回測都使用當時以前的全部歷史資料。</b>正式排名100%由逐期擴展全歷史模型產生；每期重新搜尋286組錨定權重，剔除單一模組超過五成的失衡組合，從146組均衡候選選出前三模型，以名次共識決定排序，避免任何單一模組或單一權重組壟斷主選。先以最近三百六十期分三段校正，再用更早長歷史做九段穩定複驗；末段三百六十期逐期先封存預測、開獎後才把錯誤分別回灌三個模型，三模型回測終點必須等於畫面正式模型。上一期號碼仍須先通過連莊資格，不限制重複顆數、不做事後補位；同分號碼以當時已知期別公平破同分，禁止固定偏向小號或大號。</p><table><thead><tr><th>公式</th><th>資料範圍</th><th>實際權重</th><th>動作</th></tr></thead><tbody>{formula_rows}</tbody></table></div>
 <div class='band'><h2>全歷史逐期一致性掃描</h2><p>從第321期開始逐期重算，共 {full_scan['samples']} 期：高分第1名 {full_scan['single_hits']} 中、最低分第1名 {full_scan['bottom1_hits']} 中；前5平均 {full_scan['top5_avg_hits']}、後5平均 {full_scan['bottom5_avg_hits']}；前9平均 {full_scan['top9_avg_hits']}、後9平均 {full_scan['bottom9_avg_hits']}；實際開獎號平均名次 {full_scan['avg_actual_rank']}。判定：{'排序方向通過' if full_scan['ranking_direction_valid'] else '排序方向未通過'}。</p></div>
-<div class='band warn'><h2>實戰失準回灌重排</h2><p>隔離保留 {bt['samples']} 期：高分第1名 {bt.get('single_hits',0)} 中、最低分第1名 {bt.get('bottom1_hits',0)} 中；前5平均 {bt.get('top5_avg_hits',0)}、後5平均 {bt.get('bottom5_avg_hits',0)}；前9平均 {bt.get('top9_avg_hits',0)}、後9平均 {bt.get('bottom9_avg_hits',0)}；實際開獎號平均名次 {bt.get('avg_actual_rank',0)}（中立值20）。每期 {len(tickets)} 組最佳組平均命中 {bt['avg_best_hits']}；{dist}。</p><p><b>錨定權重只用隔離期以前資料決定；隔離期內每期先預測、後開獎、再把錯誤模組回灌到下一期，共滾動更新 {bt.get('rolling_update_count',0)} 次。禁止用同一期答案改寫同一期預測。</b></p></div>
-  <div class='band'><h2>多模組校正對照</h2><div class='grid'><div class='card'><div class='label'>候選組合數</div><div class='value'>{selection['diagnostic']['candidate_count']}</div></div><div class='card'><div class='label'>前段三折校正</div><div class='value'>{'三段全數通過' if selection['diagnostic']['validation']['folds_all_valid'] else '採最佳穩定候選'}</div></div><div class='card'><div class='label'>採用原則</div><div class='value'>每期重搜、先校正、後隔離驗收</div></div></div></div>
+<div class='band warn'><h2>實戰失準回灌重排</h2><p>隔離保留 {bt['samples']} 期：高分第1名 {bt.get('single_hits',0)} 中、最低分第1名 {bt.get('bottom1_hits',0)} 中；前5平均 {bt.get('top5_avg_hits',0)}、後5平均 {bt.get('bottom5_avg_hits',0)}；前9平均 {bt.get('top9_avg_hits',0)}、後9平均 {bt.get('bottom9_avg_hits',0)}；實際開獎號平均名次 {bt.get('avg_actual_rank',0)}（中立值20）。每期 {len(tickets)} 組最佳組平均命中 {bt['avg_best_hits']}；{dist}。</p><p><b>前三均衡模型只用隔離期以前資料決定；隔離期內每期先做三模型名次共識並封存，開獎後才把錯誤分別回灌到下一期三個模型，共滾動更新 {bt.get('rolling_update_count',0)} 次。禁止用同一期答案改寫同一期預測。</b></p></div>
+  <div class='band'><h2>多模組校正對照</h2><div class='grid'><div class='card'><div class='label'>候選組合數</div><div class='value'>{selection['diagnostic']['candidate_count']}</div></div><div class='card'><div class='label'>均衡候選數</div><div class='value'>{selection['diagnostic']['eligible_candidate_count']}</div></div><div class='card'><div class='label'>正式共識模型</div><div class='value'>前三模型</div></div><div class='card'><div class='label'>前段三折校正</div><div class='value'>{'三段全數通過' if selection['diagnostic']['validation']['folds_all_valid'] else '採最佳穩定候選'}</div></div><div class='card'><div class='label'>採用原則</div><div class='value'>每期重搜、均衡篩選、三模共識、後隔離驗收</div></div></div></div>
 <div class='band' id='gate'><h2>鐵律守門</h2><table><thead><tr><th>項目</th><th>結果</th><th>說明</th></tr></thead><tbody><tr><td>重新運算</td><td>已完成</td><td>依最新資料從模型分數直接重排，不做補位</td></tr><tr><td>資料完整性</td><td>通過</td><td>去重、日期排序、號碼1至39、每期5個不重複</td></tr><tr><td>每期命中檢討</td><td>{'通過' if settlements and settlements[-1].get('review_status')=='completed_from_pre_draw_seal' else '等待首筆封存結算'}</td><td>只採開獎前封存排名與模組貢獻，逐期回灌重算</td></tr><tr><td>全歷史掃描</td><td>{'通過' if full_scan['ranking_direction_valid'] else '未通過'}</td><td>{full_scan['samples']}期逐期重新運算</td></tr><tr><td>未來資料隔離</td><td>通過</td><td>每期重搜286組，校正截止在最後三百六十期以前並鎖定參數</td></tr><tr><td>連莊資格</td><td>通過</td><td>相對指數、轉移貢獻、正貢獻模組三重驗算</td></tr><tr><td>上一期號碼檢查</td><td>通過</td><td>前5符合資格並列入{previous_overlap5}顆、前9符合資格並列入{previous_overlap9}顆</td></tr><tr><td>高低分方向</td><td>{rank_status}</td><td>同時計算前1／5／9與後1／5／9，禁止只報高分成績</td></tr><tr><td>主選產出</td><td>通過</td><td>每期固定產出最強獨隻並公開，不得缺號或事後換號</td></tr></tbody></table></div>
 <div class='band warn'><h2>模型健康與公開狀態</h2><table><thead><tr><th>項目</th><th>高分結果</th><th>低分對照</th><th>判定</th></tr></thead><tbody><tr><td>第1名隔離命中</td><td>{bt.get('single_hits',0)}/{bt['samples']}（{100*bt.get('single_rate',0):.2f}%）</td><td>最低分第1名 {bt.get('bottom1_hits',0)}/{bt['samples']}</td><td>{rank_status}</td></tr><tr><td>前5隔離平均</td><td>{bt.get('top5_avg_hits',0)}</td><td>後5 {bt.get('bottom5_avg_hits',0)}</td><td>{rank_status}</td></tr><tr><td>前9隔離平均</td><td>{bt.get('top9_avg_hits',0)}</td><td>後9 {bt.get('bottom9_avg_hits',0)}</td><td>{rank_status}</td></tr><tr><td>1中1主選</td><td>已公開</td><td>不宣稱必中</td><td>{single_status}</td></tr></tbody></table></div>
 <div class='band warn'><h2>實戰門檻與風險聲明</h2><p>今彩539為隨機遊戲，每組合法號碼理論機率相同；本戰報只供統計研究，不保證中獎或獲利。請設定固定娛樂預算。</p></div></main></html>"""
@@ -889,19 +1100,25 @@ def main() -> None:
     holdout = min(a.backtest, 360)
     # 每期重新搜尋 286 組；正式權重只用末段隔離期以前資料選定。
     anchor_weights, diagnostics, selection = select_rolling_weights(draws, holdout)
-    learning_rate, learning_rate_selection = select_rolling_learning_rate(draws, anchor_weights, holdout)
+    anchor_ensemble = diagnostics[0]["ensemble_members"]
+    learning_rate, learning_rate_selection = select_rolling_learning_rate(draws, anchor_ensemble, holdout)
     diagnostics[0]["learning_rate_selection"] = learning_rate_selection
     quality = [diagnostics[0]["quality"]]
-    bt = backtest(draws, anchor_weights, holdout, max(1, min(a.tickets, 30)), learning_rate)
+    bt = backtest(draws, anchor_ensemble, holdout, max(1, min(a.tickets, 30)), learning_rate)
     weights = dict(bt["end_weights"])
+    production_ensemble = [dict(item) for item in bt["end_ensemble_weights"]]
     diagnostics[0]["production_weights_after_rolling"] = weights
+    diagnostics[0]["production_ensemble_after_rolling"] = production_ensemble
     selection["production_weights_after_rolling"] = weights
+    selection["production_ensemble_after_rolling"] = production_ensemble
     selection["rolling_update_count"] = bt["rolling_update_count"]
     selection["rolling_path_sha256"] = bt["rolling_path_sha256"]
     selection["learning_rate_selection"] = learning_rate_selection
-    full_scan = ranking_direction_metrics(draws, weights, 320, len(draws))
-    current_state=formal_history_state(draws); current_features=current_state.features(); raw_sc=scores_from_features(current_features,weights)
-    sc,repeat_audit=apply_repeat_qualification(raw_sc,current_features,weights,draws[-1]["nums"],draws[-1]["period"],current_state.repeat_exposure,current_state.repeat_hits)
+    full_scan = ranking_direction_metrics(draws, production_ensemble, 320, len(draws))
+    current_state=formal_history_state(draws); current_features=current_state.features()
+    sc,raw_sc,repeat_audit,_=ensemble_scores_from_features(
+        current_features,production_ensemble,draws[-1]["nums"],draws[-1]["period"],
+        current_state.repeat_exposure,current_state.repeat_hits)
     ranked = rank_numbers(sc,draws[-1]["period"])
     number_diagnostics = build_number_diagnostics(ranked, sc, raw_sc, current_features, weights)
     tickets = make_tickets(sc, max(1, min(a.tickets, 30)), draws[-1]["period"], set(ranked[-15:]))
@@ -910,7 +1127,9 @@ def main() -> None:
     while target.weekday() == 6: target += timedelta(days=1)
     history_payload="|".join(f"{x['period']}:{x['date']}:{','.join(map(str,x['nums']))}" for x in draws)
     history_hash=hashlib.sha256(history_payload.encode()).hexdigest()
-    seal_payload = prediction_seal_payload(draws[-1]["period"], target.isoformat(), history_hash, ranked, number_diagnostics, weights, selection)
+    seal_payload = prediction_seal_payload(
+        draws[-1]["period"], target.isoformat(), history_hash, ranked,
+        number_diagnostics, weights, selection, production_ensemble)
     seal_sha256 = hashlib.sha256(json.dumps(seal_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     fingerprint = seal_sha256[:16]
     report = OUT / "最新539科學預測戰報.html"
@@ -939,13 +1158,16 @@ def main() -> None:
             "global_history_features": FORMAL_FEATURE_KEYS
         },
         "production_weights": weights,
+        "production_ensemble_weights": production_ensemble,
         "audit_weights": weights,
         "audit_candidate_quality": quality,
         "weight_selection_diagnostics": diagnostics,
         "rolling_calibration": selection,
         "rolling_weight_adjustment": {
-            "anchor_weights": anchor_weights,
+            "anchor_weights": average_weights(anchor_ensemble),
+            "anchor_ensemble_weights": anchor_ensemble,
             "production_weights": weights,
+            "production_ensemble_weights": production_ensemble,
             "updates": bt["rolling_update_count"],
             "learning_rate": bt["rolling_learning_rate"],
             "learning_rate_selection": learning_rate_selection,

@@ -39,7 +39,9 @@ seal=result.get('pre_draw_seal') or {}; sealed_payload=seal.get('sealed_payload'
 seal_hash=hashlib.sha256(json.dumps(sealed_payload,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 if seal.get('sha256')!=seal_hash or not seal.get('no_post_draw_substitution') or result.get('recalculation_fingerprint')!=seal_hash[:16]: errors.append('開獎前封存雜湊驗證失敗')
 selection=(result.get('weight_selection_diagnostics') or [{}])[0]
-if selection.get('candidate_count')!=286 or selection.get('method')!='rolling_all_history_286_grid_recent_three_fold_plus_long_history' or (selection.get('long_history_selection_window') or {}).get('samples',0)<1000: errors.append('開獎後沒有重新搜尋全部286組或缺少長歷史複驗')
+ensemble=result.get('production_ensemble_weights') or []
+if selection.get('candidate_count')!=286 or selection.get('eligible_candidate_count')!=146 or selection.get('method')!='balanced_three_model_consensus_all_history_286_grid' or (selection.get('long_history_selection_window') or {}).get('samples',0)<1000: errors.append('開獎後沒有完成286組搜尋、146組均衡篩選或長歷史複驗')
+if len(ensemble)!=3 or len(selection.get('ensemble_members') or [])!=3: errors.append('公開結果缺少前三均衡模型共識')
 overlap=result.get('previous_draw_overlap_audit') or {}
 if overlap.get('method')!='model_score_with_repeat_qualification' or overlap.get('full_previous_draw_copied_into_top9') or set(data_latest.get('nums') or []).issubset(ranked[:9]): errors.append('公開結果仍整批複製上一期號碼或缺少連莊資格')
 repeat_by_number={x.get('number'):x for x in (result.get('repeat_qualification') or [])}
@@ -54,12 +56,12 @@ if coverage.get('database_sha256')!=health.get('history_database_sha256'): error
 backtest=result.get('backtest') or {}
 if 'ranking_direction_valid' not in backtest or 'bottom1_hits' not in backtest or 'bottom5_avg_hits' not in backtest or 'bottom9_avg_hits' not in backtest: errors.append('公開結果缺少高低分方向驗證')
 if bool(backtest.get('ranking_direction_valid'))!=bool(health.get('ranking_direction_valid')): errors.append('公開結果與健康檔的排序方向不同步')
-if backtest.get('backtest_weights')!=result.get('production_weights') or result.get('audit_weights')!=result.get('production_weights'): errors.append('公開主選與隔離回測權重不同')
+if backtest.get('backtest_weights')!=result.get('production_weights') or backtest.get('end_ensemble_weights')!=ensemble or result.get('audit_weights')!=result.get('production_weights'): errors.append('公開主選與三模型隔離回測權重不同')
 rolling=result.get('rolling_weight_adjustment') or {}
-if rolling.get('production_weights')!=result.get('production_weights') or rolling.get('anchor_weights')!=selection.get('weights') or rolling.get('updates')!=360 or rolling.get('method')!='pre_draw_prediction_then_post_draw_module_error_update': errors.append('最新開獎錯誤沒有逐期回灌到下一期正式權重')
+if rolling.get('production_weights')!=result.get('production_weights') or rolling.get('production_ensemble_weights')!=ensemble or rolling.get('anchor_ensemble_weights')!=selection.get('ensemble_members') or rolling.get('updates')!=360 or rolling.get('method')!='three_balanced_models_borda_then_post_draw_module_error_update': errors.append('最新開獎錯誤沒有逐期回灌三個均衡模型')
 rate_selection=rolling.get('learning_rate_selection') or {}
 if rate_selection.get('candidate_count')!=6 or not rate_selection.get('holdout_not_used') or rate_selection.get('selected_learning_rate')!=rolling.get('learning_rate'): errors.append('滾動學習幅度未以隔離期以前資料選定')
-if backtest.get('anchor_weights')!=rolling.get('anchor_weights') or backtest.get('end_weights')!=result.get('production_weights') or backtest.get('rolling_update_count')!=360: errors.append('隔離回測沒有重演同一套逐期權重更新')
+if backtest.get('anchor_ensemble_weights')!=rolling.get('anchor_ensemble_weights') or backtest.get('end_ensemble_weights')!=ensemble or backtest.get('end_weights')!=result.get('production_weights') or backtest.get('rolling_update_count')!=360: errors.append('隔離回測沒有重演三模型逐期權重更新')
 if backtest.get('rolling_learning_rate')!=rolling.get('learning_rate'): errors.append('隔離回測與正式滾動學習幅度不同')
 full_scan=result.get('full_history_scan') or {}
 if full_scan.get('samples')!=result.get('draw_count',0)-320: errors.append('公開結果的全歷史逐期掃描期數錯誤')

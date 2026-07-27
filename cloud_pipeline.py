@@ -77,7 +77,9 @@ def read_jsonl(path):
 def reconstruct_pre_draw_snapshot(prediction):
     """舊封存只准用目標日前資料精確重建，且原前15名與指紋必須完全一致。"""
     from tw539_ultra import (load_draws, formal_history_state, scores_from_features,
-                             apply_repeat_qualification, rank_numbers, build_number_diagnostics)
+                             apply_repeat_qualification, average_weights,
+                             ensemble_scores_from_features, rank_numbers,
+                             build_number_diagnostics)
     draws=load_draws(CSV)
     index=next((i for i,x in enumerate(draws) if str(x['period'])==str(prediction.get('based_on_period'))),-1)
     if index<0: raise RuntimeError('找不到封存預測所依據的歷史期別')
@@ -90,8 +92,16 @@ def reconstruct_pre_draw_snapshot(prediction):
     if stored_hash and stored_hash!=history_hash: raise RuntimeError('封存預測歷史資料庫指紋不符')
     weights=prediction.get('production_weights') or {}
     if not weights: raise RuntimeError('封存預測缺少正式權重')
-    state=formal_history_state(history); features=state.features(); raw=scores_from_features(features,weights)
-    adjusted,_=apply_repeat_qualification(raw,features,weights,history[-1]['nums'],history[-1]['period'],state.repeat_exposure,state.repeat_hits)
+    ensemble=prediction.get('production_ensemble_weights') or []
+    state=formal_history_state(history); features=state.features()
+    if ensemble:
+        adjusted,raw,_,_=ensemble_scores_from_features(
+            features,ensemble,history[-1]['nums'],history[-1]['period'],
+            state.repeat_exposure,state.repeat_hits)
+        weights=average_weights(ensemble)
+    else:
+        raw=scores_from_features(features,weights)
+        adjusted,_=apply_repeat_qualification(raw,features,weights,history[-1]['nums'],history[-1]['period'],state.repeat_exposure,state.repeat_hits)
     ranked=rank_numbers(adjusted,history[-1]['period'])
     if ranked[:15] != list(prediction.get('ranked_top15') or []):
         raise RuntimeError('舊封存預測無法精確重建原始前15名')
@@ -103,6 +113,7 @@ def reconstruct_pre_draw_snapshot(prediction):
     legacy_payload={'based_on_period':history[-1]['period'],'target_draw_date':prediction.get('target_draw_date'),
                     'history_database_sha256':history_hash,'ranked_all':ranked,
                     'number_diagnostics':diagnostics,'production_weights':weights,
+                    'production_ensemble_weights':ensemble,
                     'legacy_fingerprint':prediction.get('recalculation_fingerprint')}
     legacy_hash=hashlib.sha256(json.dumps(legacy_payload,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
     return ranked,diagnostics,legacy_hash
