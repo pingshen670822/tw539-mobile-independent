@@ -13,6 +13,7 @@ from pathlib import Path
 from cloud_pipeline import expected_latest_date
 from tw539_ultra import (FORMAL_FEATURE_KEYS, GLOBAL_HISTORY_BLEND, MAX_ANCHOR_MODULE_WEIGHT,
                          MODEL_SEARCH_CANDIDATE_COUNT, ROLLING_ENSEMBLE_MEMBERS,
+                         ROLLING_BOUNDARY_BLEND_CANDIDATES, ROLLING_LEARNING_RATE_CANDIDATES,
                          apply_repeat_qualification, average_weights, build_number_diagnostics,
                          candidate_grid_sha256, ensemble_scores_from_features, evaluation_cases,
                          fast_case_ranking, formal_history_state, load_draws, rank_numbers,
@@ -104,7 +105,7 @@ else:
     rolling_adjustment=result.get('rolling_weight_adjustment') or {}
     if rolling_adjustment.get('anchor_weights')!=average_weights(anchor_ensemble) or rolling_adjustment.get('anchor_ensemble_weights')!=anchor_ensemble: fail('三模型錨定權重與逐期滾動未銜接')
     if rolling_adjustment.get('production_weights')!=weights or rolling_adjustment.get('production_ensemble_weights')!=ensemble_weights: fail('三模型終點權重與正式主選未銜接')
-    if rolling_adjustment.get('updates')!=360 or rolling_adjustment.get('method')!='three_balanced_models_borda_then_post_draw_module_error_update': fail('最新開獎錯誤沒有逐一回灌三個模型')
+    if rolling_adjustment.get('updates')!=360 or rolling_adjustment.get('method')!='three_balanced_models_borda_then_post_draw_top9_boundary_update': fail('最新開獎錯誤沒有逐一回灌三個模型與前9邊界')
     if validation.get('samples')!=360: fail('前段滾動校正不是三百六十期')
     if selected.get('method')!='balanced_three_model_consensus_all_history_286_grid': fail('正式權重不是均衡三模型共識與長歷史複驗')
     calibration=selected.get('calibration_window') or {}; holdout_window=selected.get('holdout_window') or {}
@@ -120,6 +121,8 @@ else:
     if expected_anchor_ensemble!=anchor_ensemble: fail('重新搜尋後的前三均衡模型不同')
     expected_rate,expected_rate_selection=select_rolling_learning_rate(draws,anchor_ensemble,360)
     if expected_rate!=rolling_adjustment.get('learning_rate') or not expected_rate_selection.get('holdout_not_used'): fail('滾動學習幅度使用了隔離答案或無法重現')
+    if expected_rate_selection.get('candidate_count')!=len(ROLLING_LEARNING_RATE_CANDIDATES)*len(ROLLING_BOUNDARY_BLEND_CANDIDATES): fail('學習幅度與前9邊界參數未完整交叉搜尋')
+    if expected_rate_selection.get('selected_boundary_blend')!=rolling_adjustment.get('boundary_blend'): fail('前9邊界占比無法重現')
     expected_diagnostics[0]['learning_rate_selection']=expected_rate_selection
     expected_diagnostics[0]['production_weights_after_rolling']=weights
     expected_diagnostics[0]['production_ensemble_after_rolling']=ensemble_weights
@@ -170,6 +173,7 @@ if seal.get('algorithm')!='sha256' or seal.get('sha256')!=seal_hash or not seal.
 if sealed_payload.get('based_on_period')!=latest['period'] or sealed_payload.get('target_draw_date')!=target.isoformat(): fail('開獎前封存期別日期錯誤')
 if sealed_payload.get('history_database_sha256')!=coverage.get('database_sha256') or sealed_payload.get('ranked_all')!=ranked_all or sealed_payload.get('number_diagnostics')!=result.get('number_diagnostics'): fail('開獎前封存內容與公開結果不同步')
 if sealed_payload.get('production_ensemble_weights')!=ensemble_weights: fail('開獎前封存缺少三模型終點權重')
+if sealed_payload.get('rolling_boundary_blend')!=(result.get('rolling_weight_adjustment') or {}).get('boundary_blend'): fail('開獎前封存缺少前9邊界占比')
 if result.get('recalculation_fingerprint')!=seal_hash[:16]: fail('預測重算指紋沒有取自完整開獎前封存資料')
 
 tickets=[tuple(int(n) for n in ticket) for ticket in (result.get('tickets') or [])]
@@ -188,20 +192,26 @@ if backtest.get('samples')!=360: fail('隔離回測不是三百六十期')
 if sum(int(v) for v in (backtest.get('distribution') or {}).values())!=backtest.get('samples'): fail('隔離回測分布加總錯誤')
 for key in ('single_rate','single_random_baseline','single_wilson_lower95'):
     if not 0<=float(backtest.get(key,-1))<=1: fail(f'隔離回測數值錯誤：{key}')
-for key in ('bottom1_hits','bottom5_avg_hits','bottom9_avg_hits','avg_actual_rank','ranking_direction_valid','backtest_weights'):
+for key in ('bottom1_hits','bottom5_avg_hits','top9_hits','rank10_15_hits','rank10_15_avg_hits','top9_capture_rate','boundary_control_valid','bottom9_avg_hits','avg_actual_rank','ranking_direction_valid','backtest_weights'):
     if key not in backtest: fail(f'隔離回測缺少高低分方向欄位：{key}')
-calculated_direction=(backtest.get('single_hits',0)>backtest.get('bottom1_hits',0) and backtest.get('top5_avg_hits',0)>backtest.get('bottom5_avg_hits',0) and backtest.get('top9_avg_hits',0)>backtest.get('bottom9_avg_hits',0) and backtest.get('avg_actual_rank',99)<20)
+calculated_direction=(backtest.get('single_hits',0)>backtest.get('bottom1_hits',0)
+                      and backtest.get('top5_avg_hits',0)>backtest.get('bottom5_avg_hits',0)
+                      and backtest.get('top9_avg_hits',0)>backtest.get('bottom9_avg_hits',0)
+                      and backtest.get('top9_hits',0)>backtest.get('rank10_15_hits',0)
+                      and backtest.get('avg_actual_rank',99)<20)
 if bool(backtest.get('ranking_direction_valid'))!=calculated_direction: fail('高低分方向判定與實際數據不符')
 if not calculated_direction: warn('校正後正式模型的最後三百六十期排序方向未通過，已保留模型警報但不得阻斷官方資料發布')
 if backtest.get('backtest_weights')!=weights or backtest.get('end_weights')!=weights: fail('隔離滾動回測平均終點權重與正式主選權重不同')
 if backtest.get('anchor_ensemble_weights')!=anchor_ensemble or backtest.get('end_ensemble_weights')!=ensemble_weights: fail('隔離回測三模型起訖權重不同步')
 if backtest.get('anchor_weights')!=average_weights(anchor_ensemble) or backtest.get('rolling_update_count')!=360: fail('隔離回測沒有從三個均衡模型逐期回灌360次')
-recalculated_holdout=rolling_ensemble_direction_metrics(draws,anchor_ensemble,len(draws)-360,len(draws),backtest.get('rolling_learning_rate'))
-for key in ('samples','single_hits','bottom1_hits','top5_avg_hits','bottom5_avg_hits','top9_avg_hits','bottom9_avg_hits','avg_actual_rank','ranking_direction_valid','end_weights','end_ensemble_weights','rolling_update_count','rolling_path_sha256','method'):
+recalculated_holdout=rolling_ensemble_direction_metrics(
+    draws,anchor_ensemble,len(draws)-360,len(draws),
+    backtest.get('rolling_learning_rate'),backtest.get('rolling_boundary_blend'))
+for key in ('samples','single_hits','bottom1_hits','top5_avg_hits','bottom5_avg_hits','top9_hits','rank10_15_hits','top15_hits','top9_avg_hits','rank10_15_avg_hits','top15_avg_hits','top9_capture_rate','boundary_control_valid','bottom9_avg_hits','avg_actual_rank','ranking_direction_valid','end_weights','end_ensemble_weights','rolling_update_count','rolling_learning_rate','rolling_boundary_blend','rolling_path_sha256','method'):
     if recalculated_holdout.get(key)!=backtest.get(key): fail(f'最後三百六十期獨立重算不符：{key}')
 full_scan=result.get('full_history_scan') or {}
 recalculated_full=ranking_direction_metrics(draws,ensemble_weights,320,len(draws))
-for key in ('samples','single_hits','bottom1_hits','top5_avg_hits','bottom5_avg_hits','top9_avg_hits','bottom9_avg_hits','avg_actual_rank','ranking_direction_valid'):
+for key in ('samples','single_hits','bottom1_hits','top5_avg_hits','bottom5_avg_hits','top9_hits','rank10_15_hits','top15_hits','top9_avg_hits','rank10_15_avg_hits','top15_avg_hits','top9_capture_rate','boundary_control_valid','bottom9_avg_hits','avg_actual_rank','ranking_direction_valid'):
     if recalculated_full.get(key)!=full_scan.get(key): fail(f'全歷史逐期掃描獨立重算不符：{key}')
 if full_scan.get('samples')!=len(draws)-320: fail('全歷史逐期一致性掃描期數錯誤')
 if not full_scan.get('ranking_direction_valid'): warn('全歷史逐期排序方向未通過，已保留模型警報但不得阻斷官方資料發布')
@@ -214,13 +224,14 @@ for label,item in (('戰報健康檔',health),('手機健康檔',site_health)):
     if not item.get('model_release_allowed') or not item.get('single_release_allowed'): fail(f'{label}仍會封鎖主選公開')
     if not item.get('freshness_ok') or latest['date']<expected_latest_date(): fail(f'{label}資料新鮮度錯誤')
     if bool(item.get('ranking_direction_valid'))!=bool(backtest.get('ranking_direction_valid')): fail(f'{label}未同步排序方向狀態')
+    if item.get('rank10_15_avg_hits')!=backtest.get('rank10_15_avg_hits') or item.get('top9_capture_rate')!=backtest.get('top9_capture_rate') or bool(item.get('boundary_control_valid'))!=bool(backtest.get('boundary_control_valid')): fail(f'{label}未同步前9邊界狀態')
 if version.get('latest_period')!=latest['period'] or version.get('latest_draw_date')!=latest['date']: fail('手機版本檔期別日期錯誤')
 
 for path in (REPORTS/'最新539科學預測戰報.html',SITE/'index.html'):
     visible=visible_text(path)
     english=sorted(set(re.findall(r'[A-Za-z][A-Za-z0-9_-]*',visible)))
     if english: fail(f'{path.name} 可見文字含英文：'+','.join(english))
-    for term in ('1中1主選','公開狀態','已公開','全歷史核心占比','每期固定產出最強獨隻','相對指數（非機率）','開獎前封存實戰紀錄','每期開獎命中檢討與滾動修正','錯誤模組逐項檢討','開獎後滾動權重重算','禁止開獎後換號或補號','強制投注排除名單','禁止進入任何推薦牌組','全歷史逐期一致性掃描','上一期號碼檢查','連莊資格驗算','相對指數至少75','全歷史連莊率不低於12.82%','加權貢獻','不做補位'):
+    for term in ('1中1主選','公開狀態','已公開','全歷史核心占比','每期固定產出最強獨隻','相對指數（非機率）','開獎前封存實戰紀錄','每期開獎命中檢討與滾動修正','錯誤模組與前9邊界逐項檢討','第10至15名命中','前9邊界偏移','開獎後滾動權重重算','禁止開獎後換號或補號','強制投注排除名單','禁止進入任何推薦牌組','全歷史逐期一致性掃描','上一期號碼檢查','連莊資格驗算','相對指數至少75','全歷史連莊率不低於12.82%','加權貢獻','不做補位'):
         if term not in visible: fail(f'{path.name} 缺少：{term}')
     expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'
     if expected_direction not in visible: fail(f'{path.name} 未照實顯示高低分方向')
@@ -258,10 +269,17 @@ else:
             if len(sealed)!=1: fail('已結算紀錄沒有唯一對應的開獎前正式封存')
             if item.get('review_status')!='completed_from_pre_draw_seal' or not item.get('rolling_recalculation_required'): fail('已結算紀錄沒有完成開獎前封存命中檢討')
             if len(item.get('actual_rankings') or [])!=5 or len(item.get('module_review') or [])!=len(weights): fail('命中檢討缺少實際號碼排名或逐模組檢討')
+            if item.get('target_draw_date','')>='2026-07-27':
+                actual_boundary=sorted(x.get('number') for x in (item.get('actual_rankings') or []) if 10<=int(x.get('rank',99))<=15)
+                if sorted(item.get('rank10_15_hits') or [])!=actual_boundary: fail('命中檢討的第10至15名偏移紀錄錯誤')
+                if item.get('boundary_review_status') not in ('triggered_and_recalculated','checked_no_rank_10_15_hit'): fail('命中檢討缺少前9邊界狀態')
+                for module in item.get('module_review') or []:
+                    if any(key not in module for key in ('boundary_actual_mean','false_top9_mean','boundary_discrimination_gap','boundary_error_flag')): fail('命中檢討缺少前9邊界逐模組比較')
             if not (item.get('data_integrity') or {}).get('no_post_draw_substitution'): fail('命中檢討沒有禁止事後換號')
             if len(str(item.get('pre_draw_seal_sha256') or item.get('legacy_reconstruction_sha256') or ''))!=64 or len(str(item.get('review_evidence_sha256') or ''))!=64: fail('命中檢討證據雜湊缺失')
             adjustment=item.get('rolling_adjustment') or {}
             if not adjustment.get('completed') or adjustment.get('candidate_count')!=MODEL_SEARCH_CANDIDATE_COUNT: fail('開獎後沒有重跑全部286組權重')
+            if item.get('target_draw_date','')>='2026-07-27' and adjustment.get('boundary_parameter_candidate_count')!=len(ROLLING_LEARNING_RATE_CANDIDATES)*len(ROLLING_BOUNDARY_BLEND_CANDIDATES): fail('開獎後沒有重跑三十組前9邊界參數')
         if not health.get('settled_previous') or not site_health.get('settled_previous'): fail('健康檔沒有標示最新命中檢討完成')
     except Exception as exc: fail(f'已結算紀錄無法驗證：{exc}')
 

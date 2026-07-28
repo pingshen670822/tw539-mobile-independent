@@ -54,15 +54,16 @@ coverage=result.get('history_coverage') or {}
 if coverage.get('mode')!='all_available_history_for_every_prediction' or coverage.get('global_history_blend')!=1.0: errors.append('公開結果不是100%全歷史正式排名')
 if coverage.get('database_sha256')!=health.get('history_database_sha256'): errors.append('公開結果與健康檔的資料庫指紋不同')
 backtest=result.get('backtest') or {}
-if 'ranking_direction_valid' not in backtest or 'bottom1_hits' not in backtest or 'bottom5_avg_hits' not in backtest or 'bottom9_avg_hits' not in backtest: errors.append('公開結果缺少高低分方向驗證')
+if 'ranking_direction_valid' not in backtest or 'bottom1_hits' not in backtest or 'bottom5_avg_hits' not in backtest or 'bottom9_avg_hits' not in backtest or 'rank10_15_avg_hits' not in backtest or 'top9_capture_rate' not in backtest or 'boundary_control_valid' not in backtest: errors.append('公開結果缺少高低分與前9邊界驗證')
 if bool(backtest.get('ranking_direction_valid'))!=bool(health.get('ranking_direction_valid')): errors.append('公開結果與健康檔的排序方向不同步')
+if backtest.get('rank10_15_avg_hits')!=health.get('rank10_15_avg_hits') or backtest.get('top9_capture_rate')!=health.get('top9_capture_rate') or bool(backtest.get('boundary_control_valid'))!=bool(health.get('boundary_control_valid')): errors.append('公開結果與健康檔的前9邊界狀態不同步')
 if backtest.get('backtest_weights')!=result.get('production_weights') or backtest.get('end_ensemble_weights')!=ensemble or result.get('audit_weights')!=result.get('production_weights'): errors.append('公開主選與三模型隔離回測權重不同')
 rolling=result.get('rolling_weight_adjustment') or {}
-if rolling.get('production_weights')!=result.get('production_weights') or rolling.get('production_ensemble_weights')!=ensemble or rolling.get('anchor_ensemble_weights')!=selection.get('ensemble_members') or rolling.get('updates')!=360 or rolling.get('method')!='three_balanced_models_borda_then_post_draw_module_error_update': errors.append('最新開獎錯誤沒有逐期回灌三個均衡模型')
+if rolling.get('production_weights')!=result.get('production_weights') or rolling.get('production_ensemble_weights')!=ensemble or rolling.get('anchor_ensemble_weights')!=selection.get('ensemble_members') or rolling.get('updates')!=360 or rolling.get('method')!='three_balanced_models_borda_then_post_draw_top9_boundary_update': errors.append('最新開獎錯誤沒有逐期回灌三個均衡模型與前9邊界')
 rate_selection=rolling.get('learning_rate_selection') or {}
-if rate_selection.get('candidate_count')!=6 or not rate_selection.get('holdout_not_used') or rate_selection.get('selected_learning_rate')!=rolling.get('learning_rate'): errors.append('滾動學習幅度未以隔離期以前資料選定')
+if rate_selection.get('candidate_count')!=30 or rate_selection.get('learning_rate_candidate_count')!=6 or rate_selection.get('boundary_blend_candidate_count')!=5 or not rate_selection.get('holdout_not_used') or rate_selection.get('selected_learning_rate')!=rolling.get('learning_rate') or rate_selection.get('selected_boundary_blend')!=rolling.get('boundary_blend'): errors.append('滾動學習幅度與前9邊界占比未以隔離期以前資料選定')
 if backtest.get('anchor_ensemble_weights')!=rolling.get('anchor_ensemble_weights') or backtest.get('end_ensemble_weights')!=ensemble or backtest.get('end_weights')!=result.get('production_weights') or backtest.get('rolling_update_count')!=360: errors.append('隔離回測沒有重演三模型逐期權重更新')
-if backtest.get('rolling_learning_rate')!=rolling.get('learning_rate'): errors.append('隔離回測與正式滾動學習幅度不同')
+if backtest.get('rolling_learning_rate')!=rolling.get('learning_rate') or backtest.get('rolling_boundary_blend')!=rolling.get('boundary_blend'): errors.append('隔離回測與正式滾動學習幅度或前9邊界占比不同')
 full_scan=result.get('full_history_scan') or {}
 if full_scan.get('samples')!=result.get('draw_count',0)-320: errors.append('公開結果的全歷史逐期掃描期數錯誤')
 if not full_scan.get('ranking_direction_valid'): warnings.append('全歷史逐期排序方向未通過')
@@ -73,8 +74,11 @@ else:
     review=settlements[-1]
     if review.get('target_draw_date')!=official['draw_date'] or str(review.get('official_period'))!=str(official['period']): errors.append('最新命中檢討未對應官方最新期別')
     if review.get('review_status')!='completed_from_pre_draw_seal' or len(review.get('actual_rankings') or [])!=5 or len(review.get('module_review') or [])!=len(result.get('production_weights') or {}): errors.append('最新命中檢討缺少實際排名或錯誤模組分析')
+    actual_boundary=sorted(x.get('number') for x in (review.get('actual_rankings') or []) if 10<=int(x.get('rank',99))<=15)
+    if sorted(review.get('rank10_15_hits') or [])!=actual_boundary or review.get('boundary_review_status') not in ('triggered_and_recalculated','checked_no_rank_10_15_hit'): errors.append('最新命中檢討缺少第10至15名偏移檢查')
+    if any(any(key not in module for key in ('boundary_actual_mean','false_top9_mean','boundary_discrimination_gap','boundary_error_flag')) for module in (review.get('module_review') or [])): errors.append('最新命中檢討缺少前9邊界逐模組比較')
     if not (review.get('data_integrity') or {}).get('no_post_draw_substitution'): errors.append('命中檢討未禁止開獎後換號')
-    if not (review.get('rolling_adjustment') or {}).get('completed') or (review.get('rolling_adjustment') or {}).get('candidate_count')!=286: errors.append('命中檢討後沒有完成286組滾動重算')
+    if not (review.get('rolling_adjustment') or {}).get('completed') or (review.get('rolling_adjustment') or {}).get('candidate_count')!=286 or (review.get('rolling_adjustment') or {}).get('boundary_parameter_candidate_count')!=30: errors.append('命中檢討後沒有完成286組權重與30組前9邊界重算')
     if not health.get('settled_previous'): errors.append('健康檔沒有標示最新命中檢討完成')
 visible=re.sub(r'(?is)<(?:style|script)\b[^>]*>.*?</(?:style|script)>',' ',page)
 visible=html.unescape(re.sub(r'(?s)<[^>]+>',' ',visible))
@@ -82,7 +86,7 @@ english=sorted(set(re.findall(r'[A-Za-z][A-Za-z0-9_-]*',visible)))
 if english: errors.append('戰報可見文字含英文：'+','.join(english))
 if '1中1主選' not in visible or (ranked and f'{int(ranked[0]):02}' not in visible): errors.append('公開戰報未顯示1中1主選')
 if '低機率' in visible or '當期預測前九' in visible: errors.append('公開戰報仍含易誤解標示或事後回算內容')
-if '每期開獎命中檢討與滾動修正' not in visible or '錯誤模組逐項檢討' not in visible or '開獎後滾動權重重算' not in visible or '禁止開獎後換號或補號' not in visible: errors.append('公開戰報缺少每期命中檢討或滾動修正')
+if '每期開獎命中檢討與滾動修正' not in visible or '錯誤模組與前9邊界逐項檢討' not in visible or '第10至15名命中' not in visible or '前9邊界偏移' not in visible or '開獎後滾動權重重算' not in visible or '禁止開獎後換號或補號' not in visible: errors.append('公開戰報缺少每期命中檢討或前9邊界滾動修正')
 if '強制投注排除名單' not in visible or '全歷史逐期一致性掃描' not in visible or '上一期號碼檢查' not in visible or '連莊資格驗算' not in visible or '全歷史連莊率不低於12.82%' not in visible: errors.append('公開戰報缺少投注排除、全歷史掃描或連莊資格')
 expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'
 if expected_direction not in visible: errors.append('公開戰報未照實顯示排序方向')

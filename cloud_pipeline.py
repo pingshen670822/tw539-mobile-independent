@@ -129,7 +129,10 @@ def enrich_settlement(item, prediction, latest):
         ranked,diagnostics,legacy_hash=reconstruct_pre_draw_snapshot(prediction)
     diagnostics_by_number={int(x['number']):x for x in diagnostics}
     if set(diagnostics_by_number)!=set(range(1,40)): raise RuntimeError('開獎前39碼診斷不完整')
-    actual=set(latest['nums']); top5=ranked[:5]; missed=[n for n in top5 if n not in actual]
+    actual=set(latest['nums']); top5=ranked[:5]; top9=ranked[:9]
+    missed=[n for n in top5 if n not in actual]
+    boundary_hits=[n for n in ranked[9:15] if n in actual]
+    false_top9=[n for n in top9 if n not in actual]
     weights=prediction.get('production_weights') or {}
     actual_rankings=[]
     for number in latest['nums']:
@@ -139,18 +142,32 @@ def enrich_settlement(item, prediction, latest):
     module_review=[]; error_modules=[]
     for key in weights:
         actual_mean=sum(float(diagnostics_by_number[n]['weighted_contributions'][key]) for n in actual)/5
-        comparison=missed or [n for n in ranked[:5] if n not in actual]
+        comparison=missed or false_top9 or ranked[:5]
         missed_mean=sum(float(diagnostics_by_number[n]['weighted_contributions'][key]) for n in comparison)/max(1,len(comparison))
-        gap=actual_mean-missed_mean; error=gap<0
+        gap=actual_mean-missed_mean
+        if boundary_hits and false_top9:
+            boundary_mean=sum(float(diagnostics_by_number[n]['weighted_contributions'][key]) for n in boundary_hits)/len(boundary_hits)
+            false_top9_mean=sum(float(diagnostics_by_number[n]['weighted_contributions'][key]) for n in false_top9)/len(false_top9)
+            boundary_gap=boundary_mean-false_top9_mean
+        else:
+            boundary_mean=false_top9_mean=boundary_gap=0.0
+        boundary_error=bool(boundary_hits and boundary_gap<0)
+        error=gap<0 or boundary_error
         if error: error_modules.append(key)
         module_review.append({'module':key,'actual_mean':round(actual_mean,9),'missed_top5_mean':round(missed_mean,9),
-                              'discrimination_gap':round(gap,9),'error_flag':error})
+                              'discrimination_gap':round(gap,9),
+                              'boundary_actual_mean':round(boundary_mean,9),
+                              'false_top9_mean':round(false_top9_mean,9),
+                              'boundary_discrimination_gap':round(boundary_gap,9),
+                              'boundary_error_flag':boundary_error,'error_flag':error})
     item.update({
         'official_period':latest['period'],'actual_numbers':latest['nums'],
-        'top5_published':top5,'top9_published':ranked[:9],
+        'top5_published':top5,'top9_published':top9,
         'single_published':prediction.get('single_published'),
         'single_hit':bool(prediction.get('single_published') in actual),
-        'top5_hits':sorted(actual.intersection(top5)),'top9_hits':sorted(actual.intersection(ranked[:9])),
+        'top5_hits':sorted(actual.intersection(top5)),'top9_hits':sorted(actual.intersection(top9)),
+        'rank10_15_hits':sorted(boundary_hits),'false_top9':false_top9,
+        'boundary_review_status':'triggered_and_recalculated' if boundary_hits else 'checked_no_rank_10_15_hit',
         'actual_rankings':actual_rankings,'average_actual_rank':round(sum(x['rank'] for x in actual_rankings)/5,4),
         'missed_top5':missed,'module_review':module_review,'error_modules':error_modules,
         'production_weights_before':weights,
@@ -230,8 +247,11 @@ def build_site(latest, changed, previous=None):
             'completed':True,'candidate_count':diagnostic.get('candidate_count'),
             'weights_before':settlement.get('production_weights_before'),
             'weights_after':current.get('production_weights'),
+            'production_ensemble_weights':current.get('production_ensemble_weights'),
             'calibration_window':diagnostic.get('calibration_window'),
             'holdout_window':diagnostic.get('holdout_window'),
+            'boundary_parameter_candidate_count':(current.get('rolling_weight_adjustment') or {}).get('learning_rate_selection',{}).get('candidate_count'),
+            'selected_boundary_blend':(current.get('rolling_weight_adjustment') or {}).get('boundary_blend'),
             'next_single':current.get('single_published'),
             'next_prediction_seal_sha256':(current.get('pre_draw_seal') or {}).get('sha256')}
         evidence={k:v for k,v in settlement.items() if k!='review_evidence_sha256'}
@@ -253,6 +273,9 @@ def build_site(latest, changed, previous=None):
         'top1_hits':backtest.get('single_hits'),'bottom1_hits':backtest.get('bottom1_hits'),
         'top5_avg_hits':backtest.get('top5_avg_hits'),'bottom5_avg_hits':backtest.get('bottom5_avg_hits'),
         'top9_avg_hits':backtest.get('top9_avg_hits'),'bottom9_avg_hits':backtest.get('bottom9_avg_hits'),
+        'rank10_15_avg_hits':backtest.get('rank10_15_avg_hits'),
+        'top9_capture_rate':backtest.get('top9_capture_rate'),
+        'boundary_control_valid':backtest.get('boundary_control_valid'),
         'model_drift':'ranking_direction_invalid' if not direction_ok else ('no_verified_edge' if degraded else 'stable_or_observing'),
         'recalculation_fingerprint':current.get('recalculation_fingerprint'),
         'settled_previous':bool(settlement and settlement.get('review_status')=='completed_from_pre_draw_seal')

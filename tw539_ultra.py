@@ -222,6 +222,7 @@ LONG_HISTORY_SAMPLE_STEP = 6
 LONG_HISTORY_FOLDS = 9
 ROLLING_LEARNING_RATE = .001
 ROLLING_LEARNING_RATE_CANDIDATES = (.0005,.001,.002,.003,.005,.01)
+ROLLING_BOUNDARY_BLEND_CANDIDATES = (0.0,.25,.50,.75,1.0)
 
 FEATURE_LABELS = {
     "full_freq": "全歷史頻率",
@@ -411,7 +412,8 @@ def evaluation_cases(draws: list[dict], start: int, end: int) -> list[dict]:
 
 def _empty_metric() -> dict:
     return {"samples": 0, "single_hits": 0, "bottom1_hits": 0, "top5_hits": 0,
-            "bottom5_hits": 0, "top9_hits": 0, "bottom9_hits": 0, "rank_sum": 0}
+            "bottom5_hits": 0, "top9_hits": 0, "rank10_15_hits": 0,
+            "top15_hits": 0, "bottom9_hits": 0, "rank_sum": 0}
 
 
 def fast_case_ranking(case: dict, weights: dict[str, float]) -> list[int]:
@@ -436,9 +438,7 @@ def fast_case_ranking(case: dict, weights: dict[str, float]) -> list[int]:
     return front+[n for n in base if n not in front]
 
 
-def _add_case(metric: dict, case: dict, weights: dict[str, float]) -> None:
-    ranked = fast_case_ranking(case, weights)
-    actual = set(case["actual"])
+def _add_ranking(metric: dict, ranked: list[int], actual: set[int]) -> None:
     positions = {n: i + 1 for i, n in enumerate(ranked)}
     metric["samples"] += 1
     metric["single_hits"] += int(ranked[0] in actual)
@@ -446,8 +446,16 @@ def _add_case(metric: dict, case: dict, weights: dict[str, float]) -> None:
     metric["top5_hits"] += len(actual.intersection(ranked[:5]))
     metric["bottom5_hits"] += len(actual.intersection(ranked[-5:]))
     metric["top9_hits"] += len(actual.intersection(ranked[:9]))
+    metric["rank10_15_hits"] += len(actual.intersection(ranked[9:15]))
+    metric["top15_hits"] += len(actual.intersection(ranked[:15]))
     metric["bottom9_hits"] += len(actual.intersection(ranked[-9:]))
     metric["rank_sum"] += sum(positions[n] for n in actual)
+
+
+def _add_case(metric: dict, case: dict, weights: dict[str, float]) -> None:
+    ranked = fast_case_ranking(case, weights)
+    actual = set(case["actual"])
+    _add_ranking(metric,ranked,actual)
 
 
 def _finish_metric(metric: dict) -> dict:
@@ -458,16 +466,25 @@ def _finish_metric(metric: dict) -> dict:
     direction = (metric["single_hits"] > metric["bottom1_hits"]
                  and metric["top5_hits"] > metric["bottom5_hits"]
                  and metric["top9_hits"] > metric["bottom9_hits"]
+                 and metric["top9_hits"] > metric["rank10_15_hits"]
                  and avg_rank < 20)
+    top15_hits = metric["top15_hits"]
     return {
         "samples": n,
         "single_hits": metric["single_hits"],
         "bottom1_hits": metric["bottom1_hits"],
+        "top9_hits": metric["top9_hits"],
+        "rank10_15_hits": metric["rank10_15_hits"],
+        "top15_hits": top15_hits,
         "top5_avg_hits": round(metric["top5_hits"] / n, 4),
         "bottom5_avg_hits": round(metric["bottom5_hits"] / n, 4),
         "top9_avg_hits": round(metric["top9_hits"] / n, 4),
+        "rank10_15_avg_hits": round(metric["rank10_15_hits"] / n, 4),
+        "top15_avg_hits": round(top15_hits / n, 4),
+        "top9_capture_rate": round(metric["top9_hits"] / max(1, top15_hits), 4),
         "bottom9_avg_hits": round(metric["bottom9_hits"] / n, 4),
         "avg_actual_rank": round(avg_rank, 4),
+        "boundary_control_valid": metric["top9_hits"] > metric["rank10_15_hits"],
         "ranking_direction_valid": direction,
     }
 
@@ -487,14 +504,16 @@ def metrics_from_cases(cases: list[dict], weights: dict[str, float], fold_count:
 
 
 def calibration_quality(metric: dict) -> float:
-    """同時獎勵獨隻、前五、前九與整體名次，避免只追逐單一偶然命中。"""
+    """直接獎勵前9並懲罰命中滯留第10至15名，避免平均名次掩蓋邊界錯誤。"""
     n = metric["samples"]
     single_lift = metric["single_hits"] - metric["bottom1_hits"]
     top5_lift = (metric["top5_avg_hits"] - metric["bottom5_avg_hits"]) * n
     top9_lift = (metric["top9_avg_hits"] - metric["bottom9_avg_hits"]) * n
+    boundary_lift = (metric["top9_avg_hits"] - metric["rank10_15_avg_hits"]) * n
     rank_lift = (20 - metric["avg_actual_rank"]) * n
     fold_bonus = metric["positive_folds"] * 25 + (100 if metric["folds_all_valid"] else 0)
-    return round(single_lift * 12 + top5_lift * 3 + top9_lift * 1.5 + rank_lift * 2 + fold_bonus, 6)
+    return round(single_lift * 8 + top5_lift * 2 + top9_lift * 7
+                 + boundary_lift * 4 + rank_lift + fold_bonus, 6)
 
 
 def select_rolling_weights(draws: list[dict], holdout: int = ROLLING_HOLDOUT_DRAWS) -> tuple[dict, list[dict], dict]:
@@ -593,6 +612,9 @@ def select_rolling_weights(draws: list[dict], holdout: int = ROLLING_HOLDOUT_DRA
     slim_leaderboard = [{
         "candidate_index": x["candidate_index"], "weights": x["weights"], "quality": x["quality"],
         "single_hits": x["validation"]["single_hits"], "positive_folds": x["validation"]["positive_folds"],
+        "top9_avg_hits": x["validation"]["top9_avg_hits"],
+        "rank10_15_avg_hits": x["validation"]["rank10_15_avg_hits"],
+        "top9_capture_rate": x["validation"]["top9_capture_rate"],
         "long_history_positive_folds": x["long_history_validation"]["positive_folds"],
         "long_history_direction_valid": x["long_history_validation"]["ranking_direction_valid"],
         "folds_all_valid": x["validation"]["folds_all_valid"],
@@ -667,50 +689,86 @@ def ranking_direction_metrics(
             total["top5_hits"] += len(actual.intersection(order[:5]))
             total["bottom5_hits"] += len(actual.intersection(order[-5:]))
             total["top9_hits"] += len(actual.intersection(order[:9]))
+            total["rank10_15_hits"] += len(actual.intersection(order[9:15]))
+            total["top15_hits"] += len(actual.intersection(order[:15]))
             total["bottom9_hits"] += len(actual.intersection(order[-9:]))
             positions = {n: p + 1 for p, n in enumerate(order)}
             rank_sum += sum(positions[n] for n in actual)
         state.update(draw)
     n = total["samples"]
     avg_rank = rank_sum / (n * 5)
-    direction = total["single_hits"] > total["bottom1_hits"] and total["top5_hits"] > total["bottom5_hits"] and total["top9_hits"] > total["bottom9_hits"] and avg_rank < 20
+    direction = (total["single_hits"] > total["bottom1_hits"]
+                 and total["top5_hits"] > total["bottom5_hits"]
+                 and total["top9_hits"] > total["bottom9_hits"]
+                 and total["top9_hits"] > total["rank10_15_hits"]
+                 and avg_rank < 20)
     return {
         "samples": n,
         "single_hits": total["single_hits"],
         "bottom1_hits": total["bottom1_hits"],
+        "top9_hits": total["top9_hits"],
+        "rank10_15_hits": total["rank10_15_hits"],
+        "top15_hits": total["top15_hits"],
         "top5_avg_hits": round(total["top5_hits"] / n, 4),
         "bottom5_avg_hits": round(total["bottom5_hits"] / n, 4),
         "top9_avg_hits": round(total["top9_hits"] / n, 4),
+        "rank10_15_avg_hits": round(total["rank10_15_hits"] / n, 4),
+        "top15_avg_hits": round(total["top15_hits"] / n, 4),
+        "top9_capture_rate": round(total["top9_hits"] / max(1,total["top15_hits"]), 4),
         "bottom9_avg_hits": round(total["bottom9_hits"] / n, 4),
         "avg_actual_rank": round(avg_rank, 4),
+        "boundary_control_valid": total["top9_hits"] > total["rank10_15_hits"],
         "ranking_direction_valid": direction,
     }
 
 
 def rolling_weight_update(weights: dict[str,float], features: dict[str,dict[int,float]],
-                          ranked: list[int], actual: set[int], learning_rate: float = ROLLING_LEARNING_RATE) -> tuple[dict,dict]:
-    """開獎後用實際號碼與前5落空號的模組鑑別差調整下一期權重；不改寫本期封存預測。"""
+                          ranked: list[int], actual: set[int], learning_rate: float = ROLLING_LEARNING_RATE,
+                          consensus_ranked: list[int] | None = None,
+                          boundary_blend: float = 0.0) -> tuple[dict,dict]:
+    """開獎後同時回灌整體失準與第10至15名滯留；只影響下一期，不改寫本期封存。"""
     missed=[n for n in ranked[:5] if n not in actual]
-    comparison=missed or [n for n in ranked[:5] if n not in actual]
+    comparison=missed or [n for n in ranked[:9] if n not in actual] or ranked[:5]
+    boundary_order=consensus_ranked or ranked
+    boundary_actual=[n for n in boundary_order[9:15] if n in actual]
+    false_top9=[n for n in boundary_order[:9] if n not in actual]
     signals={}
+    boundary_signals={}
     unscaled={}
     for key in weights:
         actual_mean=sum(features[key][n] for n in actual)/5
         missed_mean=sum(features[key][n] for n in comparison)/max(1,len(comparison))
-        signal=max(-2.0,min(2.0,actual_mean-missed_mean))
+        global_signal=actual_mean-missed_mean
+        if boundary_actual and false_top9:
+            boundary_mean=sum(features[key][n] for n in boundary_actual)/len(boundary_actual)
+            false_mean=sum(features[key][n] for n in false_top9)/len(false_top9)
+            boundary_signal=boundary_mean-false_mean
+            signal=(1-boundary_blend)*global_signal+boundary_blend*boundary_signal
+            boundary_signals[key]=round(boundary_signal,9)
+        else:
+            signal=global_signal
+            boundary_signals[key]=None
+        signal=max(-2.0,min(2.0,signal))
         signals[key]=signal
         unscaled[key]=max(.01,float(weights[key]))*math.exp(learning_rate*signal)
     total=sum(unscaled.values())
     updated={key:unscaled[key]/total for key in weights}
     return updated,{"signals":{k:round(v,9) for k,v in signals.items()},
+                    "boundary_signals":boundary_signals,
+                    "boundary_triggered":bool(boundary_actual),
+                    "boundary_actual_numbers":boundary_actual,
+                    "false_top9_numbers":false_top9,
+                    "boundary_blend":boundary_blend,
                     "weights_before":{k:round(float(weights[k]),12) for k in weights},
                     "weights_after":{k:round(float(updated[k]),12) for k in weights}}
 
 
 def rolling_direction_metrics(draws: list[dict], anchor_weights: dict[str,float], start: int, end: int | None = None,
-                              learning_rate: float = ROLLING_LEARNING_RATE) -> dict:
+                              learning_rate: float = ROLLING_LEARNING_RATE,
+                              boundary_blend: float = 0.0, fold_count: int = 0) -> dict:
     end=min(len(draws),len(draws) if end is None else end)
     state=ExpandingHistoryState(); current=dict(anchor_weights); total=_empty_metric(); path=[]
+    folds=[_empty_metric() for _ in range(fold_count)]
     for i,draw in enumerate(draws[:end]):
         if i==0:
             state.update(draw); continue
@@ -719,12 +777,11 @@ def rolling_direction_metrics(draws: list[dict], anchor_weights: dict[str,float]
         features=state.features(); raw=scores_from_features(features,current)
         adjusted,_=apply_repeat_qualification(raw,features,current,draws[i-1]["nums"],draws[i-1]["period"],state.repeat_exposure,state.repeat_hits)
         ranked=rank_numbers(adjusted,draws[i-1]["period"]); actual=set(draw["nums"])
-        positions={n:p+1 for p,n in enumerate(ranked)}
-        total["samples"]+=1; total["single_hits"]+=int(ranked[0] in actual); total["bottom1_hits"]+=int(ranked[-1] in actual)
-        total["top5_hits"]+=len(actual.intersection(ranked[:5])); total["bottom5_hits"]+=len(actual.intersection(ranked[-5:]))
-        total["top9_hits"]+=len(actual.intersection(ranked[:9])); total["bottom9_hits"]+=len(actual.intersection(ranked[-9:]))
-        total["rank_sum"]+=sum(positions[n] for n in actual)
-        current,update=rolling_weight_update(current,features,ranked,actual,learning_rate)
+        _add_ranking(total,ranked,actual)
+        if fold_count:
+            fold_index=min(fold_count-1,(i-start)*fold_count//max(1,end-start))
+            _add_ranking(folds[fold_index],ranked,actual)
+        current,update=rolling_weight_update(current,features,ranked,actual,learning_rate,ranked,boundary_blend)
         path.append({"period":draw["period"],"update":update})
         state.update(draw)
     result=_finish_metric(total)
@@ -733,9 +790,12 @@ def rolling_direction_metrics(draws: list[dict], anchor_weights: dict[str,float]
         "end_weights":current,
         "rolling_update_count":len(path),
         "rolling_learning_rate":learning_rate,
+        "rolling_boundary_blend":boundary_blend,
         "rolling_path_sha256":hashlib.sha256(json.dumps(path,ensure_ascii=False,sort_keys=True,separators=(",", ":")).encode()).hexdigest(),
-        "method":"pre_draw_prediction_then_post_draw_module_error_update",
+        "method":"pre_draw_prediction_then_post_draw_top9_boundary_update",
     })
+    if fold_count:
+        result["fold_metrics"]=[_finish_metric(item) for item in folds]
     return result
 
 
@@ -745,12 +805,15 @@ def rolling_ensemble_direction_metrics(
     start: int,
     end: int | None = None,
     learning_rate: float = ROLLING_LEARNING_RATE,
+    boundary_blend: float = 0.0,
+    fold_count: int = 0,
 ) -> dict:
-    """三個均衡模型各自於開獎後回灌，再以名次共識產生下一期排序。"""
+    """三個均衡模型各自回灌整體與前9邊界錯誤，再以名次共識產生下一期排序。"""
     end = min(len(draws), len(draws) if end is None else end)
     state = ExpandingHistoryState()
     current = [dict(weights) for weights in anchor_weight_sets]
     total = _empty_metric()
+    folds = [_empty_metric() for _ in range(fold_count)]
     path = []
     for index, draw in enumerate(draws[:end]):
         if index == 0:
@@ -770,15 +833,10 @@ def rolling_ensemble_direction_metrics(
         )
         ranked = rank_numbers(adjusted, draws[index - 1]["period"])
         actual = set(draw["nums"])
-        positions = {number: position + 1 for position, number in enumerate(ranked)}
-        total["samples"] += 1
-        total["single_hits"] += int(ranked[0] in actual)
-        total["bottom1_hits"] += int(ranked[-1] in actual)
-        total["top5_hits"] += len(actual.intersection(ranked[:5]))
-        total["bottom5_hits"] += len(actual.intersection(ranked[-5:]))
-        total["top9_hits"] += len(actual.intersection(ranked[:9]))
-        total["bottom9_hits"] += len(actual.intersection(ranked[-9:]))
-        total["rank_sum"] += sum(positions[number] for number in actual)
+        _add_ranking(total,ranked,actual)
+        if fold_count:
+            fold_index=min(fold_count-1,(index-start)*fold_count//max(1,end-start))
+            _add_ranking(folds[fold_index],ranked,actual)
         updates = []
         for member_index, weights in enumerate(current):
             current[member_index], update = rolling_weight_update(
@@ -787,6 +845,8 @@ def rolling_ensemble_direction_metrics(
                 member_rankings[member_index],
                 actual,
                 learning_rate,
+                ranked,
+                boundary_blend,
             )
             updates.append(update)
         path.append({"period": draw["period"], "updates": updates})
@@ -800,6 +860,7 @@ def rolling_ensemble_direction_metrics(
             "end_ensemble_weights": current,
             "rolling_update_count": len(path),
             "rolling_learning_rate": learning_rate,
+            "rolling_boundary_blend": boundary_blend,
             "rolling_path_sha256": hashlib.sha256(
                 json.dumps(
                     path,
@@ -808,18 +869,21 @@ def rolling_ensemble_direction_metrics(
                     separators=(",", ":"),
                 ).encode()
             ).hexdigest(),
-            "method": "three_balanced_models_borda_then_post_draw_module_error_update",
+            "method": "three_balanced_models_borda_then_post_draw_top9_boundary_update",
         }
     )
+    if fold_count:
+        result["fold_metrics"]=[_finish_metric(item) for item in folds]
     return result
 
 
 def rolling_rate_quality(metric: dict) -> float:
     n=metric['samples']
-    return round((metric['single_hits']-metric['bottom1_hits'])*12
-                 +(metric['top5_avg_hits']-metric['bottom5_avg_hits'])*n*3
-                 +(metric['top9_avg_hits']-metric['bottom9_avg_hits'])*n*1.5
-                 +(20-metric['avg_actual_rank'])*n*2,6)
+    return round((metric['single_hits']-metric['bottom1_hits'])*8
+                 +(metric['top5_avg_hits']-metric['bottom5_avg_hits'])*n*2
+                 +(metric['top9_avg_hits']-metric['bottom9_avg_hits'])*n*7
+                 +(metric['top9_avg_hits']-metric['rank10_15_avg_hits'])*n*4
+                 +(20-metric['avg_actual_rank'])*n,6)
 
 
 def select_rolling_learning_rate(
@@ -827,7 +891,7 @@ def select_rolling_learning_rate(
     anchor_weights: dict[str, float] | list[dict[str, float]],
     holdout: int = ROLLING_HOLDOUT_DRAWS,
 ) -> tuple[float,dict]:
-    """學習幅度只用末段隔離期以前的最近360期挑選，禁止查看隔離答案。"""
+    """學習幅度與前9邊界占比只用末段隔離期以前資料挑選，禁止查看隔離答案。"""
     holdout_start=len(draws)-min(ROLLING_HOLDOUT_DRAWS,holdout)
     start=holdout_start-ROLLING_CALIBRATION_DRAWS
     evaluated=[]
@@ -837,25 +901,46 @@ def select_rolling_learning_rate(
         else rolling_direction_metrics
     )
     for rate in ROLLING_LEARNING_RATE_CANDIDATES:
-        metric=metric_function(draws,anchor_weights,start,holdout_start,rate)
-        folds=[]
-        for fold in range(ROLLING_CALIBRATION_FOLDS):
-            a=start+fold*120; b=a+120
-            folds.append(metric_function(draws,anchor_weights,a,b,rate))
-        evaluated.append({'learning_rate':rate,'validation':metric,
-                          'folds_all_valid':all(x['ranking_direction_valid'] for x in folds),
-                          'positive_folds':sum(x['ranking_direction_valid'] for x in folds),
-                          'fold_metrics':folds,'quality':rolling_rate_quality(metric)})
+        for boundary_blend in ROLLING_BOUNDARY_BLEND_CANDIDATES:
+            metric=metric_function(
+                draws,anchor_weights,start,holdout_start,rate,boundary_blend,
+                ROLLING_CALIBRATION_FOLDS)
+            folds=metric["fold_metrics"]
+            evaluated.append({'learning_rate':rate,'boundary_blend':boundary_blend,'validation':metric,
+                              'folds_all_valid':all(x['ranking_direction_valid'] for x in folds),
+                              'positive_folds':sum(x['ranking_direction_valid'] for x in folds),
+                              'fold_metrics':folds,'quality':rolling_rate_quality(metric)})
     stable=[x for x in evaluated if x['validation']['ranking_direction_valid'] and x['folds_all_valid']]
     directional=[x for x in evaluated if x['validation']['ranking_direction_valid']]
     pool=stable or directional or evaluated
     selected=max(pool,key=lambda x:(x['folds_all_valid'],x['positive_folds'],x['quality'],
-                                    x['validation']['single_hits'],-x['learning_rate']))
+                                    x['validation']['top9_hits'],x['validation']['single_hits'],
+                                    -x['learning_rate'],-x['boundary_blend']))
+    summary_keys=(
+        'samples','single_hits','bottom1_hits','top5_avg_hits','bottom5_avg_hits',
+        'top9_hits','rank10_15_hits','top15_hits','top9_avg_hits','rank10_15_avg_hits',
+        'top15_avg_hits','top9_capture_rate','bottom9_avg_hits','avg_actual_rank',
+        'boundary_control_valid','ranking_direction_valid')
+    candidate_summaries=[{
+        'learning_rate':item['learning_rate'],
+        'boundary_blend':item['boundary_blend'],
+        'folds_all_valid':item['folds_all_valid'],
+        'positive_folds':item['positive_folds'],
+        'quality':item['quality'],
+        'validation':{key:item['validation'][key] for key in summary_keys},
+        'fold_metrics':[
+            {key:fold[key] for key in summary_keys}
+            for fold in item['fold_metrics']
+        ],
+    } for item in evaluated]
     return selected['learning_rate'],{
-        'method':'pre_holdout_three_model_six_rate_three_fold_selection' if isinstance(anchor_weights,list) else 'pre_holdout_six_rate_three_fold_selection',
-        'candidate_count':len(ROLLING_LEARNING_RATE_CANDIDATES),
-        'candidates':evaluated,
+        'method':'pre_holdout_three_model_thirty_pair_three_fold_selection' if isinstance(anchor_weights,list) else 'pre_holdout_thirty_pair_three_fold_selection',
+        'candidate_count':len(ROLLING_LEARNING_RATE_CANDIDATES)*len(ROLLING_BOUNDARY_BLEND_CANDIDATES),
+        'learning_rate_candidate_count':len(ROLLING_LEARNING_RATE_CANDIDATES),
+        'boundary_blend_candidate_count':len(ROLLING_BOUNDARY_BLEND_CANDIDATES),
+        'candidates':candidate_summaries,
         'selected_learning_rate':selected['learning_rate'],
+        'selected_boundary_blend':selected['boundary_blend'],
         'selection_window':{'first_period':draws[start]['period'],'first_date':draws[start]['date'],
                             'last_period':draws[holdout_start-1]['period'],'last_date':draws[holdout_start-1]['date'],
                             'samples':ROLLING_CALIBRATION_DRAWS},
@@ -864,9 +949,9 @@ def select_rolling_learning_rate(
 
 
 def backtest(draws: list[dict], weights: dict[str, float] | list[dict[str, float]], tests: int = 180, ticket_count: int = 8,
-             learning_rate: float = ROLLING_LEARNING_RATE) -> dict:
+             learning_rate: float = ROLLING_LEARNING_RATE, boundary_blend: float = 0.0) -> dict:
     start = max(320, len(draws) - tests); hist = Counter(); total_hits = 0
-    single_hits = top5_hits = top9_hits = 0
+    single_hits = top5_hits = top9_hits = rank10_15_hits = top15_hits = 0
     bottom1_hits = bottom5_hits = bottom9_hits = rank_sum = 0
     state = ExpandingHistoryState()
     ensemble_mode = isinstance(weights, list)
@@ -901,6 +986,8 @@ def backtest(draws: list[dict], weights: dict[str, float] | list[dict[str, float
         single_hits += int(ranked[0] in actual)
         top5_hits += len(actual.intersection(ranked[:5]))
         top9_hits += len(actual.intersection(ranked[:9]))
+        rank10_15_hits += len(actual.intersection(ranked[9:15]))
+        top15_hits += len(actual.intersection(ranked[:15]))
         bottom1_hits += int(ranked[-1] in actual)
         bottom5_hits += len(actual.intersection(ranked[-5:]))
         bottom9_hits += len(actual.intersection(ranked[-9:]))
@@ -912,12 +999,12 @@ def backtest(draws: list[dict], weights: dict[str, float] | list[dict[str, float
             updates=[]
             for member_index,member_weights in enumerate(current_ensemble):
                 current_ensemble[member_index],update=rolling_weight_update(
-                    member_weights,features,member_rankings[member_index],actual,learning_rate)
+                    member_weights,features,member_rankings[member_index],actual,learning_rate,ranked,boundary_blend)
                 updates.append(update)
             current=average_weights(current_ensemble)
             path.append({"period":draw["period"],"updates":updates})
         else:
-            current,update=rolling_weight_update(current,features,ranked,actual,learning_rate)
+            current,update=rolling_weight_update(current,features,ranked,actual,learning_rate,ranked,boundary_blend)
             path.append({"period":draw["period"],"update":update})
         state.update(draw)
     n = sum(hist.values())
@@ -929,7 +1016,9 @@ def backtest(draws: list[dict], weights: dict[str, float] | list[dict[str, float
     lower = center - margin
     gate = lower > p0
     avg_actual_rank=rank_sum/(n*5)
-    direction_valid=single_hits>bottom1_hits and top5_hits>bottom5_hits and top9_hits>bottom9_hits and avg_actual_rank<20
+    direction_valid=(single_hits>bottom1_hits and top5_hits>bottom5_hits
+                     and top9_hits>bottom9_hits and top9_hits>rank10_15_hits
+                     and avg_actual_rank<20)
     return {
         "samples": n,
         "evaluation": "最後三百六十期完全隔離；校正參數只用更早資料選定並鎖定",
@@ -941,13 +1030,20 @@ def backtest(draws: list[dict], weights: dict[str, float] | list[dict[str, float
         "single_wilson_lower95": round(lower, 4),
         "single_release_allowed": gate,
         "bottom1_hits": bottom1_hits,
+        "top9_hits": top9_hits,
+        "rank10_15_hits": rank10_15_hits,
+        "top15_hits": top15_hits,
         "top5_avg_hits": round(top5_hits / n, 4),
         "top5_random_baseline": round(25 / 39, 4),
         "bottom5_avg_hits": round(bottom5_hits / n, 4),
         "top9_avg_hits": round(top9_hits / n, 4),
+        "rank10_15_avg_hits": round(rank10_15_hits / n, 4),
+        "top15_avg_hits": round(top15_hits / n, 4),
+        "top9_capture_rate": round(top9_hits / max(1,top15_hits), 4),
         "top9_random_baseline": round(45 / 39, 4),
         "bottom9_avg_hits": round(bottom9_hits / n, 4),
         "avg_actual_rank": round(avg_actual_rank,4),
+        "boundary_control_valid": top9_hits>rank10_15_hits,
         "ranking_direction_valid": direction_valid,
         "backtest_weights": current,
         "anchor_weights": anchor,
@@ -956,8 +1052,9 @@ def backtest(draws: list[dict], weights: dict[str, float] | list[dict[str, float
         "end_ensemble_weights": current_ensemble,
         "rolling_update_count": len(path),
         "rolling_learning_rate": learning_rate,
+        "rolling_boundary_blend": boundary_blend,
         "rolling_path_sha256": hashlib.sha256(json.dumps(path,ensure_ascii=False,sort_keys=True,separators=(",", ":")).encode()).hexdigest(),
-        "method": "three_balanced_models_borda_then_post_draw_module_error_update" if ensemble_mode else "pre_draw_prediction_then_post_draw_module_error_update",
+        "method": "three_balanced_models_borda_then_post_draw_top9_boundary_update" if ensemble_mode else "pre_draw_prediction_then_post_draw_top9_boundary_update",
     }
 
 
@@ -997,6 +1094,7 @@ def prediction_seal_payload(based_on_period: str, target_draw_date: str, history
         "long_history_selection_window": selection["diagnostic"]["long_history_selection_window"],
         "holdout_window": selection["diagnostic"]["holdout_window"],
         "rolling_learning_rate": selection["learning_rate_selection"]["selected_learning_rate"],
+        "rolling_boundary_blend": selection["learning_rate_selection"]["selected_boundary_blend"],
         "rolling_learning_rate_selection_window": selection["learning_rate_selection"]["selection_window"],
     }
 
@@ -1004,8 +1102,8 @@ def prediction_seal_payload(based_on_period: str, target_draw_date: str, history
 def _review_blocks(settlements: list[dict], current_weights: dict, selection: dict, fmt) -> tuple[str, str]:
     recent = []
     for item in reversed(settlements[-15:]):
-        recent.append(f"<tr><td>{item.get('target_draw_date','-')}</td><td>{int(item.get('single_published',0)):02}</td><td>{fmt(item.get('top5_published') or []) or '-'}</td><td>{fmt(item.get('actual_numbers') or []) or '-'}</td><td>{'命中' if item.get('single_hit') else '未中'}</td><td>{fmt(item.get('top5_hits') or []) or '-'}</td></tr>")
-    recent_html = "".join(recent) or "<tr><td colspan='6'>尚無改版後、開獎前封存的實戰結算紀錄</td></tr>"
+        recent.append(f"<tr><td>{item.get('target_draw_date','-')}</td><td>{int(item.get('single_published',0)):02}</td><td>{fmt(item.get('top9_published') or []) or '-'}</td><td>{fmt(item.get('actual_numbers') or []) or '-'}</td><td>{'命中' if item.get('single_hit') else '未中'}</td><td>{fmt(item.get('top9_hits') or []) or '-'}</td><td>{fmt(item.get('rank10_15_hits') or []) or '-'}</td><td>{'已觸發邊界回灌' if item.get('rank10_15_hits') else '已檢查、無邊界命中'}</td></tr>")
+    recent_html = "".join(recent) or "<tr><td colspan='8'>尚無改版後、開獎前封存的實戰結算紀錄</td></tr>"
     if not settlements:
         return recent_html, "<p><b>尚無可檢討的開獎前封存實戰資料。</b></p>"
     item = settlements[-1]
@@ -1013,7 +1111,7 @@ def _review_blocks(settlements: list[dict], current_weights: dict, selection: di
         f"<tr><td>{x.get('number',0):02}</td><td>{x.get('rank','-')}</td><td>{x.get('relative_index',0):.2f}</td><td>{'前9' if x.get('rank',99)<=9 else ('第10至15名' if x.get('rank',99)<=15 else '第16名以後')}</td></tr>"
         for x in item.get("actual_rankings", []))
     module_rows = "".join(
-        f"<tr><td>{FEATURE_LABELS.get(x.get('module'),x.get('module','-'))}</td><td>{x.get('actual_mean',0):+.4f}</td><td>{x.get('missed_top5_mean',0):+.4f}</td><td>{x.get('discrimination_gap',0):+.4f}</td><td>{'失準，已納入滾動重算' if x.get('error_flag') else '方向正確，保留競爭'}</td></tr>"
+        f"<tr><td>{FEATURE_LABELS.get(x.get('module'),x.get('module','-'))}</td><td>{x.get('actual_mean',0):+.4f}</td><td>{x.get('missed_top5_mean',0):+.4f}</td><td>{x.get('discrimination_gap',0):+.4f}</td><td>{x.get('boundary_actual_mean',0):+.4f}</td><td>{x.get('false_top9_mean',0):+.4f}</td><td>{x.get('boundary_discrimination_gap',0):+.4f}</td><td>{'失準，已納入前9邊界回灌' if x.get('error_flag') else '方向正確，保留競爭'}</td></tr>"
         for x in item.get("module_review", []))
     before = item.get("production_weights_before") or {}
     weight_rows = "".join(
@@ -1028,11 +1126,11 @@ def _review_blocks(settlements: list[dict], current_weights: dict, selection: di
     holdout = selection["diagnostic"]["holdout_window"]
     rate_selection = selection["learning_rate_selection"]
     review_html = f"""
-<p><b>檢討期別：{item.get('target_draw_date','-')}；實際開獎 {fmt(item.get('actual_numbers') or [])}；獨隻 {int(item.get('single_published',0)):02} {'命中' if item.get('single_hit') else '未中'}；前5命中 {fmt(item.get('top5_hits') or []) or '0顆'}。</b></p>
+<p><b>檢討期別：{item.get('target_draw_date','-')}；實際開獎 {fmt(item.get('actual_numbers') or [])}；獨隻 {int(item.get('single_published',0)):02} {'命中' if item.get('single_hit') else '未中'}；前9命中 {fmt(item.get('top9_hits') or []) or '0顆'}；第10至15名滯留 {fmt(item.get('rank10_15_hits') or []) or '0顆'}。</b></p>
 <p>失準模組：{error_labels}。檢討只讀取開獎前封存的完整39碼排序、模組貢獻與資料庫指紋，禁止開獎後換號或補號。</p>
 <h3>實際開獎號碼原始排名</h3><table><thead><tr><th>號碼</th><th>開獎前排名</th><th>相對指數</th><th>區段</th></tr></thead><tbody>{actual_rows}</tbody></table>
-<h3>錯誤模組逐項檢討</h3><table><thead><tr><th>模組</th><th>開獎號平均貢獻</th><th>前5落空號平均貢獻</th><th>鑑別差</th><th>處理</th></tr></thead><tbody>{module_rows}</tbody></table>
-<h3>開獎後滾動權重重算</h3><p>本次已重新搜尋全部 {selection['diagnostic']['candidate_count']} 組權重，先排除單一模組超過五成的失衡組合，保留 {selection['diagnostic']['eligible_candidate_count']} 組均衡候選，再取前三個穩定模型做名次共識；最近校正區間 {calibration['first_date']}～{calibration['last_date']} 共 {calibration['samples']} 期分三段驗算，再以 {long_window['source_first_date']}～{long_window['source_last_date']} 的更早長歷史抽取 {long_window['samples']} 個逐期樣本做九段穩定複驗。三個模型各自於開獎後回灌，滾動幅度另以隔離期以前資料比較 {rate_selection['candidate_count']} 種候選，採用 {rate_selection['selected_learning_rate']:.4f}；全部參數鎖定後才用 {holdout['first_date']}～{holdout['last_date']} 共 {holdout['samples']} 期隔離驗收。</p>
+<h3>錯誤模組與前9邊界逐項檢討</h3><table><thead><tr><th>模組</th><th>開獎號平均貢獻</th><th>前5落空號平均貢獻</th><th>整體鑑別差</th><th>第10至15名命中平均</th><th>前9落空號平均</th><th>邊界鑑別差</th><th>處理</th></tr></thead><tbody>{module_rows}</tbody></table>
+<h3>開獎後滾動權重重算</h3><p>本次已重新搜尋全部 {selection['diagnostic']['candidate_count']} 組權重，先排除單一模組超過五成的失衡組合，保留 {selection['diagnostic']['eligible_candidate_count']} 組均衡候選，再取前三個穩定模型做名次共識；最近校正區間 {calibration['first_date']}～{calibration['last_date']} 共 {calibration['samples']} 期分三段驗算，再以 {long_window['source_first_date']}～{long_window['source_last_date']} 的更早長歷史抽取 {long_window['samples']} 個逐期樣本做九段穩定複驗。三個模型各自於開獎後回灌；隔離期以前資料交叉比較 {rate_selection['candidate_count']} 組「學習幅度×前9邊界占比」，採用幅度 {rate_selection['selected_learning_rate']:.4f}、邊界占比 {100*rate_selection['selected_boundary_blend']:.0f}%；全部參數鎖定後才用 {holdout['first_date']}～{holdout['last_date']} 共 {holdout['samples']} 期隔離驗收。</p>
 <table><thead><tr><th>模組</th><th>開獎前權重</th><th>重算後權重</th><th>調整</th></tr></thead><tbody>{weight_rows}</tbody></table>
 <p><b>資料證據：開獎前封存驗證碼 {seal_code}；檢討驗證碼 {review_code}。完整雜湊保存在結算資料檔供系統核驗，不在中文戰報顯示英文字母。</b></p>"""
     return recent_html, review_html
@@ -1077,19 +1175,19 @@ def render(draws: list[dict], weights: dict, quality: list[float], score: dict, 
 <div class='band'><h2>本報表日期對照</h2><div class='grid'><div class='card'><div class='label'>全歷史資料範圍</div><div class='value'>{draws[0]['date']}～{latest['date']}</div></div><div class='card'><div class='label'>實際輸入資料</div><div class='value'>{len(draws):,} 期／{len(draws)*5:,}個號碼</div></div><div class='card'><div class='label'>全歷史核心占比</div><div class='value'>100%（短期正式權重0%）</div></div><div class='card'><div class='label'>最新開獎期別</div><div class='value'>{latest['period']}</div></div><div class='card'><div class='label'>最新開獎號碼</div><div class='value'>{fmt(latest['nums'])}</div></div><div class='card'><div class='label'>資料對應開獎日</div><div class='value'>{latest['date']}</div></div><div class='card'><div class='label'>本次預測目標日</div><div class='value'>{target_date.isoformat()}</div></div><div class='card'><div class='label'>戰報產生時間</div><div class='value'>{now}</div></div></div></div>
 <div class='band' id='decision'><h2>核心決策</h2><div class='grid'><div class='card'><div class='label'>資料狀態</div><div class='value'>資料已更新</div></div><div class='card'><div class='label'>檢查</div><div class='value'>已重新運算</div></div><div class='card hot-card'><div class='label'>1中1主選</div><div class='value num'>{single_display}</div></div><div class='card'><div class='label'>公開狀態</div><div class='value'>已公開</div></div><div class='card'><div class='label'>排序方向</div><div class='value'>{rank_status}</div></div><div class='card'><div class='label'>九碼核心</div><div class='value'>{fmt(top15[:9])}</div></div></div></div>
 <div class='band'><h2>最強獨隻1中1</h2><div class='grid'><div class='card hot-card'><div class='label'>1中1主選號碼</div><div class='value num'>{single_display}</div></div><div class='card'><div class='label'>判定</div><div class='value'>{single_status}</div></div><div class='card'><div class='label'>隔離驗證命中</div><div class='value'>{bt.get('single_hits',0)}/{bt['samples']}（{100*bt.get('single_rate',0):.2f}%）</div></div><div class='card'><div class='label'>隨機基準／九成五下界</div><div class='value'>{100*bt.get('single_random_baseline',0):.2f}%／{100*bt.get('single_wilson_lower95',0):.2f}%</div></div></div></div>
-<div class='band' id='rank'><h2>下期綜合排序前9名</h2><table><thead><tr><th>排名</th><th>號碼</th><th>相對指數（非機率）</th><th>主要支撐</th><th>加權貢獻</th><th>守門</th></tr></thead><tbody>{rows[:rows.find('</tr>', rows.find('</tr>')*0)+5] if False else rows}</tbody></table><h2>第10到第15名第二層備查</h2><p>{fmt(top15[9:15])}</p></div>
+<div class='band' id='rank'><h2>下期綜合排序前9名</h2><table><thead><tr><th>排名</th><th>號碼</th><th>相對指數（非機率）</th><th>主要支撐</th><th>加權貢獻</th><th>守門</th></tr></thead><tbody>{rows[:rows.find('</tr>', rows.find('</tr>')*0)+5] if False else rows}</tbody></table><h2>第10到第15名前9邊界監控</h2><p>{fmt(top15[9:15])}</p></div>
 <div class='band'><h2>生成號碼逐號驗算</h2><table><thead><tr><th>排名</th><th>號碼</th><th>相對指數（非機率）</th><th>交叉來源</th><th>加權貢獻</th><th>狀態</th></tr></thead><tbody>{rows}</tbody></table></div>
 <div class='band' id='packs'><h2>強牌組精算</h2><table><thead><tr><th>類型</th><th>號碼</th><th>顆數</th><th>狀態</th></tr></thead><tbody>{packrows}</tbody></table></div>
-<div class='band' id='hits'><h2>開獎前封存實戰紀錄</h2><table><thead><tr><th>開獎日</th><th>1中1主選</th><th>當期前5</th><th>實際開獎</th><th>主選結果</th><th>前5命中</th></tr></thead><tbody>{recent_html}</tbody></table></div>
+<div class='band' id='hits'><h2>開獎前封存實戰紀錄</h2><table><thead><tr><th>開獎日</th><th>1中1主選</th><th>當期前9</th><th>實際開獎</th><th>主選結果</th><th>前9命中</th><th>第10至15名命中</th><th>邊界檢測</th></tr></thead><tbody>{recent_html}</tbody></table></div>
 <div class='band warn' id='review'><h2>每期開獎命中檢討與滾動修正</h2>{review_html}</div>
 <div class='band' id='low'><h2>強制投注排除名單</h2><p><b>以下後15名已從本系統全部推薦牌組強制排除，系統產生的任何牌組都不得包含。</b></p><table><thead><tr><th>區段</th><th>號碼</th><th>動作</th><th>鐵律</th></tr></thead><tbody>{lowrows}</tbody></table></div>
-<div class='band'><h2>連莊資格驗算</h2><p><b>上一期號碼必須同時符合：相對指數至少75、全歷史轉移貢獻為正、至少兩個正式模組正貢獻、該號碼全歷史連莊率不低於12.82%，且全系統5,599期掃描與最後360期隔離回測均通過，才准列入前9。</b>資格在正式排名前判定，不限制連莊顆數、不做事後補號。</p><table><thead><tr><th>上一期號碼</th><th>相對指數</th><th>轉移貢獻</th><th>正貢獻模組數</th><th>連莊命中／樣本</th><th>個別回測</th><th>資格</th><th>最終名次</th><th>結果</th></tr></thead><tbody>{repeat_rows}</tbody></table></div>
-<div class='band' id='models'><h2>公式模型實驗室</h2><p><b>每次預測與每一期回測都使用當時以前的全部歷史資料。</b>正式排名100%由逐期擴展全歷史模型產生；每期重新搜尋286組錨定權重，剔除單一模組超過五成的失衡組合，從146組均衡候選選出前三模型，以名次共識決定排序，避免任何單一模組或單一權重組壟斷主選。先以最近三百六十期分三段校正，再用更早長歷史做九段穩定複驗；末段三百六十期逐期先封存預測、開獎後才把錯誤分別回灌三個模型，三模型回測終點必須等於畫面正式模型。上一期號碼仍須先通過連莊資格，不限制重複顆數、不做事後補位；同分號碼以當時已知期別公平破同分，禁止固定偏向小號或大號。</p><table><thead><tr><th>公式</th><th>資料範圍</th><th>實際權重</th><th>動作</th></tr></thead><tbody>{formula_rows}</tbody></table></div>
-<div class='band'><h2>全歷史逐期一致性掃描</h2><p>從第321期開始逐期重算，共 {full_scan['samples']} 期：高分第1名 {full_scan['single_hits']} 中、最低分第1名 {full_scan['bottom1_hits']} 中；前5平均 {full_scan['top5_avg_hits']}、後5平均 {full_scan['bottom5_avg_hits']}；前9平均 {full_scan['top9_avg_hits']}、後9平均 {full_scan['bottom9_avg_hits']}；實際開獎號平均名次 {full_scan['avg_actual_rank']}。判定：{'排序方向通過' if full_scan['ranking_direction_valid'] else '排序方向未通過'}。</p></div>
-<div class='band warn'><h2>實戰失準回灌重排</h2><p>隔離保留 {bt['samples']} 期：高分第1名 {bt.get('single_hits',0)} 中、最低分第1名 {bt.get('bottom1_hits',0)} 中；前5平均 {bt.get('top5_avg_hits',0)}、後5平均 {bt.get('bottom5_avg_hits',0)}；前9平均 {bt.get('top9_avg_hits',0)}、後9平均 {bt.get('bottom9_avg_hits',0)}；實際開獎號平均名次 {bt.get('avg_actual_rank',0)}（中立值20）。每期 {len(tickets)} 組最佳組平均命中 {bt['avg_best_hits']}；{dist}。</p><p><b>前三均衡模型只用隔離期以前資料決定；隔離期內每期先做三模型名次共識並封存，開獎後才把錯誤分別回灌到下一期三個模型，共滾動更新 {bt.get('rolling_update_count',0)} 次。禁止用同一期答案改寫同一期預測。</b></p></div>
+<div class='band'><h2>連莊資格驗算</h2><p><b>上一期號碼必須同時符合：相對指數至少75、全歷史轉移貢獻為正、至少兩個正式模組正貢獻、該號碼全歷史連莊率不低於12.82%，且全系統{full_scan['samples']}期掃描與最後360期隔離回測均通過，才准列入前9。</b>資格在正式排名前判定，不限制連莊顆數、不做事後補號。</p><table><thead><tr><th>上一期號碼</th><th>相對指數</th><th>轉移貢獻</th><th>正貢獻模組數</th><th>連莊命中／樣本</th><th>個別回測</th><th>資格</th><th>最終名次</th><th>結果</th></tr></thead><tbody>{repeat_rows}</tbody></table></div>
+<div class='band' id='models'><h2>公式模型實驗室</h2><p><b>每次預測與每一期回測都使用當時以前的全部歷史資料。</b>正式排名100%由逐期擴展全歷史模型產生；每期重新搜尋286組錨定權重，剔除單一模組超過五成的失衡組合，從146組均衡候選選出前三模型，以名次共識決定排序。選模品質直接獎勵前9命中並懲罰命中滯留第10至15名；開獎後再分開比較第10至15名命中與前9落空號，將邊界錯誤回灌到下一期三個模型。先以最近三百六十期分三段校正，再用更早長歷史做九段穩定複驗；末段三百六十期逐期先封存預測、開獎後才回灌，三模型回測終點必須等於畫面正式模型。上一期號碼仍須先通過連莊資格，不限制重複顆數、不做事後補位；同分號碼以當時已知期別公平破同分，禁止固定偏向小號或大號。</p><table><thead><tr><th>公式</th><th>資料範圍</th><th>實際權重</th><th>動作</th></tr></thead><tbody>{formula_rows}</tbody></table></div>
+<div class='band'><h2>全歷史逐期一致性掃描</h2><p>從第321期開始逐期重算，共 {full_scan['samples']} 期：高分第1名 {full_scan['single_hits']} 中、最低分第1名 {full_scan['bottom1_hits']} 中；前5平均 {full_scan['top5_avg_hits']}、後5平均 {full_scan['bottom5_avg_hits']}；前9平均 {full_scan['top9_avg_hits']}、第10至15名平均 {full_scan['rank10_15_avg_hits']}、後9平均 {full_scan['bottom9_avg_hits']}；前9占前15命中 {100*full_scan['top9_capture_rate']:.2f}%；實際開獎號平均名次 {full_scan['avg_actual_rank']}。判定：{'排序方向通過' if full_scan['ranking_direction_valid'] else '排序方向未通過'}。</p></div>
+<div class='band warn'><h2>實戰失準回灌重排</h2><p>隔離保留 {bt['samples']} 期：高分第1名 {bt.get('single_hits',0)} 中、最低分第1名 {bt.get('bottom1_hits',0)} 中；前5平均 {bt.get('top5_avg_hits',0)}、後5平均 {bt.get('bottom5_avg_hits',0)}；前9平均 {bt.get('top9_avg_hits',0)}、第10至15名滯留平均 {bt.get('rank10_15_avg_hits',0)}、後9平均 {bt.get('bottom9_avg_hits',0)}；前9占前15命中 {100*bt.get('top9_capture_rate',0):.2f}%；實際開獎號平均名次 {bt.get('avg_actual_rank',0)}（中立值20）。每期 {len(tickets)} 組最佳組平均命中 {bt['avg_best_hits']}；{dist}。</p><p><b>前三均衡模型只用隔離期以前資料決定；隔離期以前另比較三十組學習幅度與前9邊界占比。本次邊界占比 {100*bt.get('rolling_boundary_blend',0):.0f}%。隔離期內每期先做三模型名次共識並封存，開獎後才把整體與第10至15名邊界錯誤回灌到下一期，共滾動更新 {bt.get('rolling_update_count',0)} 次。禁止用同一期答案改寫同一期預測。</b></p></div>
   <div class='band'><h2>多模組校正對照</h2><div class='grid'><div class='card'><div class='label'>候選組合數</div><div class='value'>{selection['diagnostic']['candidate_count']}</div></div><div class='card'><div class='label'>均衡候選數</div><div class='value'>{selection['diagnostic']['eligible_candidate_count']}</div></div><div class='card'><div class='label'>正式共識模型</div><div class='value'>前三模型</div></div><div class='card'><div class='label'>前段三折校正</div><div class='value'>{'三段全數通過' if selection['diagnostic']['validation']['folds_all_valid'] else '採最佳穩定候選'}</div></div><div class='card'><div class='label'>採用原則</div><div class='value'>每期重搜、均衡篩選、三模共識、後隔離驗收</div></div></div></div>
-<div class='band' id='gate'><h2>鐵律守門</h2><table><thead><tr><th>項目</th><th>結果</th><th>說明</th></tr></thead><tbody><tr><td>重新運算</td><td>已完成</td><td>依最新資料從模型分數直接重排，不做補位</td></tr><tr><td>資料完整性</td><td>通過</td><td>去重、日期排序、號碼1至39、每期5個不重複</td></tr><tr><td>每期命中檢討</td><td>{'通過' if settlements and settlements[-1].get('review_status')=='completed_from_pre_draw_seal' else '等待首筆封存結算'}</td><td>只採開獎前封存排名與模組貢獻，逐期回灌重算</td></tr><tr><td>全歷史掃描</td><td>{'通過' if full_scan['ranking_direction_valid'] else '未通過'}</td><td>{full_scan['samples']}期逐期重新運算</td></tr><tr><td>未來資料隔離</td><td>通過</td><td>每期重搜286組，校正截止在最後三百六十期以前並鎖定參數</td></tr><tr><td>連莊資格</td><td>通過</td><td>相對指數、轉移貢獻、正貢獻模組三重驗算</td></tr><tr><td>上一期號碼檢查</td><td>通過</td><td>前5符合資格並列入{previous_overlap5}顆、前9符合資格並列入{previous_overlap9}顆</td></tr><tr><td>高低分方向</td><td>{rank_status}</td><td>同時計算前1／5／9與後1／5／9，禁止只報高分成績</td></tr><tr><td>主選產出</td><td>通過</td><td>每期固定產出最強獨隻並公開，不得缺號或事後換號</td></tr></tbody></table></div>
-<div class='band warn'><h2>模型健康與公開狀態</h2><table><thead><tr><th>項目</th><th>高分結果</th><th>低分對照</th><th>判定</th></tr></thead><tbody><tr><td>第1名隔離命中</td><td>{bt.get('single_hits',0)}/{bt['samples']}（{100*bt.get('single_rate',0):.2f}%）</td><td>最低分第1名 {bt.get('bottom1_hits',0)}/{bt['samples']}</td><td>{rank_status}</td></tr><tr><td>前5隔離平均</td><td>{bt.get('top5_avg_hits',0)}</td><td>後5 {bt.get('bottom5_avg_hits',0)}</td><td>{rank_status}</td></tr><tr><td>前9隔離平均</td><td>{bt.get('top9_avg_hits',0)}</td><td>後9 {bt.get('bottom9_avg_hits',0)}</td><td>{rank_status}</td></tr><tr><td>1中1主選</td><td>已公開</td><td>不宣稱必中</td><td>{single_status}</td></tr></tbody></table></div>
+<div class='band' id='gate'><h2>鐵律守門</h2><table><thead><tr><th>項目</th><th>結果</th><th>說明</th></tr></thead><tbody><tr><td>重新運算</td><td>已完成</td><td>依最新資料從模型分數直接重排，不做補位</td></tr><tr><td>資料完整性</td><td>通過</td><td>去重、日期排序、號碼1至39、每期5個不重複</td></tr><tr><td>每期命中檢討</td><td>{'通過' if settlements and settlements[-1].get('review_status')=='completed_from_pre_draw_seal' else '等待首筆封存結算'}</td><td>只採開獎前封存排名與模組貢獻，逐期回灌重算</td></tr><tr><td>前9邊界偏移</td><td>{'通過' if bt.get('boundary_control_valid') else '未通過'}</td><td>每期強制檢查第10至15名命中，與前9落空號分模組比較並回灌下一期</td></tr><tr><td>全歷史掃描</td><td>{'通過' if full_scan['ranking_direction_valid'] else '未通過'}</td><td>{full_scan['samples']}期逐期重新運算</td></tr><tr><td>未來資料隔離</td><td>通過</td><td>每期重搜286組，三十組邊界參數校正截止在最後三百六十期以前</td></tr><tr><td>連莊資格</td><td>通過</td><td>相對指數、轉移貢獻、正貢獻模組三重驗算</td></tr><tr><td>上一期號碼檢查</td><td>通過</td><td>前5符合資格並列入{previous_overlap5}顆、前9符合資格並列入{previous_overlap9}顆</td></tr><tr><td>高低分方向</td><td>{rank_status}</td><td>同時計算前1／5／9、第10至15名與後1／5／9</td></tr><tr><td>主選產出</td><td>通過</td><td>每期固定產出最強獨隻並公開，不得缺號或事後換號</td></tr></tbody></table></div>
+<div class='band warn'><h2>模型健康與公開狀態</h2><table><thead><tr><th>項目</th><th>高分結果</th><th>對照</th><th>判定</th></tr></thead><tbody><tr><td>第1名隔離命中</td><td>{bt.get('single_hits',0)}/{bt['samples']}（{100*bt.get('single_rate',0):.2f}%）</td><td>最低分第1名 {bt.get('bottom1_hits',0)}/{bt['samples']}</td><td>{rank_status}</td></tr><tr><td>前5隔離平均</td><td>{bt.get('top5_avg_hits',0)}</td><td>後5 {bt.get('bottom5_avg_hits',0)}</td><td>{rank_status}</td></tr><tr><td>前9隔離平均</td><td>{bt.get('top9_avg_hits',0)}</td><td>第10至15名 {bt.get('rank10_15_avg_hits',0)}／後9 {bt.get('bottom9_avg_hits',0)}</td><td>{rank_status}</td></tr><tr><td>前9邊界占比</td><td>{100*bt.get('top9_capture_rate',0):.2f}%</td><td>前15命中中落入前9比例</td><td>{'通過' if bt.get('boundary_control_valid') else '未通過'}</td></tr><tr><td>1中1主選</td><td>已公開</td><td>不宣稱必中</td><td>{single_status}</td></tr></tbody></table></div>
 <div class='band warn'><h2>實戰門檻與風險聲明</h2><p>今彩539為隨機遊戲，每組合法號碼理論機率相同；本戰報只供統計研究，不保證中獎或獲利。請設定固定娛樂預算。</p></div></main></html>"""
 
 
@@ -1102,9 +1200,10 @@ def main() -> None:
     anchor_weights, diagnostics, selection = select_rolling_weights(draws, holdout)
     anchor_ensemble = diagnostics[0]["ensemble_members"]
     learning_rate, learning_rate_selection = select_rolling_learning_rate(draws, anchor_ensemble, holdout)
+    boundary_blend = learning_rate_selection["selected_boundary_blend"]
     diagnostics[0]["learning_rate_selection"] = learning_rate_selection
     quality = [diagnostics[0]["quality"]]
-    bt = backtest(draws, anchor_ensemble, holdout, max(1, min(a.tickets, 30)), learning_rate)
+    bt = backtest(draws, anchor_ensemble, holdout, max(1, min(a.tickets, 30)), learning_rate, boundary_blend)
     weights = dict(bt["end_weights"])
     production_ensemble = [dict(item) for item in bt["end_ensemble_weights"]]
     diagnostics[0]["production_weights_after_rolling"] = weights
@@ -1170,6 +1269,7 @@ def main() -> None:
             "production_ensemble_weights": production_ensemble,
             "updates": bt["rolling_update_count"],
             "learning_rate": bt["rolling_learning_rate"],
+            "boundary_blend": bt["rolling_boundary_blend"],
             "learning_rate_selection": learning_rate_selection,
             "path_sha256": bt["rolling_path_sha256"],
             "method": bt["method"],
