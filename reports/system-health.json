@@ -1,11 +1,11 @@
 {
   "status": "healthy_model_degraded",
-  "checked_at": "2026-07-28T23:05:22+08:00",
+  "checked_at": "2026-07-28T23:11:04+08:00",
   "latest_period": "115000182",
   "latest_draw_date": "2026-07-28",
   "expected_latest_date": "2026-07-28",
   "freshness_ok": true,
-  "data_changed": true,
+  "data_changed": false,
   "model_release_allowed": true,
   "single_release_allowed": true,
   "single_edge_verified": false,
