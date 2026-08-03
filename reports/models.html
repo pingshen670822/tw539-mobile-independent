@@ -13,20 +13,20 @@
 <nav aria-label='戰報分類'><a href='./index.html'>本期預測</a><a href='./backtest.html'>回測驗證</a><a href='./review.html'>開獎檢討</a><a href='./history.html'>歷史封存</a><a href='./models.html' class="active" aria-current="page">模型說明</a><a href='./health.html'>系統健康</a></nav>
 
 <div class='band'><h2>全歷史運算範圍</h2><div class='grid'>
-<div class='card'><div class='label'>資料範圍</div><div class='value'>2007-01-01～2026-08-01</div></div>
-<div class='card'><div class='label'>全歷史期數</div><div class='value'>5,930期</div></div>
+<div class='card'><div class='label'>資料範圍</div><div class='value'>2007-01-01～2026-08-03</div></div>
+<div class='card'><div class='label'>全歷史期數</div><div class='value'>5,931期</div></div>
 <div class='card'><div class='label'>全歷史核心占比</div><div class='value'>100%</div></div>
 <div class='card'><div class='label'>短期正式權重</div><div class='value'>0%</div></div>
 </div></div>
-<div class='band'><h2>正式方向模型</h2><p>每次預測與每一期回測都使用當時以前的全部歷史資料。先搜尋 286 組錨定權重，保留 146 組均衡候選，再建立 30 組模組正反方向模型；每一期只用此前 90 期成績選擇下一期方向。</p><div class='table-wrap'><table><thead><tr><th>正式模組</th><th>資料來源</th><th>目前權重</th><th>方向</th></tr></thead><tbody><tr><td>全歷史頻率平衡</td><td>逐期擴展全歷史資料庫</td><td>+0.033</td><td>正向</td></tr><tr><td>全歷史轉移反向校正</td><td>逐期擴展全歷史資料庫</td><td>-0.367</td><td>反向</td></tr><tr><td>全歷史同型反向校正</td><td>逐期擴展全歷史資料庫</td><td>+0.233</td><td>正向</td></tr><tr><td>全歷史遺漏反向校正</td><td>逐期擴展全歷史資料庫</td><td>-0.367</td><td>反向</td></tr></tbody></table></div></div>
+<div class='band'><h2>正式方向模型</h2><p>每次預測與每一期回測都使用當時以前的全部歷史資料。先搜尋 286 組錨定權重，保留 146 組均衡候選，再建立 30 組模組正反方向模型；每一期只用此前 90 期成績選擇下一期方向。</p><div class='table-wrap'><table><thead><tr><th>正式模組</th><th>資料來源</th><th>目前權重</th><th>方向</th></tr></thead><tbody><tr><td>全歷史頻率平衡</td><td>逐期擴展全歷史資料庫</td><td>+0.033</td><td>正向</td></tr><tr><td>全歷史轉移反向校正</td><td>逐期擴展全歷史資料庫</td><td>+0.367</td><td>正向</td></tr><tr><td>全歷史同型反向校正</td><td>逐期擴展全歷史資料庫</td><td>+0.233</td><td>正向</td></tr><tr><td>全歷史遺漏反向校正</td><td>逐期擴展全歷史資料庫</td><td>-0.367</td><td>反向</td></tr></tbody></table></div></div>
 <div class='band'><h2>多模組校正規格</h2><div class='grid'>
 <div class='card'><div class='label'>錨定候選</div><div class='value'>286組</div></div>
 <div class='card'><div class='label'>均衡候選</div><div class='value'>146組</div></div>
-<div class='card'><div class='label'>長歷史複驗</div><div class='value'>1175個逐期樣本</div></div>
+<div class='card'><div class='label'>長歷史複驗</div><div class='value'>1176個逐期樣本</div></div>
 <div class='card'><div class='label'>長歷史分段</div><div class='value'>9段</div></div>
 <div class='card'><div class='label'>方向模型</div><div class='value'>30組</div></div>
 <div class='card'><div class='label'>方向選擇窗</div><div class='value'>90期</div></div>
 </div></div>
-<div class='band'><h2>連莊資格驗算規格</h2><p>上一期號碼必須同時符合：相對指數至少75、全歷史轉移貢獻為正、至少兩個正式模組正貢獻、全歷史連莊率不低於12.82%，且個別回測通過；不做補位。</p><div class='table-wrap'><table><thead><tr><th>上一期號碼</th><th>相對指數</th><th>轉移貢獻</th><th>正貢獻模組</th><th>全歷史連莊率</th><th>個別回測</th></tr></thead><tbody><tr><td>06</td><td>32.9</td><td>-0.049</td><td>1</td><td>11.30%</td><td>未通過</td></tr><tr><td>11</td><td>33.7</td><td>-0.036</td><td>1</td><td>13.22%</td><td>通過</td></tr><tr><td>18</td><td>14.4</td><td>-0.399</td><td>1</td><td>10.31%</td><td>未通過</td></tr><tr><td>22</td><td>37.2</td><td>-0.003</td><td>1</td><td>13.58%</td><td>通過</td></tr><tr><td>29</td><td>0.0</td><td>-0.531</td><td>0</td><td>12.19%</td><td>未通過</td></tr></tbody></table></div></div>
+<div class='band'><h2>連莊資格驗算規格</h2><p>上一期號碼必須同時符合：相對指數至少75、全歷史轉移貢獻為正、至少兩個正式模組正貢獻、全歷史連莊率不低於12.82%，且個別回測通過；不做補位。</p><div class='table-wrap'><table><thead><tr><th>上一期號碼</th><th>相對指數</th><th>轉移貢獻</th><th>正貢獻模組</th><th>全歷史連莊率</th><th>個別回測</th></tr></thead><tbody><tr><td>07</td><td>27.2</td><td>-0.185</td><td>1</td><td>12.83%</td><td>通過</td></tr><tr><td>21</td><td>48.5</td><td>+0.052</td><td>3</td><td>12.21%</td><td>未通過</td></tr><tr><td>23</td><td>38.5</td><td>+0.174</td><td>1</td><td>13.14%</td><td>通過</td></tr><tr><td>28</td><td>35.4</td><td>+0.066</td><td>2</td><td>13.65%</td><td>通過</td></tr><tr><td>35</td><td>43.0</td><td>+0.268</td><td>2</td><td>11.72%</td><td>未通過</td></tr></tbody></table></div></div>
 <footer>各頁只顯示所屬分類；資料由同一次正式運算產生並同步更新。</footer>
 </main></body></html>
