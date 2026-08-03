@@ -100,12 +100,13 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
 <div class='card'><div class='label'>使用歷史期數</div><div class='value'>{len(draws):,}期</div></div>
 <div class='card'><div class='label'>戰報產生時間</div><div class='value'>{generated_at}</div></div>
 </div></div>
-<div class='band'><h2>本期正式預測</h2><div class='grid'>
-<div class='card primary'><div class='label'>1中1主選</div><div class='value number'>{ranking[0]:02}</div></div>
-<div class='card'><div class='label'>前5核心</div><div class='value number-line'>{_fmt(ranking[:5])}</div></div>
-<div class='card'><div class='label'>前9核心</div><div class='value number-line'>{_fmt(ranking[:9])}</div></div>
-<div class='card'><div class='label'>公開狀態</div><div class='value ok'>已公開</div></div>
-</div></div>
+<div class='band'><h2>本期分級主選</h2><div class='table-wrap'><table><thead><tr><th>類型</th><th>正式號碼</th><th>顆數</th><th>狀態</th></tr></thead><tbody>
+<tr><td><b>1中1</b></td><td><b class='number'>{ranking[0]:02}</b></td><td>1</td><td class='ok'>已公開</td></tr>
+<tr><td><b>2中1～2</b></td><td class='number-line'>{_fmt(ranking[:2])}</td><td>2</td><td class='ok'>已公開</td></tr>
+<tr><td><b>3中1～3</b></td><td class='number-line'>{_fmt(ranking[:3])}</td><td>3</td><td class='ok'>已公開</td></tr>
+<tr><td><b>5中2～3</b></td><td class='number-line'>{_fmt(ranking[:5])}</td><td>5</td><td class='ok'>已公開</td></tr>
+<tr><td><b>9中3～5</b></td><td class='number-line'>{_fmt(ranking[:9])}</td><td>9</td><td class='ok'>已公開</td></tr>
+</tbody></table></div></div>
 <div class='band'><h2>本期前15名單一明細</h2><div class='table-wrap'><table><thead><tr><th>排名</th><th>號碼</th><th>區段</th><th>相對指數（非機率）</th><th>主要支撐</th></tr></thead><tbody>{''.join(rank_rows)}</tbody></table></div></div>
 <div class='band'><h2>本期推薦牌組</h2><div class='table-wrap'><table><thead><tr><th>組別</th><th>號碼</th><th>檢查</th></tr></thead><tbody>{ticket_rows}</tbody></table></div></div>
 <div class='band'><h2>本期投注排除</h2><div class='table-wrap'><table><thead><tr><th>區段</th><th>號碼</th><th>處理</th></tr></thead><tbody>{exclusion_rows}</tbody></table></div></div>
