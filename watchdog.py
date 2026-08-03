@@ -4,7 +4,8 @@ import hashlib, html, json, re, time, urllib.request
 from cloud_pipeline import fetch_latest
 
 PAGE='https://pingshen670822.github.io/tw539-mobile-independent/system-health.json'
-REPORT='https://pingshen670822.github.io/tw539-mobile-independent/'
+REPORT_ROOT='https://pingshen670822.github.io/tw539-mobile-independent/'
+REPORT_PAGES=('index.html','backtest.html','review.html','history.html','models.html','health.html')
 RESULT='https://pingshen670822.github.io/tw539-mobile-independent/latest-result.json'
 VERSION='https://pingshen670822.github.io/tw539-mobile-independent/version.json'
 SETTLEMENTS='https://pingshen670822.github.io/tw539-mobile-independent/published-settlements.jsonl'
@@ -13,8 +14,10 @@ stamp=str(int(time.time()))
 headers={'User-Agent':'TW539-ironlaw-watchdog/1.0','Cache-Control':'no-cache'}
 req=urllib.request.Request(PAGE+'?t='+stamp,headers=headers)
 with urllib.request.urlopen(req,timeout=40) as r: health=json.load(r)
-report_req=urllib.request.Request(REPORT+'?t='+stamp,headers=headers)
-with urllib.request.urlopen(report_req,timeout=40) as r: page=r.read().decode('utf-8')
+pages={}
+for name in REPORT_PAGES:
+    report_req=urllib.request.Request(REPORT_ROOT+name+'?t='+stamp,headers=headers)
+    with urllib.request.urlopen(report_req,timeout=40) as r: pages[name]=r.read().decode('utf-8')
 result_req=urllib.request.Request(RESULT+'?t='+stamp,headers=headers)
 with urllib.request.urlopen(result_req,timeout=40) as r: result=json.load(r)
 version_req=urllib.request.Request(VERSION+'?t='+stamp,headers=headers)
@@ -40,8 +43,9 @@ seal_hash=hashlib.sha256(json.dumps(sealed_payload,ensure_ascii=False,sort_keys=
 if seal.get('sha256')!=seal_hash or not seal.get('no_post_draw_substitution') or result.get('recalculation_fingerprint')!=seal_hash[:16]: errors.append('開獎前封存雜湊驗證失敗')
 selection=(result.get('weight_selection_diagnostics') or [{}])[0]
 ensemble=result.get('production_ensemble_weights') or []
+anchor_ensemble=result.get('anchor_ensemble_weights') or []
 if selection.get('candidate_count')!=286 or selection.get('eligible_candidate_count')!=146 or selection.get('method')!='balanced_three_model_consensus_all_history_286_grid' or (selection.get('long_history_selection_window') or {}).get('samples',0)<1000: errors.append('開獎後沒有完成286組搜尋、146組均衡篩選或長歷史複驗')
-if len(ensemble)!=3 or len(selection.get('ensemble_members') or [])!=3: errors.append('公開結果缺少前三均衡模型共識')
+if ensemble or len(anchor_ensemble)!=3 or len(selection.get('ensemble_members') or [])!=3: errors.append('公開結果仍錯用同質三模型，或缺少分散錨定模型')
 overlap=result.get('previous_draw_overlap_audit') or {}
 if overlap.get('method')!='model_score_with_repeat_qualification' or overlap.get('full_previous_draw_copied_into_top9') or set(data_latest.get('nums') or []).issubset(ranked[:9]): errors.append('公開結果仍整批複製上一期號碼或缺少連莊資格')
 repeat_by_number={x.get('number'):x for x in (result.get('repeat_qualification') or [])}
@@ -57,13 +61,13 @@ backtest=result.get('backtest') or {}
 if 'ranking_direction_valid' not in backtest or 'bottom1_hits' not in backtest or 'bottom5_avg_hits' not in backtest or 'bottom9_avg_hits' not in backtest or 'rank10_15_avg_hits' not in backtest or 'top9_capture_rate' not in backtest or 'boundary_control_valid' not in backtest: errors.append('公開結果缺少高低分與前9邊界驗證')
 if bool(backtest.get('ranking_direction_valid'))!=bool(health.get('ranking_direction_valid')): errors.append('公開結果與健康檔的排序方向不同步')
 if backtest.get('rank10_15_avg_hits')!=health.get('rank10_15_avg_hits') or backtest.get('top9_capture_rate')!=health.get('top9_capture_rate') or bool(backtest.get('boundary_control_valid'))!=bool(health.get('boundary_control_valid')): errors.append('公開結果與健康檔的前9邊界狀態不同步')
-if backtest.get('backtest_weights')!=result.get('production_weights') or backtest.get('end_ensemble_weights')!=ensemble or result.get('audit_weights')!=result.get('production_weights'): errors.append('公開主選與三模型隔離回測權重不同')
+if backtest.get('next_signed_weights')!=result.get('production_weights') or result.get('audit_weights')!=result.get('production_weights'): errors.append('公開主選與方向模型隔離回測權重不同')
 rolling=result.get('rolling_weight_adjustment') or {}
-if rolling.get('production_weights')!=result.get('production_weights') or rolling.get('production_ensemble_weights')!=ensemble or rolling.get('anchor_ensemble_weights')!=selection.get('ensemble_members') or rolling.get('updates')!=360 or rolling.get('method')!='three_balanced_models_borda_then_post_draw_top9_boundary_update': errors.append('最新開獎錯誤沒有逐期回灌三個均衡模型與前9邊界')
+if rolling.get('production_weights')!=result.get('production_weights') or rolling.get('production_ensemble_weights')!=ensemble or rolling.get('anchor_ensemble_weights')!=selection.get('ensemble_members') or rolling.get('updates')!=360 or rolling.get('method')!='thirty_polarity_models_ninety_draw_walk_forward_selection' or rolling.get('strategy_candidate_count')!=30 or rolling.get('strategy_selection_window')!=90: errors.append('最新開獎錯誤沒有觸發三十組方向模型與九十期逐期重選')
 rate_selection=rolling.get('learning_rate_selection') or {}
-if rate_selection.get('candidate_count')!=30 or rate_selection.get('learning_rate_candidate_count')!=6 or rate_selection.get('boundary_blend_candidate_count')!=5 or not rate_selection.get('holdout_not_used') or rate_selection.get('selected_learning_rate')!=rolling.get('learning_rate') or rate_selection.get('selected_boundary_blend')!=rolling.get('boundary_blend'): errors.append('滾動學習幅度與前9邊界占比未以隔離期以前資料選定')
-if backtest.get('anchor_ensemble_weights')!=rolling.get('anchor_ensemble_weights') or backtest.get('end_ensemble_weights')!=ensemble or backtest.get('end_weights')!=result.get('production_weights') or backtest.get('rolling_update_count')!=360: errors.append('隔離回測沒有重演三模型逐期權重更新')
-if backtest.get('rolling_learning_rate')!=rolling.get('learning_rate') or backtest.get('rolling_boundary_blend')!=rolling.get('boundary_blend'): errors.append('隔離回測與正式滾動學習幅度或前9邊界占比不同')
+if rate_selection.get('candidate_count')!=30 or rate_selection.get('learning_rate_candidate_count')!=6 or rate_selection.get('boundary_blend_candidate_count')!=5 or not rate_selection.get('holdout_not_used'): errors.append('舊邊界診斷未保持隔離')
+if backtest.get('next_signed_weights')!=result.get('production_weights') or backtest.get('rolling_update_count')!=360: errors.append('隔離回測沒有重演方向模型逐期選擇')
+if backtest.get('strategy_candidate_count')!=30 or backtest.get('strategy_selection_window')!=90: errors.append('隔離回測缺少三十組方向模型或九十期選擇窗')
 full_scan=result.get('full_history_scan') or {}
 if full_scan.get('samples')!=result.get('draw_count',0)-320: errors.append('公開結果的全歷史逐期掃描期數錯誤')
 if not full_scan.get('ranking_direction_valid'): warnings.append('全歷史逐期排序方向未通過')
@@ -80,15 +84,25 @@ else:
     if not (review.get('data_integrity') or {}).get('no_post_draw_substitution'): errors.append('命中檢討未禁止開獎後換號')
     if not (review.get('rolling_adjustment') or {}).get('completed') or (review.get('rolling_adjustment') or {}).get('candidate_count')!=286 or (review.get('rolling_adjustment') or {}).get('boundary_parameter_candidate_count')!=30: errors.append('命中檢討後沒有完成286組權重與30組前9邊界重算')
     if not health.get('settled_previous'): errors.append('健康檔沒有標示最新命中檢討完成')
-visible=re.sub(r'(?is)<(?:style|script)\b[^>]*>.*?</(?:style|script)>',' ',page)
-visible=html.unescape(re.sub(r'(?s)<[^>]+>',' ',visible))
-english=sorted(set(re.findall(r'[A-Za-z][A-Za-z0-9_-]*',visible)))
-if english: errors.append('戰報可見文字含英文：'+','.join(english))
-if '1中1主選' not in visible or (ranked and f'{int(ranked[0]):02}' not in visible): errors.append('公開戰報未顯示1中1主選')
-if '低機率' in visible or '當期預測前九' in visible: errors.append('公開戰報仍含易誤解標示或事後回算內容')
-if '每期開獎命中檢討與滾動修正' not in visible or '錯誤模組與前9邊界逐項檢討' not in visible or '第10至15名命中' not in visible or '前9邊界偏移' not in visible or '開獎後滾動權重重算' not in visible or '禁止開獎後換號或補號' not in visible: errors.append('公開戰報缺少每期命中檢討或前9邊界滾動修正')
-if '強制投注排除名單' not in visible or '全歷史逐期一致性掃描' not in visible or '上一期號碼檢查' not in visible or '連莊資格驗算' not in visible or '全歷史連莊率不低於12.82%' not in visible: errors.append('公開戰報缺少投注排除、全歷史掃描或連莊資格')
+visible_pages={}
+for name,page in pages.items():
+    visible=re.sub(r'(?is)<(?:style|script)\b[^>]*>.*?</(?:style|script)>',' ',page)
+    visible=html.unescape(re.sub(r'(?s)<[^>]+>',' ',visible))
+    visible_pages[name]=visible
+    english=sorted(set(re.findall(r'[A-Za-z][A-Za-z0-9_-]*',visible)))
+    if english: errors.append(f'{name} 可見文字含英文：'+','.join(english))
+    links=set(re.findall(r"href=['\"]\./([^'\"]+\.html)['\"]",page))
+    if links!=set(REPORT_PAGES): errors.append(f'{name} 分頁導覽不完整')
+home=visible_pages['index.html']; review_page=visible_pages['review.html']; backtest_page=visible_pages['backtest.html']; history_page=visible_pages['history.html']; models_page=visible_pages['models.html']; health_page=visible_pages['health.html']
+if '1中1主選' not in home or (ranked and f'{int(ranked[0]):02}' not in home): errors.append('本期預測頁未顯示1中1主選')
+if any(term in home for term in ('最新一期命中結算','最後360期隔離回測','全歷史運算範圍','鐵律守門')): errors.append('本期預測頁混入其他分類資料')
+if '最新一期命中結算' not in review_page or '錯誤模組與前9邊界逐項檢討' not in review_page or '第10至15名命中' not in review_page or '開獎後滾動權重重算' not in review_page or '禁止開獎後換號或補號' not in review_page: errors.append('開獎檢討分頁內容不完整')
+if '最後360期隔離回測' not in backtest_page or '最近54期獨立觀察' not in backtest_page or '全歷史逐期一致性掃描' not in backtest_page: errors.append('回測驗證分頁內容不完整')
+if '開獎前封存實戰紀錄' not in history_page or '錯誤模組與前9邊界逐項檢討' in history_page: errors.append('歷史封存分頁內容不完整或混入逐項檢討')
+if '正式方向模型' not in models_page or '連莊資格驗算規格' not in models_page or '全歷史連莊率不低於12.82%' not in models_page: errors.append('模型說明分頁內容不完整')
+if '鐵律守門' not in health_page or '手機同步' not in health_page: errors.append('系統健康分頁內容不完整')
+if any('低機率' in visible or '當期預測前九' in visible for visible in visible_pages.values()): errors.append('公開分頁仍含易誤解標示或事後回算內容')
 expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'
-if expected_direction not in visible: errors.append('公開戰報未照實顯示排序方向')
+if expected_direction not in backtest_page or expected_direction not in health_page: errors.append('回測或健康分頁未照實顯示排序方向')
 if errors: raise SystemExit('鐵律看門狗失敗：'+'；'.join(errors))
 print(json.dumps({'看門狗':'通過','官方期別':official['period'],'公開期別':health['latest_period'],'全歷史':True,'命中檢討':'完成','滾動候選':286,'1中1主選':result['single_published'],'模型警報':warnings,'戰報可見英文':0},ensure_ascii=False))

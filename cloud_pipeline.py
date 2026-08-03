@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent; CSV=ROOT/'data'/'539.csv'; SITE=ROOT/'site'; REPORTS=ROOT/'reports'; REPORT=REPORTS/'最新539科學預測戰報.html'
+REPORT_PAGE_FILES=('index.html','backtest.html','review.html','history.html','models.html','health.html')
 API='https://api.taiwanlottery.com/TLCAPIWeB/Lottery/LatestResult'
 TAIPEI=timezone(timedelta(hours=8))
 
@@ -237,6 +238,23 @@ def refresh_latest_settlement(latest):
     append_jsonl(REPORTS/'published-settlements.jsonl',item,lambda x:(x.get('target_draw_date'),x.get('fingerprint')),replace=True)
     return item
 
+def refresh_report_pages(current):
+    """結算完成後以同一份正式結果重建分頁，避免檢討頁落後一期。"""
+    from report_pages import render_report_pages
+    from tw539_ultra import FEATURE_LABELS, load_draws
+    draws=load_draws(CSV)
+    diagnostics=current.get('number_diagnostics') or []
+    score={int(item['number']):float(item['final_score']) for item in diagnostics}
+    if set(score)!=set(range(1,40)): raise RuntimeError('分頁重建缺少完整39碼分數')
+    selected=(current.get('weight_selection_diagnostics') or [{}])[0]
+    pages=render_report_pages(
+        draws,current.get('production_weights') or {},score,current.get('tickets') or [],
+        current.get('backtest') or {},current.get('full_history_scan') or {},
+        current.get('repeat_qualification') or [],{'diagnostic':selected},REPORTS,FEATURE_LABELS)
+    for filename,page in pages.items():
+        (REPORTS/filename).write_text(page,encoding='utf-8')
+    REPORT.write_text(pages['index.html'],encoding='utf-8')
+
 def build_site(latest, changed, previous=None):
     settlement=settle_previous(previous,latest) or refresh_latest_settlement(latest)
     subprocess.run([sys.executable,str(ROOT/'tw539_ultra.py'),'--backtest','360'],check=True,cwd=ROOT)
@@ -252,11 +270,14 @@ def build_site(latest, changed, previous=None):
             'holdout_window':diagnostic.get('holdout_window'),
             'boundary_parameter_candidate_count':(current.get('rolling_weight_adjustment') or {}).get('learning_rate_selection',{}).get('candidate_count'),
             'selected_boundary_blend':(current.get('rolling_weight_adjustment') or {}).get('boundary_blend'),
+            'polarity_model_candidate_count':(current.get('rolling_weight_adjustment') or {}).get('strategy_candidate_count'),
+            'polarity_selection_window':(current.get('rolling_weight_adjustment') or {}).get('strategy_selection_window'),
             'next_single':current.get('single_published'),
             'next_prediction_seal_sha256':(current.get('pre_draw_seal') or {}).get('sha256')}
         evidence={k:v for k,v in settlement.items() if k!='review_evidence_sha256'}
         settlement['review_evidence_sha256']=hashlib.sha256(json.dumps(evidence,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
         append_jsonl(REPORTS/'published-settlements.jsonl',settlement,lambda x:(x.get('target_draw_date'),x.get('fingerprint')),replace=True)
+    refresh_report_pages(current)
     append_jsonl(REPORTS/'prediction-history.jsonl',current,lambda x:x.get('target_draw_date'),replace=True)
     compact_prediction_history(current)
     backtest=current.get('backtest') or {}
@@ -275,7 +296,14 @@ def build_site(latest, changed, previous=None):
         'top9_avg_hits':backtest.get('top9_avg_hits'),'bottom9_avg_hits':backtest.get('bottom9_avg_hits'),
         'rank10_15_avg_hits':backtest.get('rank10_15_avg_hits'),
         'top9_capture_rate':backtest.get('top9_capture_rate'),
+        'top9_slot_hit_rate':backtest.get('top9_slot_hit_rate'),
+        'rank10_15_slot_hit_rate':backtest.get('rank10_15_slot_hit_rate'),
         'boundary_control_valid':backtest.get('boundary_control_valid'),
+        'top5_at_least_2_rate':backtest.get('top5_at_least_2_rate'),
+        'top9_at_least_2_rate':backtest.get('top9_at_least_2_rate'),
+        'recent_54':backtest.get('recent_54'),
+        'polarity_model_candidate_count':backtest.get('strategy_candidate_count'),
+        'polarity_selection_window':backtest.get('strategy_selection_window'),
         'model_drift':'ranking_direction_invalid' if not direction_ok else ('no_verified_edge' if degraded else 'stable_or_observing'),
         'recalculation_fingerprint':current.get('recalculation_fingerprint'),
         'settled_previous':bool(settlement and settlement.get('review_status')=='completed_from_pre_draw_seal')
@@ -285,14 +313,18 @@ def build_site(latest, changed, previous=None):
     health['history_draws_used']=coverage.get('draws_used')
     health['history_database_sha256']=coverage.get('database_sha256')
     (REPORTS/'system-health.json').write_text(json.dumps(health,ensure_ascii=False,indent=2),encoding='utf-8')
-    SITE.mkdir(exist_ok=True); shutil.copy2(REPORT,SITE/'index.html'); shutil.copy2(REPORTS/'最新結果.json',SITE/'latest-result.json'); shutil.copy2(REPORTS/'system-health.json',SITE/'system-health.json')
+    SITE.mkdir(exist_ok=True)
+    for name in REPORT_PAGE_FILES:
+        shutil.copy2(REPORTS/name,SITE/name)
+    shutil.copy2(REPORTS/'最新結果.json',SITE/'latest-result.json'); shutil.copy2(REPORTS/'system-health.json',SITE/'system-health.json')
     for name in ('prediction-history.jsonl','published-settlements.jsonl'):
         src=REPORTS/name
         if src.exists(): shutil.copy2(src,SITE/name)
-    page=(SITE/'index.html').read_text(encoding='utf-8')
-    page=page.replace("<title>","<link rel='manifest' href='./manifest.webmanifest'><meta name='theme-color' content='#8b0000'><title>",1)
-    page=page.replace('</body>',"<script src='./mobile-sync.js'></script></body>") if '</body>' in page else page.replace('</html>',"<script src='./mobile-sync.js'></script></html>")
-    (SITE/'index.html').write_text(page,encoding='utf-8')
+    for name in REPORT_PAGE_FILES:
+        path=SITE/name; page=path.read_text(encoding='utf-8')
+        page=page.replace("<title>","<link rel='manifest' href='./manifest.webmanifest'><meta name='theme-color' content='#8b0000'><title>",1)
+        page=page.replace('</body>',"<script src='./mobile-sync.js'></script></body>")
+        path.write_text(page,encoding='utf-8')
     version={'version':datetime.now(TAIPEI).strftime('%Y%m%d%H%M%S'),'updated_at':datetime.now(TAIPEI).isoformat(timespec='seconds'),'latest_period':latest['period'],'latest_draw_date':latest['draw_date'],'data_changed':changed}
     (SITE/'version.json').write_text(json.dumps(version,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps(version,ensure_ascii=False))
@@ -332,6 +364,9 @@ def verify_publication(latest):
             errors.append(f'{label}未對應官方最新期別')
         if not item.get('full_history_mode') or not item.get('history_database_sha256'):
             errors.append(f'{label}未通過全歷史鐵律')
+    for name in REPORT_PAGE_FILES:
+        if not (REPORTS/name).exists() or not (SITE/name).exists():
+            errors.append(f'分類分頁缺失：{name}')
     if errors: raise SystemExit('鐵律發布驗證失敗：'+'；'.join(errors))
     print(json.dumps({'publication_ok':True,'latest_period':latest['period'],'single_published':result['single_published']},ensure_ascii=False))
 

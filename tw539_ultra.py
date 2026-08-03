@@ -15,6 +15,8 @@ from datetime import datetime, timedelta, timezone
 from itertools import combinations
 from pathlib import Path
 
+from report_pages import render_report_pages
+
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data" / "539.csv"
 OUT = ROOT / "reports"
@@ -215,6 +217,7 @@ GLOBAL_HISTORY_BLEND = 1.00
 MODEL_SEARCH_CANDIDATE_COUNT = 286
 MAX_ANCHOR_MODULE_WEIGHT = .50
 ROLLING_ENSEMBLE_MEMBERS = 3
+MIN_ENSEMBLE_WEIGHT_DISTANCE = .60
 ROLLING_CALIBRATION_DRAWS = 360
 ROLLING_HOLDOUT_DRAWS = 360
 ROLLING_CALIBRATION_FOLDS = 3
@@ -223,6 +226,10 @@ LONG_HISTORY_FOLDS = 9
 ROLLING_LEARNING_RATE = .001
 ROLLING_LEARNING_RATE_CANDIDATES = (.0005,.001,.002,.003,.005,.01)
 ROLLING_BOUNDARY_BLEND_CANDIDATES = (0.0,.25,.50,.75,1.0)
+POLARITY_EWMA_ALPHAS = (.90,.95,.97,.98,.99,.995)
+POLARITY_FULL_HISTORY_BLENDS = (0.0,.10,.25,.50,.75)
+POLARITY_SELECTION_WINDOW = 90
+POLARITY_WARMUP = 60
 
 FEATURE_LABELS = {
     "full_freq": "全歷史頻率",
@@ -438,6 +445,167 @@ def fast_case_ranking(case: dict, weights: dict[str, float]) -> list[int]:
     return front+[n for n in base if n not in front]
 
 
+def _metric_prefix(rows: list[tuple[list[int],set[int],dict[str,float]]]) -> dict[str,list[float]]:
+    keys=("single_hits","bottom1_hits","top5_hits","bottom5_hits","top9_hits",
+          "rank10_15_hits","top15_hits","bottom9_hits","rank_sum")
+    prefix={key:[0.0] for key in keys}
+    for ranked,actual,_ in rows:
+        positions={number:index+1 for index,number in enumerate(ranked)}
+        values={
+            "single_hits":int(ranked[0] in actual),
+            "bottom1_hits":int(ranked[-1] in actual),
+            "top5_hits":len(actual.intersection(ranked[:5])),
+            "bottom5_hits":len(actual.intersection(ranked[-5:])),
+            "top9_hits":len(actual.intersection(ranked[:9])),
+            "rank10_15_hits":len(actual.intersection(ranked[9:15])),
+            "top15_hits":len(actual.intersection(ranked[:15])),
+            "bottom9_hits":len(actual.intersection(ranked[-9:])),
+            "rank_sum":sum(positions[number] for number in actual),
+        }
+        for key in keys:
+            prefix[key].append(prefix[key][-1]+values[key])
+    return prefix
+
+
+def _prefix_metric(prefix: dict[str,list[float]], start: int, end: int) -> dict:
+    raw={key:prefix[key][end]-prefix[key][start] for key in prefix}
+    raw["samples"]=end-start
+    return _finish_metric(raw)
+
+
+def adaptive_polarity_backtest(
+    draws: list[dict],
+    anchor_weights: dict[str,float],
+    tests: int = ROLLING_HOLDOUT_DRAWS,
+    selection_window: int = POLARITY_SELECTION_WINDOW,
+) -> dict:
+    """三十組模組正反方向逐期競賽；每期只用前九十期成績選下一期，禁止看答案。"""
+    def direction_quality(metric: dict) -> float:
+        n=metric["samples"]
+        return ((metric["top9_avg_hits"]-metric["bottom9_avg_hits"])*n*7
+                +(metric["top9_slot_hit_rate"]-metric["rank10_15_slot_hit_rate"])*n*180
+                +(20-metric["avg_actual_rank"])*n)
+    case_start=320
+    cases=evaluation_cases(draws,case_start,len(draws))
+    strategies=[]
+    for alpha in POLARITY_EWMA_ALPHAS:
+        for full_blend in POLARITY_FULL_HISTORY_BLENDS:
+            cumulative={key:0.0 for key in FORMAL_FEATURE_KEYS}
+            ewma={key:0.0 for key in FORMAL_FEATURE_KEYS}
+            count=0
+            rows=[]
+            for case in cases:
+                polarities={}
+                for key in FORMAL_FEATURE_KEYS:
+                    full_mean=cumulative[key]/max(1,count)
+                    combined=full_blend*full_mean+(1-full_blend)*ewma[key]
+                    polarities[key]=1.0 if count<POLARITY_WARMUP or combined>=0 else -1.0
+                signed={key:float(anchor_weights[key])*polarities[key] for key in FORMAL_FEATURE_KEYS}
+                ranked=fast_case_ranking(case,signed)
+                actual=set(case["actual"])
+                rows.append((ranked,actual,polarities))
+                for key in FORMAL_FEATURE_KEYS:
+                    signal=sum(case["features"][key][number] for number in actual)/5
+                    cumulative[key]+=signal
+                    ewma[key]=alpha*ewma[key]+(1-alpha)*signal
+                count+=1
+            strategies.append({
+                "alpha":alpha,
+                "full_history_blend":full_blend,
+                "rows":rows,
+                "prefix":_metric_prefix(rows),
+                "cumulative":cumulative,
+                "ewma":ewma,
+                "count":count,
+            })
+    holdout_start=len(draws)-min(tests,ROLLING_HOLDOUT_DRAWS)
+    start_offset=holdout_start-case_start
+    selected_metric=_empty_metric()
+    top5_distribution=Counter();top9_distribution=Counter();selection_counts=Counter();path=[];selected_rows=[]
+    for draw_index in range(holdout_start,len(draws)):
+        offset=draw_index-case_start
+        window_start=max(0,offset-selection_window)
+        def strategy_key(strategy):
+            metric=_prefix_metric(strategy["prefix"],window_start,offset)
+            return (direction_quality(metric),metric["single_hits"],-strategy["alpha"],-strategy["full_history_blend"])
+        chosen=max(strategies,key=strategy_key)
+        ranked,actual,polarities=chosen["rows"][offset]
+        _add_ranking(selected_metric,ranked,actual)
+        selected_rows.append((ranked,actual,polarities))
+        top5_distribution[len(actual.intersection(ranked[:5]))]+=1
+        top9_distribution[len(actual.intersection(ranked[:9]))]+=1
+        label=f"{chosen['alpha']:.3f}/{chosen['full_history_blend']:.2f}"
+        selection_counts[label]+=1
+        path.append({"period":draws[draw_index]["period"],"strategy":label,"polarities":polarities})
+    result=_finish_metric(selected_metric)
+    result["single_direction_valid"]=result["single_hits"]>result["bottom1_hits"]
+    result["front_ranking_direction_valid"]=(
+        result["top5_avg_hits"]>result["bottom5_avg_hits"]
+        and result["top9_avg_hits"]>result["bottom9_avg_hits"]
+        and result["boundary_control_valid"]
+        and result["avg_actual_rank"]<20
+    )
+    result["ranking_direction_valid"]=result["front_ranking_direction_valid"]
+    n=result["samples"]
+    recent_metric=_empty_metric();recent_top9_distribution=Counter()
+    for ranked,actual,_ in selected_rows[-54:]:
+        _add_ranking(recent_metric,ranked,actual)
+        recent_top9_distribution[len(actual.intersection(ranked[:9]))]+=1
+    recent_result=_finish_metric(recent_metric)
+    recent_result["single_direction_valid"]=recent_result["single_hits"]>recent_result["bottom1_hits"]
+    recent_result["front_ranking_direction_valid"]=(
+        recent_result["top5_avg_hits"]>recent_result["bottom5_avg_hits"]
+        and recent_result["top9_avg_hits"]>recent_result["bottom9_avg_hits"]
+        and recent_result["boundary_control_valid"]
+        and recent_result["avg_actual_rank"]<20
+    )
+    recent_result["ranking_direction_valid"]=recent_result["front_ranking_direction_valid"]
+    recent_result["top9_hit_distribution"]={str(k):recent_top9_distribution[k] for k in range(6)}
+    recent_result["top9_at_least_2_rate"]=round(sum(v for k,v in recent_top9_distribution.items() if k>=2)/54,4)
+    final_offset=len(cases)
+    final_window_start=max(0,final_offset-selection_window)
+    def final_strategy_key(strategy):
+        metric=_prefix_metric(strategy["prefix"],final_window_start,final_offset)
+        return (direction_quality(metric),metric["single_hits"],-strategy["alpha"],-strategy["full_history_blend"])
+    chosen=max(strategies,key=final_strategy_key)
+    final_polarities={}
+    for key in FORMAL_FEATURE_KEYS:
+        full_mean=chosen["cumulative"][key]/max(1,chosen["count"])
+        combined=chosen["full_history_blend"]*full_mean+(1-chosen["full_history_blend"])*chosen["ewma"][key]
+        final_polarities[key]=1.0 if combined>=0 else -1.0
+    signed_weights={key:float(anchor_weights[key])*final_polarities[key] for key in FORMAL_FEATURE_KEYS}
+    state=formal_history_state(draws);features=state.features();raw=scores_from_features(features,signed_weights)
+    adjusted,repeat_audit=apply_repeat_qualification(
+        raw,features,signed_weights,draws[-1]["nums"],draws[-1]["period"],
+        state.repeat_exposure,state.repeat_hits)
+    next_ranked=rank_numbers(adjusted,draws[-1]["period"])
+    single_hits=int(selected_metric["single_hits"])
+    p0=5/39;phat=single_hits/n;z=1.96
+    center=(phat+z*z/(2*n))/(1+z*z/n)
+    margin=z*math.sqrt(phat*(1-phat)/n+z*z/(4*n*n))/(1+z*z/n)
+    result.update({
+        "evaluation":"最後三百六十期逐期只用當時以前九十期挑選模組正反方向",
+        "single_rate":round(phat,4),"single_random_baseline":round(p0,4),
+        "single_wilson_lower95":round(center-margin,4),"single_release_allowed":center-margin>p0,
+        "top5_hit_distribution":{str(k):top5_distribution[k] for k in range(6)},
+        "top9_hit_distribution":{str(k):top9_distribution[k] for k in range(6)},
+        "top5_at_least_2_rate":round(sum(v for k,v in top5_distribution.items() if k>=2)/n,4),
+        "top5_at_least_3_rate":round(sum(v for k,v in top5_distribution.items() if k>=3)/n,4),
+        "top9_at_least_2_rate":round(sum(v for k,v in top9_distribution.items() if k>=2)/n,4),
+        "top9_at_least_3_rate":round(sum(v for k,v in top9_distribution.items() if k>=3)/n,4),
+        "strategy_candidate_count":len(strategies),"strategy_selection_window":selection_window,
+        "recent_54":recent_result,
+        "strategy_selection_counts":dict(selection_counts),
+        "selected_next_strategy":{"ewma_alpha":chosen["alpha"],"full_history_blend":chosen["full_history_blend"]},
+        "selected_next_polarities":final_polarities,"next_signed_weights":signed_weights,
+        "next_ranked":next_ranked,"next_score":adjusted,"next_raw_score":raw,"next_repeat_audit":repeat_audit,
+        "rolling_update_count":n,"rolling_learning_rate":0.0,"rolling_boundary_blend":0.0,
+        "rolling_path_sha256":hashlib.sha256(json.dumps(path,ensure_ascii=False,sort_keys=True,separators=(",", ":")).encode()).hexdigest(),
+        "method":"thirty_polarity_models_ninety_draw_walk_forward_selection",
+    })
+    return result
+
+
 def _add_ranking(metric: dict, ranked: list[int], actual: set[int]) -> None:
     positions = {n: i + 1 for i, n in enumerate(ranked)}
     metric["samples"] += 1
@@ -463,10 +631,13 @@ def _finish_metric(metric: dict) -> dict:
     if not n:
         raise ValueError("校正區段沒有樣本")
     avg_rank = metric["rank_sum"] / (n * 5)
+    top9_slot_hit_rate = metric["top9_hits"] / (n * 9)
+    rank10_15_slot_hit_rate = metric["rank10_15_hits"] / (n * 6)
+    boundary_valid = top9_slot_hit_rate > rank10_15_slot_hit_rate
     direction = (metric["single_hits"] > metric["bottom1_hits"]
                  and metric["top5_hits"] > metric["bottom5_hits"]
                  and metric["top9_hits"] > metric["bottom9_hits"]
-                 and metric["top9_hits"] > metric["rank10_15_hits"]
+                 and boundary_valid
                  and avg_rank < 20)
     top15_hits = metric["top15_hits"]
     return {
@@ -482,9 +653,12 @@ def _finish_metric(metric: dict) -> dict:
         "rank10_15_avg_hits": round(metric["rank10_15_hits"] / n, 4),
         "top15_avg_hits": round(top15_hits / n, 4),
         "top9_capture_rate": round(metric["top9_hits"] / max(1, top15_hits), 4),
+        "top9_slot_hit_rate": round(top9_slot_hit_rate, 6),
+        "rank10_15_slot_hit_rate": round(rank10_15_slot_hit_rate, 6),
+        "boundary_expected_capture_rate": 0.6,
         "bottom9_avg_hits": round(metric["bottom9_hits"] / n, 4),
         "avg_actual_rank": round(avg_rank, 4),
-        "boundary_control_valid": metric["top9_hits"] > metric["rank10_15_hits"],
+        "boundary_control_valid": boundary_valid,
         "ranking_direction_valid": direction,
     }
 
@@ -509,7 +683,11 @@ def calibration_quality(metric: dict) -> float:
     single_lift = metric["single_hits"] - metric["bottom1_hits"]
     top5_lift = (metric["top5_avg_hits"] - metric["bottom5_avg_hits"]) * n
     top9_lift = (metric["top9_avg_hits"] - metric["bottom9_avg_hits"]) * n
-    boundary_lift = (metric["top9_avg_hits"] - metric["rank10_15_avg_hits"]) * n
+    # 前9有九個位置、第10至15名只有六個位置，必須以每個位置命中率比較。
+    # 舊公式直接比總命中，隨機排序也會天然偏向前9，會製造假的邊界通過。
+    boundary_lift = (
+        metric["top9_slot_hit_rate"] - metric["rank10_15_slot_hit_rate"]
+    ) * n * 45
     rank_lift = (20 - metric["avg_actual_rank"]) * n
     fold_bonus = metric["positive_folds"] * 25 + (100 if metric["folds_all_valid"] else 0)
     return round(single_lift * 8 + top5_lift * 2 + top9_lift * 7
@@ -560,11 +738,24 @@ def select_rolling_weights(draws: list[dict], holdout: int = ROLLING_HOLDOUT_DRA
         x["validation"]["folds_all_valid"], x["validation"]["positive_folds"], x["quality"],
         x["validation"]["single_hits"], -x["validation"]["avg_actual_rank"], -x["candidate_index"]))
     ensemble_pool = directional or eligible
-    leaderboard = sorted(ensemble_pool, key=lambda x:(
+    ranked_pool = sorted(ensemble_pool, key=lambda x:(
         x["long_history_validation"]["ranking_direction_valid"], x["long_history_validation"]["positive_folds"],
         x["validation"]["folds_all_valid"], x["validation"]["positive_folds"], x["quality"],
-        x["validation"]["single_hits"]), reverse=True)[:10]
-    ensemble_members = [dict(item["weights"]) for item in leaderboard[:ROLLING_ENSEMBLE_MEMBERS]]
+        x["validation"]["single_hits"]), reverse=True)
+    leaderboard = ranked_pool[:10]
+    ensemble_selected = []
+    for item in ranked_pool:
+        if not ensemble_selected or all(
+            sum(abs(float(item["weights"][key]) - float(chosen["weights"][key])) for key in FORMAL_FEATURE_KEYS)
+            >= MIN_ENSEMBLE_WEIGHT_DISTANCE - 1e-12
+            for chosen in ensemble_selected
+        ):
+            ensemble_selected.append(item)
+        if len(ensemble_selected) == ROLLING_ENSEMBLE_MEMBERS:
+            break
+    if len(ensemble_selected) != ROLLING_ENSEMBLE_MEMBERS:
+        raise RuntimeError("找不到足夠分散的三個均衡模型")
+    ensemble_members = [dict(item["weights"]) for item in ensemble_selected]
     if len(ensemble_members) != ROLLING_ENSEMBLE_MEMBERS:
         raise RuntimeError("均衡多模型成員不足")
     diagnostic = {
@@ -573,6 +764,8 @@ def select_rolling_weights(draws: list[dict], holdout: int = ROLLING_HOLDOUT_DRA
         "eligible_candidate_count": len(eligible),
         "max_anchor_module_weight": MAX_ANCHOR_MODULE_WEIGHT,
         "ensemble_member_count": ROLLING_ENSEMBLE_MEMBERS,
+        "minimum_ensemble_weight_distance": MIN_ENSEMBLE_WEIGHT_DISTANCE,
+        "ensemble_candidate_indices": [item["candidate_index"] for item in ensemble_selected],
         "ensemble_members": ensemble_members,
         "candidate_grid_sha256": candidate_grid_sha256(candidates),
         "selected_candidate_index": selected["candidate_index"],
@@ -697,10 +890,13 @@ def ranking_direction_metrics(
         state.update(draw)
     n = total["samples"]
     avg_rank = rank_sum / (n * 5)
+    top9_slot_hit_rate = total["top9_hits"] / (n * 9)
+    rank10_15_slot_hit_rate = total["rank10_15_hits"] / (n * 6)
+    boundary_valid = top9_slot_hit_rate > rank10_15_slot_hit_rate
     direction = (total["single_hits"] > total["bottom1_hits"]
                  and total["top5_hits"] > total["bottom5_hits"]
                  and total["top9_hits"] > total["bottom9_hits"]
-                 and total["top9_hits"] > total["rank10_15_hits"]
+                 and boundary_valid
                  and avg_rank < 20)
     return {
         "samples": n,
@@ -715,9 +911,12 @@ def ranking_direction_metrics(
         "rank10_15_avg_hits": round(total["rank10_15_hits"] / n, 4),
         "top15_avg_hits": round(total["top15_hits"] / n, 4),
         "top9_capture_rate": round(total["top9_hits"] / max(1,total["top15_hits"]), 4),
+        "top9_slot_hit_rate": round(top9_slot_hit_rate, 6),
+        "rank10_15_slot_hit_rate": round(rank10_15_slot_hit_rate, 6),
+        "boundary_expected_capture_rate": 0.6,
         "bottom9_avg_hits": round(total["bottom9_hits"] / n, 4),
         "avg_actual_rank": round(avg_rank, 4),
-        "boundary_control_valid": total["top9_hits"] > total["rank10_15_hits"],
+        "boundary_control_valid": boundary_valid,
         "ranking_direction_valid": direction,
     }
 
@@ -882,7 +1081,7 @@ def rolling_rate_quality(metric: dict) -> float:
     return round((metric['single_hits']-metric['bottom1_hits'])*8
                  +(metric['top5_avg_hits']-metric['bottom5_avg_hits'])*n*2
                  +(metric['top9_avg_hits']-metric['bottom9_avg_hits'])*n*7
-                 +(metric['top9_avg_hits']-metric['rank10_15_avg_hits'])*n*4
+                 +(metric['top9_slot_hit_rate']-metric['rank10_15_slot_hit_rate'])*n*45*4
                  +(20-metric['avg_actual_rank'])*n,6)
 
 
@@ -919,7 +1118,8 @@ def select_rolling_learning_rate(
     summary_keys=(
         'samples','single_hits','bottom1_hits','top5_avg_hits','bottom5_avg_hits',
         'top9_hits','rank10_15_hits','top15_hits','top9_avg_hits','rank10_15_avg_hits',
-        'top15_avg_hits','top9_capture_rate','bottom9_avg_hits','avg_actual_rank',
+        'top15_avg_hits','top9_capture_rate','top9_slot_hit_rate','rank10_15_slot_hit_rate',
+        'boundary_expected_capture_rate','bottom9_avg_hits','avg_actual_rank',
         'boundary_control_valid','ranking_direction_valid')
     candidate_summaries=[{
         'learning_rate':item['learning_rate'],
@@ -966,6 +1166,7 @@ def backtest(draws: list[dict], weights: dict[str, float] | list[dict[str, float
         anchor = dict(weights)
         current = dict(weights)
     path=[]
+    top9_distribution=Counter()
     for i, draw in enumerate(draws):
         if i == 0:
             state.update(draw)
@@ -986,6 +1187,7 @@ def backtest(draws: list[dict], weights: dict[str, float] | list[dict[str, float
         single_hits += int(ranked[0] in actual)
         top5_hits += len(actual.intersection(ranked[:5]))
         top9_hits += len(actual.intersection(ranked[:9]))
+        top9_distribution[len(actual.intersection(ranked[:9]))] += 1
         rank10_15_hits += len(actual.intersection(ranked[9:15]))
         top15_hits += len(actual.intersection(ranked[:15]))
         bottom1_hits += int(ranked[-1] in actual)
@@ -1016,8 +1218,11 @@ def backtest(draws: list[dict], weights: dict[str, float] | list[dict[str, float
     lower = center - margin
     gate = lower > p0
     avg_actual_rank=rank_sum/(n*5)
+    top9_slot_hit_rate=top9_hits/(n*9)
+    rank10_15_slot_hit_rate=rank10_15_hits/(n*6)
+    boundary_valid=top9_slot_hit_rate>rank10_15_slot_hit_rate
     direction_valid=(single_hits>bottom1_hits and top5_hits>bottom5_hits
-                     and top9_hits>bottom9_hits and top9_hits>rank10_15_hits
+                     and top9_hits>bottom9_hits and boundary_valid
                      and avg_actual_rank<20)
     return {
         "samples": n,
@@ -1040,10 +1245,16 @@ def backtest(draws: list[dict], weights: dict[str, float] | list[dict[str, float
         "rank10_15_avg_hits": round(rank10_15_hits / n, 4),
         "top15_avg_hits": round(top15_hits / n, 4),
         "top9_capture_rate": round(top9_hits / max(1,top15_hits), 4),
+        "top9_slot_hit_rate": round(top9_slot_hit_rate,6),
+        "rank10_15_slot_hit_rate": round(rank10_15_slot_hit_rate,6),
+        "boundary_expected_capture_rate": 0.6,
+        "top9_hit_distribution": {str(k):top9_distribution[k] for k in range(6)},
+        "top9_at_least_2_rate": round(sum(v for k,v in top9_distribution.items() if k>=2)/n,4),
+        "top9_at_least_3_rate": round(sum(v for k,v in top9_distribution.items() if k>=3)/n,4),
         "top9_random_baseline": round(45 / 39, 4),
         "bottom9_avg_hits": round(bottom9_hits / n, 4),
         "avg_actual_rank": round(avg_actual_rank,4),
-        "boundary_control_valid": top9_hits>rank10_15_hits,
+        "boundary_control_valid": boundary_valid,
         "ranking_direction_valid": direction_valid,
         "backtest_weights": current,
         "anchor_weights": anchor,
@@ -1096,6 +1307,7 @@ def prediction_seal_payload(based_on_period: str, target_draw_date: str, history
         "rolling_learning_rate": selection["learning_rate_selection"]["selected_learning_rate"],
         "rolling_boundary_blend": selection["learning_rate_selection"]["selected_boundary_blend"],
         "rolling_learning_rate_selection_window": selection["learning_rate_selection"]["selection_window"],
+        "adaptive_polarity": selection.get("adaptive_polarity") or {},
     }
 
 
@@ -1161,14 +1373,16 @@ def render(draws: list[dict], weights: dict, quality: list[float], score: dict, 
     single_display=f"{top15[0]:02}"
     previous_overlap5=len(set(top15[:5]).intersection(latest['nums']))
     previous_overlap9=len(set(top15[:9]).intersection(latest['nums']))
-    if bt.get("ranking_direction_valid"):
-        single_status="本期主選已公開；排序方向驗證通過"
+    if bt.get("ranking_direction_valid") and bt.get("single_direction_valid"):
+        single_status="本期主選已公開；前段排序與1中1方向均通過"
+    elif bt.get("ranking_direction_valid"):
+        single_status="本期主選已公開；前5與前9方向通過，1中1獨立優勢尚未通過"
     else:
         single_status="本期主選已公開；排序方向未通過，禁止宣稱高機率"
     formula_rows="".join(f"<tr><td>{FEATURE_LABELS.get(k,k)}</td><td>逐期擴展全歷史資料庫</td><td>{v:.3f}</td><td>正式排名核心</td></tr>" for k,v in weights.items())
     formula_rows+="<tr><td>近10／30／100期等短期模組</td><td>僅戰報觀察</td><td>0.000</td><td>鐵律禁止影響正式排名</td></tr>"
     repeat_rows="".join(f"<tr><td>{x['number']:02}</td><td>{x['relative_index']:.1f}</td><td>{x['transition_contribution']:+.3f}</td><td>{x['positive_module_count']}</td><td>{x['repeat_hits']}/{x['repeat_samples']}（{100*x['repeat_rate']:.2f}%）</td><td>{'通過' if x['repeat_backtest_pass'] else '未通過'}</td><td>{'符合' if x['qualified'] else '未符合'}</td><td>{x['final_rank']}</td><td>{'列入前9' if x['listed_top9'] else '未列入前9'}</td></tr>" for x in repeat_audit)
-    dist="、".join(f"{k}中：{v}期" for k,v in bt['distribution'].items())
+    dist="、".join(f"{k}中：{v}期" for k,v in bt.get('top9_hit_distribution',{}).items())
     return f"""<!doctype html><html lang='zh-Hant'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>台灣539 精算預測戰報</title><style>
 *{{box-sizing:border-box}}body{{margin:0;background:#f3f4f6;color:#172033;font-family:Arial,'Microsoft JhengHei',sans-serif}}main{{max-width:1180px;margin:auto;padding:18px}}header{{background:linear-gradient(135deg,#8b0000,#d1242f);color:white;padding:25px;border-radius:14px}}h1{{margin:0 0 8px}}h2{{border-left:6px solid #c1121f;padding-left:10px;color:#7f1017;margin-top:30px}}nav{{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}}nav a{{background:white;border:1px solid #d1d5db;border-radius:8px;padding:9px 12px;color:#8b0000;text-decoration:none;font-weight:700}}.band{{background:white;border:1px solid #d8dee8;border-radius:12px;padding:18px;margin:14px 0;box-shadow:0 2px 8px #0000000d}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}}.card{{border:1px solid #d9dde5;border-radius:10px;padding:13px;background:#fff}}.hot-card{{border:2px solid #c1121f;background:#fff5f5}}.label{{color:#687386;font-size:13px}}.value{{font-size:19px;font-weight:800;margin-top:5px}}.num{{color:#c1121f;font-size:34px}}table{{width:100%;border-collapse:collapse;display:block;overflow:auto}}th{{background:#7f1017;color:#fff}}th,td{{padding:9px;border:1px solid #d7dce4;text-align:left;white-space:nowrap}}tr:nth-child(even) td{{background:#fafafa}}.warn{{background:#fff8e6;border-color:#e9b949}}.note{{color:#626d7d}}@media(max-width:600px){{main{{padding:8px}}header{{border-radius:8px}}}}
 </style><main><header><h1>台灣539 精算預測戰報</h1><div>全新模型・依照天天樂戰報統一規格</div></header><nav><a href='#decision'>核心決策</a><a href='#rank'>前15名</a><a href='#packs'>強牌組</a><a href='#hits'>實戰封存</a><a href='#review'>命中檢討</a><a href='#low'>投注排除</a><a href='#models'>公式模型</a><a href='#gate'>鐵律守門</a></nav>
@@ -1182,11 +1396,11 @@ def render(draws: list[dict], weights: dict, quality: list[float], score: dict, 
 <div class='band warn' id='review'><h2>每期開獎命中檢討與滾動修正</h2>{review_html}</div>
 <div class='band' id='low'><h2>強制投注排除名單</h2><p><b>以下後15名已從本系統全部推薦牌組強制排除，系統產生的任何牌組都不得包含。</b></p><table><thead><tr><th>區段</th><th>號碼</th><th>動作</th><th>鐵律</th></tr></thead><tbody>{lowrows}</tbody></table></div>
 <div class='band'><h2>連莊資格驗算</h2><p><b>上一期號碼必須同時符合：相對指數至少75、全歷史轉移貢獻為正、至少兩個正式模組正貢獻、該號碼全歷史連莊率不低於12.82%，且全系統{full_scan['samples']}期掃描與最後360期隔離回測均通過，才准列入前9。</b>資格在正式排名前判定，不限制連莊顆數、不做事後補號。</p><table><thead><tr><th>上一期號碼</th><th>相對指數</th><th>轉移貢獻</th><th>正貢獻模組數</th><th>連莊命中／樣本</th><th>個別回測</th><th>資格</th><th>最終名次</th><th>結果</th></tr></thead><tbody>{repeat_rows}</tbody></table></div>
-<div class='band' id='models'><h2>公式模型實驗室</h2><p><b>每次預測與每一期回測都使用當時以前的全部歷史資料。</b>正式排名100%由逐期擴展全歷史模型產生；每期重新搜尋286組錨定權重，剔除單一模組超過五成的失衡組合，從146組均衡候選選出前三模型，以名次共識決定排序。選模品質直接獎勵前9命中並懲罰命中滯留第10至15名；開獎後再分開比較第10至15名命中與前9落空號，將邊界錯誤回灌到下一期三個模型。先以最近三百六十期分三段校正，再用更早長歷史做九段穩定複驗；末段三百六十期逐期先封存預測、開獎後才回灌，三模型回測終點必須等於畫面正式模型。上一期號碼仍須先通過連莊資格，不限制重複顆數、不做事後補位；同分號碼以當時已知期別公平破同分，禁止固定偏向小號或大號。</p><table><thead><tr><th>公式</th><th>資料範圍</th><th>實際權重</th><th>動作</th></tr></thead><tbody>{formula_rows}</tbody></table></div>
+<div class='band' id='models'><h2>公式模型實驗室</h2><p><b>每次預測與每一期回測都使用當時以前的全部歷史資料。</b>正式特徵100%由逐期擴展全歷史資料庫產生；每期先搜尋286組錨定權重並強制三個候選保持足夠差異，再建立三十組模組正反方向模型。每一期只用該期以前九十期實績挑選下一期方向，轉移、型態、遺漏若持續把開獎號壓到後段就會自動反轉，不准用同一期答案改寫同一期排名。前9與第10至15名以每個排名位置的命中率比較，禁止再用九個位置對六個位置的總數製造假通過。上一期號碼仍須先通過連莊資格，不限制重複顆數、不做事後補位；同分號碼以當時已知期別公平破同分。</p><table><thead><tr><th>公式</th><th>資料範圍</th><th>實際權重</th><th>動作</th></tr></thead><tbody>{formula_rows}</tbody></table></div>
 <div class='band'><h2>全歷史逐期一致性掃描</h2><p>從第321期開始逐期重算，共 {full_scan['samples']} 期：高分第1名 {full_scan['single_hits']} 中、最低分第1名 {full_scan['bottom1_hits']} 中；前5平均 {full_scan['top5_avg_hits']}、後5平均 {full_scan['bottom5_avg_hits']}；前9平均 {full_scan['top9_avg_hits']}、第10至15名平均 {full_scan['rank10_15_avg_hits']}、後9平均 {full_scan['bottom9_avg_hits']}；前9占前15命中 {100*full_scan['top9_capture_rate']:.2f}%；實際開獎號平均名次 {full_scan['avg_actual_rank']}。判定：{'排序方向通過' if full_scan['ranking_direction_valid'] else '排序方向未通過'}。</p></div>
-<div class='band warn'><h2>實戰失準回灌重排</h2><p>隔離保留 {bt['samples']} 期：高分第1名 {bt.get('single_hits',0)} 中、最低分第1名 {bt.get('bottom1_hits',0)} 中；前5平均 {bt.get('top5_avg_hits',0)}、後5平均 {bt.get('bottom5_avg_hits',0)}；前9平均 {bt.get('top9_avg_hits',0)}、第10至15名滯留平均 {bt.get('rank10_15_avg_hits',0)}、後9平均 {bt.get('bottom9_avg_hits',0)}；前9占前15命中 {100*bt.get('top9_capture_rate',0):.2f}%；實際開獎號平均名次 {bt.get('avg_actual_rank',0)}（中立值20）。每期 {len(tickets)} 組最佳組平均命中 {bt['avg_best_hits']}；{dist}。</p><p><b>前三均衡模型只用隔離期以前資料決定；隔離期以前另比較三十組學習幅度與前9邊界占比。本次邊界占比 {100*bt.get('rolling_boundary_blend',0):.0f}%。隔離期內每期先做三模型名次共識並封存，開獎後才把整體與第10至15名邊界錯誤回灌到下一期，共滾動更新 {bt.get('rolling_update_count',0)} 次。禁止用同一期答案改寫同一期預測。</b></p></div>
-  <div class='band'><h2>多模組校正對照</h2><div class='grid'><div class='card'><div class='label'>候選組合數</div><div class='value'>{selection['diagnostic']['candidate_count']}</div></div><div class='card'><div class='label'>均衡候選數</div><div class='value'>{selection['diagnostic']['eligible_candidate_count']}</div></div><div class='card'><div class='label'>正式共識模型</div><div class='value'>前三模型</div></div><div class='card'><div class='label'>前段三折校正</div><div class='value'>{'三段全數通過' if selection['diagnostic']['validation']['folds_all_valid'] else '採最佳穩定候選'}</div></div><div class='card'><div class='label'>採用原則</div><div class='value'>每期重搜、均衡篩選、三模共識、後隔離驗收</div></div></div></div>
-<div class='band' id='gate'><h2>鐵律守門</h2><table><thead><tr><th>項目</th><th>結果</th><th>說明</th></tr></thead><tbody><tr><td>重新運算</td><td>已完成</td><td>依最新資料從模型分數直接重排，不做補位</td></tr><tr><td>資料完整性</td><td>通過</td><td>去重、日期排序、號碼1至39、每期5個不重複</td></tr><tr><td>每期命中檢討</td><td>{'通過' if settlements and settlements[-1].get('review_status')=='completed_from_pre_draw_seal' else '等待首筆封存結算'}</td><td>只採開獎前封存排名與模組貢獻，逐期回灌重算</td></tr><tr><td>前9邊界偏移</td><td>{'通過' if bt.get('boundary_control_valid') else '未通過'}</td><td>每期強制檢查第10至15名命中，與前9落空號分模組比較並回灌下一期</td></tr><tr><td>全歷史掃描</td><td>{'通過' if full_scan['ranking_direction_valid'] else '未通過'}</td><td>{full_scan['samples']}期逐期重新運算</td></tr><tr><td>未來資料隔離</td><td>通過</td><td>每期重搜286組，三十組邊界參數校正截止在最後三百六十期以前</td></tr><tr><td>連莊資格</td><td>通過</td><td>相對指數、轉移貢獻、正貢獻模組三重驗算</td></tr><tr><td>上一期號碼檢查</td><td>通過</td><td>前5符合資格並列入{previous_overlap5}顆、前9符合資格並列入{previous_overlap9}顆</td></tr><tr><td>高低分方向</td><td>{rank_status}</td><td>同時計算前1／5／9、第10至15名與後1／5／9</td></tr><tr><td>主選產出</td><td>通過</td><td>每期固定產出最強獨隻並公開，不得缺號或事後換號</td></tr></tbody></table></div>
+<div class='band warn'><h2>實戰失準回灌重排</h2><p>隔離保留 {bt['samples']} 期：高分第1名 {bt.get('single_hits',0)} 中、最低分第1名 {bt.get('bottom1_hits',0)} 中；前5平均 {bt.get('top5_avg_hits',0)}、後5平均 {bt.get('bottom5_avg_hits',0)}；前9平均 {bt.get('top9_avg_hits',0)}、第10至15名滯留平均 {bt.get('rank10_15_avg_hits',0)}、後9平均 {bt.get('bottom9_avg_hits',0)}；前9占前15命中 {100*bt.get('top9_capture_rate',0):.2f}%；實際開獎號平均名次 {bt.get('avg_actual_rank',0)}（中立值20）。前9逐期分布：{dist}。</p><p>最近54期獨立逐期結果：前9平均 {bt.get('recent_54',{}).get('top9_avg_hits',0)}、後9平均 {bt.get('recent_54',{}).get('bottom9_avg_hits',0)}、前9零中 {bt.get('recent_54',{}).get('top9_hit_distribution',{}).get('0',0)} 期、實際開獎號平均名次 {bt.get('recent_54',{}).get('avg_actual_rank',0)}。</p><p><b>三十組方向模型每期只讀當時以前資料，使用前九十期選出下一期方向；隔離期共完成 {bt.get('rolling_update_count',0)} 次開獎前選模。前5至少2中比例 {100*bt.get('top5_at_least_2_rate',0):.2f}%、前5至少3中比例 {100*bt.get('top5_at_least_3_rate',0):.2f}%、前9至少2中比例 {100*bt.get('top9_at_least_2_rate',0):.2f}%、前9至少3中比例 {100*bt.get('top9_at_least_3_rate',0):.2f}%。禁止用同一期答案改寫同一期預測。</b></p></div>
+  <div class='band'><h2>多模組校正對照</h2><div class='grid'><div class='card'><div class='label'>錨定候選組合數</div><div class='value'>{selection['diagnostic']['candidate_count']}</div></div><div class='card'><div class='label'>均衡候選數</div><div class='value'>{selection['diagnostic']['eligible_candidate_count']}</div></div><div class='card'><div class='label'>方向模型數</div><div class='value'>{bt.get('strategy_candidate_count',0)}</div></div><div class='card'><div class='label'>方向選擇窗</div><div class='value'>{bt.get('strategy_selection_window',0)}期</div></div><div class='card'><div class='label'>採用原則</div><div class='value'>全歷史特徵、分散錨定、方向競賽、逐期隔離</div></div></div></div>
+<div class='band' id='gate'><h2>鐵律守門</h2><table><thead><tr><th>項目</th><th>結果</th><th>說明</th></tr></thead><tbody><tr><td>重新運算</td><td>已完成</td><td>依最新資料從模型分數直接重排，不做補位</td></tr><tr><td>資料完整性</td><td>通過</td><td>去重、日期排序、號碼1至39、每期5個不重複</td></tr><tr><td>每期命中檢討</td><td>{'通過' if settlements and settlements[-1].get('review_status')=='completed_from_pre_draw_seal' else '等待首筆封存結算'}</td><td>只採開獎前封存排名與模組貢獻，逐期回灌重算</td></tr><tr><td>前9邊界偏移</td><td>{'通過' if bt.get('boundary_control_valid') else '未通過'}</td><td>以每個排名位置命中率比較前9與第10至15名</td></tr><tr><td>全歷史掃描</td><td>診斷</td><td>事後全史只供檢查，不再冒充隔離驗證</td></tr><tr><td>未來資料隔離</td><td>通過</td><td>三十組方向模型每期只用前九十期已開獎成績挑選下一期</td></tr><tr><td>連莊資格</td><td>通過</td><td>相對指數、轉移貢獻、正貢獻模組三重驗算</td></tr><tr><td>上一期號碼檢查</td><td>通過</td><td>前5符合資格並列入{previous_overlap5}顆、前9符合資格並列入{previous_overlap9}顆</td></tr><tr><td>前5／前9目標</td><td>{'達標' if bt.get('top5_at_least_2_rate')==1 and bt.get('top9_at_least_2_rate')==1 else '歷史未全數達標'}</td><td>低於2中一律記為失敗並觸發次期方向重選</td></tr><tr><td>高低分方向</td><td>{rank_status}</td><td>同時計算前1／5／9、第10至15名與後1／5／9</td></tr><tr><td>主選產出</td><td>通過</td><td>每期固定產出最強獨隻並公開，不得缺號或事後換號</td></tr></tbody></table></div>
 <div class='band warn'><h2>模型健康與公開狀態</h2><table><thead><tr><th>項目</th><th>高分結果</th><th>對照</th><th>判定</th></tr></thead><tbody><tr><td>第1名隔離命中</td><td>{bt.get('single_hits',0)}/{bt['samples']}（{100*bt.get('single_rate',0):.2f}%）</td><td>最低分第1名 {bt.get('bottom1_hits',0)}/{bt['samples']}</td><td>{rank_status}</td></tr><tr><td>前5隔離平均</td><td>{bt.get('top5_avg_hits',0)}</td><td>後5 {bt.get('bottom5_avg_hits',0)}</td><td>{rank_status}</td></tr><tr><td>前9隔離平均</td><td>{bt.get('top9_avg_hits',0)}</td><td>第10至15名 {bt.get('rank10_15_avg_hits',0)}／後9 {bt.get('bottom9_avg_hits',0)}</td><td>{rank_status}</td></tr><tr><td>前9邊界占比</td><td>{100*bt.get('top9_capture_rate',0):.2f}%</td><td>前15命中中落入前9比例</td><td>{'通過' if bt.get('boundary_control_valid') else '未通過'}</td></tr><tr><td>1中1主選</td><td>已公開</td><td>不宣稱必中</td><td>{single_status}</td></tr></tbody></table></div>
 <div class='band warn'><h2>實戰門檻與風險聲明</h2><p>今彩539為隨機遊戲，每組合法號碼理論機率相同；本戰報只供統計研究，不保證中獎或獲利。請設定固定娛樂預算。</p></div></main></html>"""
 
@@ -1203,9 +1417,11 @@ def main() -> None:
     boundary_blend = learning_rate_selection["selected_boundary_blend"]
     diagnostics[0]["learning_rate_selection"] = learning_rate_selection
     quality = [diagnostics[0]["quality"]]
-    bt = backtest(draws, anchor_ensemble, holdout, max(1, min(a.tickets, 30)), learning_rate, boundary_blend)
-    weights = dict(bt["end_weights"])
-    production_ensemble = [dict(item) for item in bt["end_ensemble_weights"]]
+    core_bt = backtest(draws, anchor_ensemble, holdout, max(1, min(a.tickets, 30)), learning_rate, boundary_blend)
+    bt = adaptive_polarity_backtest(draws, average_weights(anchor_ensemble), holdout, POLARITY_SELECTION_WINDOW)
+    bt["core_three_model_diagnostic"] = core_bt
+    weights = dict(bt["next_signed_weights"])
+    production_ensemble = []
     diagnostics[0]["production_weights_after_rolling"] = weights
     diagnostics[0]["production_ensemble_after_rolling"] = production_ensemble
     selection["production_weights_after_rolling"] = weights
@@ -1213,12 +1429,20 @@ def main() -> None:
     selection["rolling_update_count"] = bt["rolling_update_count"]
     selection["rolling_path_sha256"] = bt["rolling_path_sha256"]
     selection["learning_rate_selection"] = learning_rate_selection
-    full_scan = ranking_direction_metrics(draws, production_ensemble, 320, len(draws))
+    selection["adaptive_polarity"] = {
+        "method": bt["method"],
+        "strategy_candidate_count": bt["strategy_candidate_count"],
+        "selection_window": bt["strategy_selection_window"],
+        "selected_next_strategy": bt["selected_next_strategy"],
+        "selected_next_polarities": bt["selected_next_polarities"],
+        "path_sha256": bt["rolling_path_sha256"],
+    }
+    full_scan = ranking_direction_metrics(draws, weights, 320, len(draws))
+    full_scan["validation_eligible"] = False
+    full_scan["evaluation"] = "目前終點方向的事後全史診斷，不作隔離驗證"
     current_state=formal_history_state(draws); current_features=current_state.features()
-    sc,raw_sc,repeat_audit,_=ensemble_scores_from_features(
-        current_features,production_ensemble,draws[-1]["nums"],draws[-1]["period"],
-        current_state.repeat_exposure,current_state.repeat_hits)
-    ranked = rank_numbers(sc,draws[-1]["period"])
+    sc=bt["next_score"];raw_sc=bt["next_raw_score"];repeat_audit=bt["next_repeat_audit"]
+    ranked = list(bt["next_ranked"])
     number_diagnostics = build_number_diagnostics(ranked, sc, raw_sc, current_features, weights)
     tickets = make_tickets(sc, max(1, min(a.tickets, 30)), draws[-1]["period"], set(ranked[-15:]))
     OUT.mkdir(parents=True, exist_ok=True)
@@ -1231,8 +1455,13 @@ def main() -> None:
         number_diagnostics, weights, selection, production_ensemble)
     seal_sha256 = hashlib.sha256(json.dumps(seal_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     fingerprint = seal_sha256[:16]
+    report_pages = render_report_pages(
+        draws, weights, sc, tickets, bt, full_scan, repeat_audit,
+        selection, OUT, FEATURE_LABELS)
+    for filename, page in report_pages.items():
+        (OUT / filename).write_text(page, encoding="utf-8")
     report = OUT / "最新539科學預測戰報.html"
-    report.write_text(render(draws, weights, quality, sc, tickets, bt, full_scan, repeat_audit, selection), encoding="utf-8")
+    report.write_text(report_pages["index.html"], encoding="utf-8")
     result = {
         "generated_at": datetime.now(TAIPEI).isoformat(timespec="seconds"),
         "based_on_period": draws[-1]["period"],
@@ -1258,6 +1487,7 @@ def main() -> None:
         },
         "production_weights": weights,
         "production_ensemble_weights": production_ensemble,
+        "anchor_ensemble_weights": anchor_ensemble,
         "audit_weights": weights,
         "audit_candidate_quality": quality,
         "weight_selection_diagnostics": diagnostics,
@@ -1273,6 +1503,10 @@ def main() -> None:
             "learning_rate_selection": learning_rate_selection,
             "path_sha256": bt["rolling_path_sha256"],
             "method": bt["method"],
+            "strategy_candidate_count": bt["strategy_candidate_count"],
+            "strategy_selection_window": bt["strategy_selection_window"],
+            "selected_next_strategy": bt["selected_next_strategy"],
+            "selected_next_polarities": bt["selected_next_polarities"],
         },
         "model_selection_cutoff": {
             "period": diagnostics[0]["calibration_window"]["last_period"],
