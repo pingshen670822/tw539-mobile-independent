@@ -101,7 +101,7 @@ for name,page in pages.items():
     links=set(re.findall(r"href=['\"]\./([^'\"]+\.html)['\"]",page))
     if links!=set(REPORT_PAGES): errors.append(f'{name} 分頁導覽不完整')
 home=visible_pages['index.html']; review_page=visible_pages['review.html']; backtest_page=visible_pages['backtest.html']; history_page=visible_pages['history.html']; models_page=visible_pages['models.html']; health_page=visible_pages['health.html']
-if '1中1主選' not in home or (ranked and f'{int(ranked[0]):02}' not in home): errors.append('本期預測頁未顯示1中1主選')
+if '本期最強1顆' not in home or '1中1' not in home or (ranked and f'{int(ranked[0]):02}' not in home): errors.append('本期預測頁未顯示1中1主選')
 if any(term in home for term in ('最新一期命中結算','最後360期隔離回測','全歷史運算範圍','鐵律守門')): errors.append('本期預測頁混入其他分類資料')
 if '最新一期命中結算' not in review_page or '錯誤模組與前9邊界逐項檢討' not in review_page or '第10至15名命中' not in review_page or '開獎後滾動權重重算' not in review_page or '禁止開獎後換號或補號' not in review_page: errors.append('開獎檢討分頁內容不完整')
 if '最後360期隔離回測' not in backtest_page or '最近54期獨立觀察' not in backtest_page or '全歷史逐期一致性掃描' not in backtest_page: errors.append('回測驗證分頁內容不完整')
