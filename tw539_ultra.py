@@ -230,6 +230,7 @@ POLARITY_EWMA_ALPHAS = (.90,.95,.97,.98,.99,.995)
 POLARITY_FULL_HISTORY_BLENDS = (0.0,.10,.25,.50,.75)
 POLARITY_SELECTION_WINDOW = 90
 POLARITY_WARMUP = 60
+SINGLE_SPECIALIST_WINDOW = 30
 
 FEATURE_LABELS = {
     "full_freq": "全歷史頻率",
@@ -521,7 +522,8 @@ def adaptive_polarity_backtest(
     holdout_start=len(draws)-min(tests,ROLLING_HOLDOUT_DRAWS)
     start_offset=holdout_start-case_start
     selected_metric=_empty_metric()
-    top5_distribution=Counter();top9_distribution=Counter();selection_counts=Counter();path=[];selected_rows=[]
+    top5_distribution=Counter();top9_distribution=Counter();selection_counts=Counter();single_selection_counts=Counter();path=[];selected_rows=[]
+    baseline_single_hits=0
     for draw_index in range(holdout_start,len(draws)):
         offset=draw_index-case_start
         window_start=max(0,offset-selection_window)
@@ -529,14 +531,27 @@ def adaptive_polarity_backtest(
             metric=_prefix_metric(strategy["prefix"],window_start,offset)
             return (direction_quality(metric),metric["single_hits"],-strategy["alpha"],-strategy["full_history_blend"])
         chosen=max(strategies,key=strategy_key)
-        ranked,actual,polarities=chosen["rows"][offset]
+        base_ranked,actual,polarities=chosen["rows"][offset]
+        single_window_start=max(0,offset-SINGLE_SPECIALIST_WINDOW)
+        def single_strategy_key(strategy):
+            metric=_prefix_metric(strategy["prefix"],single_window_start,offset)
+            return (metric["single_hits"],metric["top5_avg_hits"],direction_quality(metric),
+                    -strategy["alpha"],-strategy["full_history_blend"])
+        single_chosen=max(strategies,key=single_strategy_key)
+        specialist_ranked=single_chosen["rows"][offset][0]
+        single=next(number for number in specialist_ranked if number in base_ranked[:5])
+        ranked=[single]+[number for number in base_ranked if number!=single]
+        baseline_single_hits+=int(base_ranked[0] in actual)
         _add_ranking(selected_metric,ranked,actual)
         selected_rows.append((ranked,actual,polarities))
         top5_distribution[len(actual.intersection(ranked[:5]))]+=1
         top9_distribution[len(actual.intersection(ranked[:9]))]+=1
         label=f"{chosen['alpha']:.3f}/{chosen['full_history_blend']:.2f}"
         selection_counts[label]+=1
-        path.append({"period":draws[draw_index]["period"],"strategy":label,"polarities":polarities})
+        single_label=f"{single_chosen['alpha']:.3f}/{single_chosen['full_history_blend']:.2f}"
+        single_selection_counts[single_label]+=1
+        path.append({"period":draws[draw_index]["period"],"strategy":label,
+                     "single_strategy":single_label,"single":single,"polarities":polarities})
     result=_finish_metric(selected_metric)
     result["single_direction_valid"]=result["single_hits"]>result["bottom1_hits"]
     result["front_ranking_direction_valid"]=(
@@ -578,7 +593,29 @@ def adaptive_polarity_backtest(
     adjusted,repeat_audit=apply_repeat_qualification(
         raw,features,signed_weights,draws[-1]["nums"],draws[-1]["period"],
         state.repeat_exposure,state.repeat_hits)
-    next_ranked=rank_numbers(adjusted,draws[-1]["period"])
+    base_next_ranked=rank_numbers(adjusted,draws[-1]["period"])
+    single_window_start=max(0,final_offset-SINGLE_SPECIALIST_WINDOW)
+    def final_single_strategy_key(strategy):
+        metric=_prefix_metric(strategy["prefix"],single_window_start,final_offset)
+        return (metric["single_hits"],metric["top5_avg_hits"],direction_quality(metric),
+                -strategy["alpha"],-strategy["full_history_blend"])
+    single_chosen=max(strategies,key=final_single_strategy_key)
+    single_polarities={}
+    for key in FORMAL_FEATURE_KEYS:
+        full_mean=single_chosen["cumulative"][key]/max(1,single_chosen["count"])
+        combined=(single_chosen["full_history_blend"]*full_mean
+                  +(1-single_chosen["full_history_blend"])*single_chosen["ewma"][key])
+        single_polarities[key]=1.0 if combined>=0 else -1.0
+    single_weights={key:float(anchor_weights[key])*single_polarities[key] for key in FORMAL_FEATURE_KEYS}
+    single_raw=scores_from_features(features,single_weights)
+    single_adjusted,_=apply_repeat_qualification(
+        single_raw,features,single_weights,draws[-1]["nums"],draws[-1]["period"],
+        state.repeat_exposure,state.repeat_hits)
+    specialist_next_ranked=rank_numbers(single_adjusted,draws[-1]["period"])
+    single=next(number for number in specialist_next_ranked if number in base_next_ranked[:5])
+    next_ranked=[single]+[number for number in base_next_ranked if number!=single]
+    ordered_values=sorted(adjusted.values(),reverse=True)
+    adjusted={number:ordered_values[index] for index,number in enumerate(next_ranked)}
     single_hits=int(selected_metric["single_hits"])
     p0=5/39;phat=single_hits/n;z=1.96
     center=(phat+z*z/(2*n))/(1+z*z/n)
@@ -596,7 +633,16 @@ def adaptive_polarity_backtest(
         "strategy_candidate_count":len(strategies),"strategy_selection_window":selection_window,
         "recent_54":recent_result,
         "strategy_selection_counts":dict(selection_counts),
+        "single_specialist_selection_counts":dict(single_selection_counts),
+        "single_specialist_window":SINGLE_SPECIALIST_WINDOW,
+        "single_specialist_baseline_hits":baseline_single_hits,
+        "single_specialist_hits":single_hits,
+        "single_specialist_lift":single_hits-baseline_single_hits,
+        "single_specialist_method":"top_five_pool_thirty_draw_pre_result_specialist",
         "selected_next_strategy":{"ewma_alpha":chosen["alpha"],"full_history_blend":chosen["full_history_blend"]},
+        "selected_next_single_strategy":{"ewma_alpha":single_chosen["alpha"],"full_history_blend":single_chosen["full_history_blend"]},
+        "selected_next_single_polarities":single_polarities,
+        "selected_next_single_weights":single_weights,
         "selected_next_polarities":final_polarities,"next_signed_weights":signed_weights,
         "next_ranked":next_ranked,"next_score":adjusted,"next_raw_score":raw,"next_repeat_audit":repeat_audit,
         "rolling_update_count":n,"rolling_learning_rate":0.0,"rolling_boundary_blend":0.0,
@@ -1443,6 +1489,33 @@ def main() -> None:
     current_state=formal_history_state(draws); current_features=current_state.features()
     sc=bt["next_score"];raw_sc=bt["next_raw_score"];repeat_audit=bt["next_repeat_audit"]
     ranked = list(bt["next_ranked"])
+    single_number=ranked[0]
+    module_consensus=[]
+    for key in FORMAL_FEATURE_KEYS:
+        module_score={number:weights[key]*current_features[key][number] for number in range(1,40)}
+        module_rank=rank_numbers(module_score,draws[-1]["period"]).index(single_number)+1
+        module_consensus.append({
+            "module":key,
+            "label":FEATURE_LABELS[key],
+            "rank":module_rank,
+            "supports":bool(abs(weights[key])>1e-12 and module_rank<=9),
+            "contribution":round(module_score[single_number],9),
+        })
+    consensus_votes=sum(item["supports"] for item in module_consensus)
+    strong_conditions={
+        "單碼專模隔離提升":bt.get("single_specialist_lift",0)>0,
+        "正式排序方向通過":bool(bt.get("ranking_direction_valid")),
+        "最近五十四期方向通過":bool((bt.get("recent_54") or {}).get("ranking_direction_valid")),
+        "前九邊界通過":bool(bt.get("boundary_control_valid")),
+        "至少三項正式邏輯同向":consensus_votes>=3,
+        "單碼信賴下限高於隨機基準":bool(bt.get("single_release_allowed")),
+    }
+    bt["single_module_consensus"]=module_consensus
+    bt["single_consensus_votes"]=consensus_votes
+    bt["single_strong_conditions"]=strong_conditions
+    bt["single_strong_recommendation"]=all(strong_conditions.values())
+    bt["single_confidence_label"]=("超高信心強烈推薦" if bt["single_strong_recommendation"]
+                                   else "本期綜合最強")
     number_diagnostics = build_number_diagnostics(ranked, sc, raw_sc, current_features, weights)
     tickets = make_tickets(sc, max(1, min(a.tickets, 30)), draws[-1]["period"], set(ranked[-15:]))
     OUT.mkdir(parents=True, exist_ok=True)
@@ -1507,6 +1580,9 @@ def main() -> None:
             "strategy_selection_window": bt["strategy_selection_window"],
             "selected_next_strategy": bt["selected_next_strategy"],
             "selected_next_polarities": bt["selected_next_polarities"],
+            "single_specialist_window": bt["single_specialist_window"],
+            "selected_next_single_strategy": bt["selected_next_single_strategy"],
+            "selected_next_single_weights": bt["selected_next_single_weights"],
         },
         "model_selection_cutoff": {
             "period": diagnostics[0]["calibration_window"]["last_period"],
@@ -1527,6 +1603,18 @@ def main() -> None:
         "single_candidate": ranked[0],
         "single_published": ranked[0],
         "single_selection_evidence": number_diagnostics[0],
+        "single_recommendation": {
+            "label": bt["single_confidence_label"],
+            "strong": bt["single_strong_recommendation"],
+            "consensus_votes": consensus_votes,
+            "module_count": len(module_consensus),
+            "conditions": strong_conditions,
+            "module_consensus": module_consensus,
+            "isolated_hits": bt["single_specialist_hits"],
+            "isolated_samples": bt["samples"],
+            "baseline_hits_before_specialist": bt["single_specialist_baseline_hits"],
+            "recent_54_hits": (bt.get("recent_54") or {}).get("single_hits"),
+        },
         "release_policy": {
             "official_release_allowed": True,
             "single": "published_every_draw",

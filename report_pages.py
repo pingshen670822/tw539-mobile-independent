@@ -34,6 +34,18 @@ def _read_jsonl(path: Path) -> list[dict]:
     return rows
 
 
+def _read_json(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _display_time(value) -> str:
+    text = str(value or "－").replace("T", " ")
+    return text[:-6] if len(text) > 6 and text[-6] in "+-" and text[-3] == ":" else text
+
+
 def _numeric_code(value) -> str:
     raw = str(value or "")
     if len(raw) != 64 or any(char not in "0123456789abcdef" for char in raw.lower()):
@@ -53,7 +65,7 @@ def _page_shell(filename: str, heading: str, subtitle: str, content: str) -> str
 <meta name='viewport' content='width=device-width,initial-scale=1'>
 <title>台灣539・{heading}</title>
 <style>
-*{{box-sizing:border-box}}body{{margin:0;background:#f3f4f6;color:#172033;font-family:system-ui,'Microsoft JhengHei',sans-serif;line-height:1.55}}main{{max-width:1180px;margin:auto;padding:18px}}header{{background:linear-gradient(135deg,#7f1017,#d1242f);color:#fff;padding:24px;border-radius:14px}}h1{{margin:0 0 5px;font-size:28px}}h2{{border-left:6px solid #c1121f;padding-left:10px;color:#7f1017;margin:0 0 16px}}h3{{color:#7f1017;margin:24px 0 10px}}nav{{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:14px 0}}nav a{{display:flex;align-items:center;justify-content:center;min-height:44px;background:#fff;border:1px solid #d1d5db;border-radius:9px;padding:8px;color:#7f1017;text-decoration:none;font-weight:800;text-align:center}}nav a.active{{background:#7f1017;color:#fff;border-color:#7f1017}}.band{{background:#fff;border:1px solid #d8dee8;border-radius:12px;padding:18px;margin:14px 0;box-shadow:0 2px 8px #0000000d}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}}.card{{border:1px solid #d9dde5;border-radius:10px;padding:13px;background:#fff}}.primary{{border:2px solid #c1121f;background:#fff5f5}}.label{{color:#687386;font-size:13px}}.value{{font-size:18px;font-weight:800;margin-top:4px}}.number{{color:#c1121f;font-size:38px;letter-spacing:2px}}.number-line{{font-size:24px;letter-spacing:3px;color:#7f1017}}.table-wrap{{overflow-x:auto}}table{{width:100%;border-collapse:collapse}}th{{background:#7f1017;color:#fff}}th,td{{padding:9px;border:1px solid #d7dce4;text-align:left;white-space:nowrap}}tr:nth-child(even) td{{background:#fafafa}}.warning{{background:#fff8e6;border-color:#e9b949}}.ok{{color:#176b3a}}.bad{{color:#9b1c1c}}.note{{color:#626d7d}}.empty{{padding:22px;text-align:center;color:#687386}}footer{{padding:14px 4px 28px;color:#687386;font-size:13px}}@media(max-width:760px){{main{{padding:8px}}header{{border-radius:8px;padding:19px}}nav{{grid-template-columns:repeat(3,minmax(0,1fr))}}nav a{{font-size:14px}}.band{{padding:13px}}h1{{font-size:24px}}.number-line{{font-size:20px;letter-spacing:2px}}}}@media(max-width:390px){{nav{{grid-template-columns:repeat(2,minmax(0,1fr))}}}}
+*{{box-sizing:border-box}}body{{margin:0;background:#f3f4f6;color:#172033;font-family:system-ui,'Microsoft JhengHei',sans-serif;line-height:1.55}}main{{max-width:1180px;margin:auto;padding:18px}}header{{background:linear-gradient(135deg,#7f1017,#d1242f);color:#fff;padding:24px;border-radius:14px}}h1{{margin:0 0 5px;font-size:28px}}h2{{border-left:6px solid #c1121f;padding-left:10px;color:#7f1017;margin:0 0 16px}}h3{{color:#7f1017;margin:24px 0 10px}}nav{{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:14px 0}}nav a{{display:flex;align-items:center;justify-content:center;min-height:44px;background:#fff;border:1px solid #d1d5db;border-radius:9px;padding:8px;color:#7f1017;text-decoration:none;font-weight:800;text-align:center}}nav a.active{{background:#7f1017;color:#fff;border-color:#7f1017}}.band{{background:#fff;border:1px solid #d8dee8;border-radius:12px;padding:18px;margin:14px 0;box-shadow:0 2px 8px #0000000d}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}}.card{{border:1px solid #d9dde5;border-radius:10px;padding:13px;background:#fff}}.primary{{border:2px solid #c1121f;background:#fff5f5}}.strong{{border:3px solid #b8860b;background:linear-gradient(135deg,#fff8d8,#fff);box-shadow:0 4px 18px #b8860b33}}.strong .number{{font-size:64px}}.badge{{display:inline-block;padding:6px 12px;border-radius:999px;background:#7f1017;color:#fff;font-weight:900;margin-bottom:8px}}.label{{color:#687386;font-size:13px}}.value{{font-size:18px;font-weight:800;margin-top:4px}}.number{{color:#c1121f;font-size:38px;letter-spacing:2px}}.number-line{{font-size:24px;letter-spacing:3px;color:#7f1017}}.table-wrap{{overflow-x:auto}}table{{width:100%;border-collapse:collapse}}th{{background:#7f1017;color:#fff}}th,td{{padding:9px;border:1px solid #d7dce4;text-align:left;white-space:nowrap}}tr:nth-child(even) td{{background:#fafafa}}.warning{{background:#fff8e6;border-color:#e9b949}}.ok{{color:#176b3a}}.bad{{color:#9b1c1c}}.note{{color:#626d7d}}.empty{{padding:22px;text-align:center;color:#687386}}footer{{padding:14px 4px 28px;color:#687386;font-size:13px}}@media(max-width:760px){{main{{padding:8px}}header{{border-radius:8px;padding:19px}}nav{{grid-template-columns:repeat(3,minmax(0,1fr))}}nav a{{font-size:14px}}.band{{padding:13px}}h1{{font-size:24px}}.number-line{{font-size:20px;letter-spacing:2px}}.strong .number{{font-size:56px}}}}@media(max-width:390px){{nav{{grid-template-columns:repeat(2,minmax(0,1fr))}}}}
 </style>
 </head>
 <body><main>
@@ -64,7 +76,7 @@ def _page_shell(filename: str, heading: str, subtitle: str, content: str) -> str
 </main></body></html>"""
 
 
-def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, target_date, generated_at, feature_labels):
+def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, target_date, generated_at, feature_labels, bt):
     latest = draws[-1]
     minimum = min(score.values())
     spread = max(0.00001, max(score.values()) - minimum)
@@ -73,7 +85,8 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
     for rank, number in enumerate(ranking[:15], 1):
         index = 100 * (score[number] - minimum) / spread
         support = "、".join(
-            feature_labels.get(key, key) for key in weights if features[key][number] >= 0.65
+            feature_labels.get(key, key) for key in weights
+            if abs(weights[key]) > 1e-12 and weights[key] * features[key][number] > 0
         ) or "均衡校正"
         zone = "前5核心" if rank <= 5 else ("前9核心" if rank <= 9 else "第10至15名監控")
         rank_rows.append(
@@ -92,7 +105,20 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
         f"<tr><td>{item['number']:02}</td><td>{item['relative_index']:.1f}</td><td>{item['positive_module_count']}</td><td>{item['repeat_hits']}/{item['repeat_samples']}</td><td>{'符合' if item['qualified'] else '未符合'}</td><td>{item['final_rank']}</td><td>{'列入前9' if item['listed_top9'] else '未列入前9'}</td></tr>"
         for item in repeat_audit
     )
+    strong=bool(bt.get("single_strong_recommendation"))
+    confidence_label=bt.get("single_confidence_label") or "本期綜合最強"
+    condition_rows="".join(
+        f"<tr><td>{label}</td><td class='{'ok' if passed else 'bad'}'>{'通過' if passed else '未通過'}</td></tr>"
+        for label,passed in (bt.get("single_strong_conditions") or {}).items()
+    )
+    consensus_rows="".join(
+        f"<tr><td>{item.get('label','－')}</td><td>{item.get('rank','－')}</td><td>{'支持' if item.get('supports') else '未支持'}</td></tr>"
+        for item in (bt.get("single_module_consensus") or [])
+    )
+    single_rate=100*bt.get("single_rate",0)
     content = f"""
+<div class='band {'strong' if strong else 'primary'}'><div class='badge'>{confidence_label}</div><h2>本期最強1顆</h2><div class='number'>{ranking[0]:02}</div><p><b>單碼專模使用開獎前30期成績，在前5池內重排第1名；最後360期 {bt.get('single_specialist_hits',0)} 中，重排前為 {bt.get('single_specialist_baseline_hits',0)} 中；隔離命中率 {single_rate:.2f}%。</b></p><p class='note'>{'多重守門全部通過，列為超高信心強烈推薦。' if strong else '已產出本期綜合最強號碼；超高信心守門未全部通過，因此不偽造強烈推薦標籤。'}</p></div>
+<div class='band'><h2>最強號碼多邏輯總結</h2><div class='grid'><div class='card'><div class='label'>正式邏輯支持</div><div class='value'>{bt.get('single_consensus_votes',0)}／{len(bt.get('single_module_consensus') or [])}</div></div><div class='card'><div class='label'>單碼專模隔離提升</div><div class='value'>{bt.get('single_specialist_lift',0):+d}中</div></div><div class='card'><div class='label'>最近54期單碼命中</div><div class='value'>{(bt.get('recent_54') or {}).get('single_hits',0)}中</div></div></div><h3>強烈推薦守門</h3><div class='table-wrap'><table><thead><tr><th>必要條件</th><th>結果</th></tr></thead><tbody>{condition_rows}</tbody></table></div><h3>正式模組共識</h3><div class='table-wrap'><table><thead><tr><th>邏輯</th><th>單模組名次</th><th>是否支持前9</th></tr></thead><tbody>{consensus_rows}</tbody></table></div></div>
 <div class='band'><h2>本期資料</h2><div class='grid'>
 <div class='card'><div class='label'>預測目標日</div><div class='value'>{target_date}</div></div>
 <div class='card'><div class='label'>歷史資料截止日</div><div class='value'>{latest['date']}</div></div>
@@ -132,6 +158,7 @@ def _backtest_page(bt, full_scan):
     )
     recent_rows = "".join(
         f"<tr><td>{label}</td><td>{value}</td></tr>" for label, value in (
+            ("單碼專模命中", f"{recent.get('single_hits',0)}/{recent.get('samples',0)}"),
             ("前9平均命中", recent.get("top9_avg_hits", 0)),
             ("後9平均命中", recent.get("bottom9_avg_hits", 0)),
             ("前9零中期數", (recent.get("top9_hit_distribution") or {}).get("0", 0)),
@@ -153,6 +180,8 @@ def _backtest_page(bt, full_scan):
     content = f"""
 <div class='band'><h2>最後360期隔離回測</h2><div class='grid'>
 <div class='card'><div class='label'>隔離期數</div><div class='value'>{bt.get('samples',0)}期</div></div>
+<div class='card'><div class='label'>單碼專模命中</div><div class='value'>{bt.get('single_specialist_hits',0)}／{bt.get('samples',0)}</div></div>
+<div class='card'><div class='label'>單碼重排前命中</div><div class='value'>{bt.get('single_specialist_baseline_hits',0)}／{bt.get('samples',0)}</div></div>
 <div class='card'><div class='label'>排序方向判定</div><div class='value'>排序方向{'通過' if bt.get('ranking_direction_valid') else '未通過'}</div></div>
 <div class='card'><div class='label'>前9至少2中比例</div><div class='value'>{100*bt.get('top9_at_least_2_rate',0):.2f}%</div></div>
 <div class='card'><div class='label'>前5至少2中比例</div><div class='value'>{100*bt.get('top5_at_least_2_rate',0):.2f}%</div></div>
@@ -227,7 +256,7 @@ def _models_page(draws, weights, bt, selection, repeat_audit, feature_labels):
 <div class='card'><div class='label'>全歷史核心占比</div><div class='value'>100%</div></div>
 <div class='card'><div class='label'>短期正式權重</div><div class='value'>0%</div></div>
 </div></div>
-<div class='band'><h2>正式方向模型</h2><p>每次預測與每一期回測都使用當時以前的全部歷史資料。先搜尋 {diagnostic.get('candidate_count',0)} 組錨定權重，保留 {diagnostic.get('eligible_candidate_count',0)} 組均衡候選，再建立 {bt.get('strategy_candidate_count',0)} 組模組正反方向模型；每一期只用此前 {bt.get('strategy_selection_window',0)} 期成績選擇下一期方向。</p><div class='table-wrap'><table><thead><tr><th>正式模組</th><th>資料來源</th><th>目前權重</th><th>方向</th></tr></thead><tbody>{formula_rows}</tbody></table></div></div>
+<div class='band'><h2>正式方向模型</h2><p>每次預測與每一期回測都使用當時以前的全部歷史資料。先搜尋 {diagnostic.get('candidate_count',0)} 組錨定權重，保留 {diagnostic.get('eligible_candidate_count',0)} 組均衡候選，再建立 {bt.get('strategy_candidate_count',0)} 組模組正反方向模型；每一期只用此前 {bt.get('strategy_selection_window',0)} 期成績選擇下一期方向。前5池確定後，再由開獎前 {bt.get('single_specialist_window',0)} 期單碼專模只重排第1名，不改變前5與前9集合。</p><div class='table-wrap'><table><thead><tr><th>正式模組</th><th>資料來源</th><th>目前權重</th><th>方向</th></tr></thead><tbody>{formula_rows}</tbody></table></div></div>
 <div class='band'><h2>多模組校正規格</h2><div class='grid'>
 <div class='card'><div class='label'>錨定候選</div><div class='value'>{diagnostic.get('candidate_count',0)}組</div></div>
 <div class='card'><div class='label'>均衡候選</div><div class='value'>{diagnostic.get('eligible_candidate_count',0)}組</div></div>
@@ -240,7 +269,7 @@ def _models_page(draws, weights, bt, selection, repeat_audit, feature_labels):
     return _page_shell("models.html", "模型說明", "只顯示資料範圍、公式與校正規格", content)
 
 
-def _health_page(draws, bt, full_scan, generated_at, settlements):
+def _health_page(draws, bt, full_scan, generated_at, settlements, health):
     latest = draws[-1]
     direction = "通過" if bt.get("ranking_direction_valid") else "未通過"
     settled = bool(settlements and settlements[-1].get("review_status") == "completed_from_pre_draw_seal")
@@ -251,7 +280,8 @@ def _health_page(draws, bt, full_scan, generated_at, settlements):
         ("命中檢討", "通過" if settled else "等待結算", "只採用開獎前封存資料"),
         ("前9邊界", "通過" if bt.get("boundary_control_valid") else "未通過", "比較每個排名位置命中率"),
         ("排序方向", direction, "最後360期隔離檢查"),
-        ("手機同步", "通過", "每30秒檢查版本，頁面採網路優先"),
+        ("手機同步", "通過", "開啟、回到前景與重新連網時立即核對；同步後每30秒巡檢"),
+        ("兩小時自修", "通過" if health.get("two_hour_deadline_met",True) else "逾時自修", "超過期限即重跑資料、模型、分頁、部署與公開驗收"),
     )
     rows = "".join(f"<tr><td>{name}</td><td>{status}</td><td>{detail}</td></tr>" for name, status, detail in checks)
     content = f"""
@@ -260,6 +290,16 @@ def _health_page(draws, bt, full_scan, generated_at, settlements):
 <div class='card'><div class='label'>最新開獎日</div><div class='value'>{latest['date']}</div></div>
 <div class='card'><div class='label'>歷史期數</div><div class='value'>{len(draws):,}期</div></div>
 <div class='card'><div class='label'>最後運算時間</div><div class='value'>{generated_at}</div></div>
+</div></div>
+<div class='band'><h2>開獎後更新與自主修復</h2><div class='grid'>
+<div class='card'><div class='label'>官方開獎時間</div><div class='value'>{_display_time(health.get('official_draw_time'))}</div></div>
+<div class='card'><div class='label'>完成同步時間</div><div class='value'>{_display_time(health.get('sync_completed_at'))}</div></div>
+<div class='card'><div class='label'>同步延遲</div><div class='value'>{health.get('sync_delay_minutes','－')}分鐘</div></div>
+<div class='card'><div class='label'>兩小時修復期限</div><div class='value'>{_display_time(health.get('two_hour_repair_deadline'))}</div></div>
+<div class='card'><div class='label'>期限結果</div><div class='value'>{'期限內完成' if health.get('two_hour_deadline_met',True) else '逾時並已觸發自修'}</div></div>
+<div class='card'><div class='label'>自主修復狀態</div><div class='value'>{health.get('self_repair_status','待命中')}</div></div>
+<div class='card'><div class='label'>累計自主修復</div><div class='value'>{health.get('self_repair_count',0)}次</div></div>
+<div class='card'><div class='label'>最後公開驗收</div><div class='value'>{_display_time(health.get('last_public_verification_at'))}</div></div>
 </div></div>
 <div class='band'><h2>鐵律守門</h2><div class='table-wrap'><table><thead><tr><th>項目</th><th>結果</th><th>說明</th></tr></thead><tbody>{rows}</tbody></table></div></div>
 <div class='band'><h2>模型健康與公開狀態</h2><div class='grid'>
@@ -281,11 +321,12 @@ def render_report_pages(draws, weights, score, tickets, bt, full_scan, repeat_au
         target += timedelta(days=1)
     generated_at = datetime.now(TAIPEI).strftime("%Y-%m-%d %H:%M")
     settlements = _read_jsonl(reports_dir / "published-settlements.jsonl")
+    health = _read_json(reports_dir / "system-health.json")
     return {
-        "index.html": _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, target.isoformat(), generated_at, feature_labels),
+        "index.html": _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, target.isoformat(), generated_at, feature_labels, bt),
         "backtest.html": _backtest_page(bt, full_scan),
         "review.html": _review_page(settlements, weights, selection, feature_labels),
         "history.html": _history_page(settlements),
         "models.html": _models_page(draws, weights, bt, selection, repeat_audit, feature_labels),
-        "health.html": _health_page(draws, bt, full_scan, generated_at, settlements),
+        "health.html": _health_page(draws, bt, full_scan, generated_at, settlements, health),
     }

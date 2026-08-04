@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """官方最新開獎 -> 驗證 -> 重算 -> 產生獨立 PWA。僅使用 Python 標準庫。"""
 from __future__ import annotations
-import argparse, csv, hashlib, json, shutil, subprocess, sys, time, urllib.request
+import argparse, csv, hashlib, json, os, shutil, subprocess, sys, time, urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -256,6 +256,8 @@ def refresh_report_pages(current):
     REPORT.write_text(pages['index.html'],encoding='utf-8')
 
 def build_site(latest, changed, previous=None):
+    previous_health=read_json(REPORTS/'system-health.json') or {}
+    repair_run=os.getenv('TW539_SELF_REPAIR','').lower() in ('1','true','yes')
     settlement=settle_previous(previous,latest) or refresh_latest_settlement(latest)
     subprocess.run([sys.executable,str(ROOT/'tw539_ultra.py'),'--backtest','360'],check=True,cwd=ROOT)
     current=read_json(REPORTS/'最新結果.json') or {}
@@ -277,16 +279,32 @@ def build_site(latest, changed, previous=None):
         evidence={k:v for k,v in settlement.items() if k!='review_evidence_sha256'}
         settlement['review_evidence_sha256']=hashlib.sha256(json.dumps(evidence,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
         append_jsonl(REPORTS/'published-settlements.jsonl',settlement,lambda x:(x.get('target_draw_date'),x.get('fingerprint')),replace=True)
-    refresh_report_pages(current)
     append_jsonl(REPORTS/'prediction-history.jsonl',current,lambda x:x.get('target_draw_date'),replace=True)
     compact_prediction_history(current)
     backtest=current.get('backtest') or {}
     direction_ok=bool(backtest.get('ranking_direction_valid'))
     degraded=(not direction_ok) or (backtest.get('single_rate',0)<=backtest.get('single_random_baseline',0) and backtest.get('top9_avg_hits',0)<=backtest.get('top9_random_baseline',0))
+    checked_at=datetime.now(TAIPEI)
+    same_period=str(previous_health.get('latest_period'))==str(latest['period'])
+    sync_completed_at=(previous_health.get('sync_completed_at') if same_period else None) or checked_at.isoformat(timespec='seconds')
+    draw_at=datetime.strptime(latest['draw_date']+' 20:30','%Y-%m-%d %H:%M').replace(tzinfo=TAIPEI)
+    repair_deadline=draw_at+timedelta(hours=2)
+    sync_delay=max(0,round((datetime.fromisoformat(sync_completed_at)-draw_at).total_seconds()/60))
+    repair_count=int(previous_health.get('self_repair_count') or 0)+(1 if repair_run else 0)
     health={
-        'status':'healthy_model_degraded' if degraded else 'healthy','checked_at':datetime.now(TAIPEI).isoformat(timespec='seconds'),
+        'status':'healthy_model_degraded' if degraded else 'healthy','checked_at':checked_at.isoformat(timespec='seconds'),
         'latest_period':latest['period'],'latest_draw_date':latest['draw_date'],'expected_latest_date':expected_latest_date(),
         'freshness_ok':latest['draw_date']>=expected_latest_date(),'data_changed':changed,
+        'official_draw_time':draw_at.isoformat(timespec='minutes'),
+        'sync_completed_at':sync_completed_at,
+        'sync_delay_minutes':sync_delay,
+        'two_hour_repair_deadline':repair_deadline.isoformat(timespec='minutes'),
+        'two_hour_deadline_met':datetime.fromisoformat(sync_completed_at)<=repair_deadline,
+        'self_repair_status':'本次自修完成' if repair_run else '待命中',
+        'self_repair_count':repair_count,
+        'last_self_repair_at':checked_at.isoformat(timespec='seconds') if repair_run else previous_health.get('last_self_repair_at'),
+        'last_public_verification_at':checked_at.isoformat(timespec='seconds'),
+        'mobile_open_sync':'開啟、回到前景、重新連網均立即核對版本',
         'model_release_allowed':True,
         'single_release_allowed':True,
         'single_edge_verified':bool((current.get('backtest') or {}).get('single_release_allowed')),
@@ -313,6 +331,7 @@ def build_site(latest, changed, previous=None):
     health['history_draws_used']=coverage.get('draws_used')
     health['history_database_sha256']=coverage.get('database_sha256')
     (REPORTS/'system-health.json').write_text(json.dumps(health,ensure_ascii=False,indent=2),encoding='utf-8')
+    refresh_report_pages(current)
     SITE.mkdir(exist_ok=True)
     for name in REPORT_PAGE_FILES:
         shutil.copy2(REPORTS/name,SITE/name)
@@ -320,12 +339,13 @@ def build_site(latest, changed, previous=None):
     for name in ('prediction-history.jsonl','published-settlements.jsonl'):
         src=REPORTS/name
         if src.exists(): shutil.copy2(src,SITE/name)
+    version_stamp=datetime.now(TAIPEI).strftime('%Y%m%d%H%M%S')
     for name in REPORT_PAGE_FILES:
         path=SITE/name; page=path.read_text(encoding='utf-8')
-        page=page.replace("<title>","<link rel='manifest' href='./manifest.webmanifest'><meta name='theme-color' content='#8b0000'><title>",1)
+        page=page.replace("<title>",f"<link rel='manifest' href='./manifest.webmanifest'><meta name='theme-color' content='#8b0000'><meta name='tw539-version' content='{version_stamp}'><title>",1)
         page=page.replace('</body>',"<script src='./mobile-sync.js'></script></body>")
         path.write_text(page,encoding='utf-8')
-    version={'version':datetime.now(TAIPEI).strftime('%Y%m%d%H%M%S'),'updated_at':datetime.now(TAIPEI).isoformat(timespec='seconds'),'latest_period':latest['period'],'latest_draw_date':latest['draw_date'],'data_changed':changed}
+    version={'version':version_stamp,'updated_at':datetime.now(TAIPEI).isoformat(timespec='seconds'),'latest_period':latest['period'],'latest_draw_date':latest['draw_date'],'data_changed':changed}
     (SITE/'version.json').write_text(json.dumps(version,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps(version,ensure_ascii=False))
 

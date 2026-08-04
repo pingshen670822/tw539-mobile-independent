@@ -1,4 +1,4 @@
-const CACHE='tw539-mobile-ironlaw-v4';
+const CACHE='tw539-mobile-ironlaw-v5';
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./','./index.html','./backtest.html','./review.html','./history.html','./models.html','./health.html','./manifest.webmanifest'])).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{

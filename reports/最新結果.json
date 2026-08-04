@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-08-04T01:24:47+08:00",
+  "generated_at": "2026-08-04T07:56:00+08:00",
   "based_on_period": "115000187",
   "target_draw_date": "2026-08-04",
-  "recalculation_fingerprint": "46a64e09b59b2163",
+  "recalculation_fingerprint": "67126f0cadf9923e",
   "pre_draw_seal": {
     "algorithm": "sha256",
-    "sha256": "46a64e09b59b21638c5f151164066fd04ba37e617047fad7f9e8ee338068bde4",
+    "sha256": "67126f0cadf9923eb93f906b7835d07f098ef4ce343849e997bac95259e8bf2f",
     "sealed_payload": {
       "based_on_period": "115000187",
       "target_draw_date": "2026-08-04",
       "history_database_sha256": "c6e09753a2daa407873cb41d41ae4e630f54ad5cdc0fd631f70dc897bc3b9ac5",
       "ranked_all": [
-        2,
         3,
+        2,
         15,
         20,
         24,
@@ -53,31 +53,11 @@
       ],
       "number_diagnostics": [
         {
-          "number": 2,
+          "number": 3,
           "rank": 1,
           "final_score": 1.423335046474,
-          "raw_score": 1.423335046474,
-          "relative_index": 100.0,
-          "feature_values": {
-            "full_frequency_balance": 1.326081095,
-            "full_transition_correction": 0.471543309,
-            "full_signature_correction": 0.765092056,
-            "full_overdue_correction": -2.802849956
-          },
-          "weighted_contributions": {
-            "full_frequency_balance": 0.044202703,
-            "full_transition_correction": 0.172899213,
-            "full_signature_correction": 0.17852148,
-            "full_overdue_correction": 1.02771165
-          },
-          "contribution_total": 1.423335046
-        },
-        {
-          "number": 3,
-          "rank": 2,
-          "final_score": 0.899777164929,
           "raw_score": 0.899777164931,
-          "relative_index": 81.277644,
+          "relative_index": 100.0,
           "feature_values": {
             "full_frequency_balance": -0.758954576,
             "full_transition_correction": 2.123413246,
@@ -91,6 +71,26 @@
             "full_overdue_correction": 0.354765854
           },
           "contribution_total": 0.899777165
+        },
+        {
+          "number": 2,
+          "rank": 2,
+          "final_score": 0.899777164929,
+          "raw_score": 1.423335046474,
+          "relative_index": 81.277644,
+          "feature_values": {
+            "full_frequency_balance": 1.326081095,
+            "full_transition_correction": 0.471543309,
+            "full_signature_correction": 0.765092056,
+            "full_overdue_correction": -2.802849956
+          },
+          "weighted_contributions": {
+            "full_frequency_balance": 0.044202703,
+            "full_transition_correction": 0.172899213,
+            "full_signature_correction": 0.17852148,
+            "full_overdue_correction": 1.02771165
+          },
+          "contribution_total": 1.423335046
         },
         {
           "number": 15,
@@ -888,7 +888,7 @@
           "full_signature_correction": 1.0,
           "full_overdue_correction": -1.0
         },
-        "path_sha256": "0606eaa5173cddeb4ecc6f36e0cff1cddaa6b1ffbcbb3fb0d93aa1d750a9a6b5"
+        "path_sha256": "7b2ae17ce48feeb942a1ce947590d39fde40517b021b0fe7d38ddc09d2caae24"
       }
     },
     "no_post_draw_substitution": true
@@ -7533,7 +7533,7 @@
     },
     "production_ensemble_after_rolling": [],
     "rolling_update_count": 360,
-    "rolling_path_sha256": "0606eaa5173cddeb4ecc6f36e0cff1cddaa6b1ffbcbb3fb0d93aa1d750a9a6b5",
+    "rolling_path_sha256": "7b2ae17ce48feeb942a1ce947590d39fde40517b021b0fe7d38ddc09d2caae24",
     "learning_rate_selection": {
       "method": "pre_holdout_three_model_thirty_pair_three_fold_selection",
       "candidate_count": 30,
@@ -10356,7 +10356,7 @@
         "full_signature_correction": 1.0,
         "full_overdue_correction": -1.0
       },
-      "path_sha256": "0606eaa5173cddeb4ecc6f36e0cff1cddaa6b1ffbcbb3fb0d93aa1d750a9a6b5"
+      "path_sha256": "7b2ae17ce48feeb942a1ce947590d39fde40517b021b0fe7d38ddc09d2caae24"
     }
   },
   "rolling_weight_adjustment": {
@@ -13204,7 +13204,7 @@
       },
       "holdout_not_used": true
     },
-    "path_sha256": "0606eaa5173cddeb4ecc6f36e0cff1cddaa6b1ffbcbb3fb0d93aa1d750a9a6b5",
+    "path_sha256": "7b2ae17ce48feeb942a1ce947590d39fde40517b021b0fe7d38ddc09d2caae24",
     "method": "thirty_polarity_models_ninety_draw_walk_forward_selection",
     "strategy_candidate_count": 30,
     "strategy_selection_window": 90,
@@ -13217,6 +13217,17 @@
       "full_transition_correction": 1.0,
       "full_signature_correction": 1.0,
       "full_overdue_correction": -1.0
+    },
+    "single_specialist_window": 30,
+    "selected_next_single_strategy": {
+      "ewma_alpha": 0.995,
+      "full_history_blend": 0.75
+    },
+    "selected_next_single_weights": {
+      "full_frequency_balance": -0.03333333333333333,
+      "full_transition_correction": 0.3666666666666667,
+      "full_signature_correction": -0.23333333333333336,
+      "full_overdue_correction": 0.3666666666666667
     }
   },
   "model_selection_cutoff": {
@@ -13224,8 +13235,8 @@
     "date": "2025-06-12"
   },
   "ranked_all": [
-    2,
     3,
+    2,
     15,
     20,
     24,
@@ -13265,8 +13276,8 @@
     5
   ],
   "ranked_top15": [
-    2,
     3,
+    2,
     15,
     20,
     24,
@@ -13283,31 +13294,11 @@
   ],
   "number_diagnostics": [
     {
-      "number": 2,
+      "number": 3,
       "rank": 1,
       "final_score": 1.423335046474,
-      "raw_score": 1.423335046474,
-      "relative_index": 100.0,
-      "feature_values": {
-        "full_frequency_balance": 1.326081095,
-        "full_transition_correction": 0.471543309,
-        "full_signature_correction": 0.765092056,
-        "full_overdue_correction": -2.802849956
-      },
-      "weighted_contributions": {
-        "full_frequency_balance": 0.044202703,
-        "full_transition_correction": 0.172899213,
-        "full_signature_correction": 0.17852148,
-        "full_overdue_correction": 1.02771165
-      },
-      "contribution_total": 1.423335046
-    },
-    {
-      "number": 3,
-      "rank": 2,
-      "final_score": 0.899777164929,
       "raw_score": 0.899777164931,
-      "relative_index": 81.277644,
+      "relative_index": 100.0,
       "feature_values": {
         "full_frequency_balance": -0.758954576,
         "full_transition_correction": 2.123413246,
@@ -13321,6 +13312,26 @@
         "full_overdue_correction": 0.354765854
       },
       "contribution_total": 0.899777165
+    },
+    {
+      "number": 2,
+      "rank": 2,
+      "final_score": 0.899777164929,
+      "raw_score": 1.423335046474,
+      "relative_index": 81.277644,
+      "feature_values": {
+        "full_frequency_balance": 1.326081095,
+        "full_transition_correction": 0.471543309,
+        "full_signature_correction": 0.765092056,
+        "full_overdue_correction": -2.802849956
+      },
+      "weighted_contributions": {
+        "full_frequency_balance": 0.044202703,
+        "full_transition_correction": 0.172899213,
+        "full_signature_correction": 0.17852148,
+        "full_overdue_correction": 1.02771165
+      },
+      "contribution_total": 1.423335046
     },
     {
       "number": 15,
@@ -14170,27 +14181,75 @@
       "listed_top9": false
     }
   ],
-  "single_candidate": 2,
-  "single_published": 2,
+  "single_candidate": 3,
+  "single_published": 3,
   "single_selection_evidence": {
-    "number": 2,
+    "number": 3,
     "rank": 1,
     "final_score": 1.423335046474,
-    "raw_score": 1.423335046474,
+    "raw_score": 0.899777164931,
     "relative_index": 100.0,
     "feature_values": {
-      "full_frequency_balance": 1.326081095,
-      "full_transition_correction": 0.471543309,
-      "full_signature_correction": 0.765092056,
-      "full_overdue_correction": -2.802849956
+      "full_frequency_balance": -0.758954576,
+      "full_transition_correction": 2.123413246,
+      "full_signature_correction": -0.892607398,
+      "full_overdue_correction": -0.967543237
     },
     "weighted_contributions": {
-      "full_frequency_balance": 0.044202703,
-      "full_transition_correction": 0.172899213,
-      "full_signature_correction": 0.17852148,
-      "full_overdue_correction": 1.02771165
+      "full_frequency_balance": -0.025298486,
+      "full_transition_correction": 0.778584857,
+      "full_signature_correction": -0.20827506,
+      "full_overdue_correction": 0.354765854
     },
-    "contribution_total": 1.423335046
+    "contribution_total": 0.899777165
+  },
+  "single_recommendation": {
+    "label": "本期綜合最強",
+    "strong": false,
+    "consensus_votes": 2,
+    "module_count": 4,
+    "conditions": {
+      "單碼專模隔離提升": true,
+      "正式排序方向通過": false,
+      "最近五十四期方向通過": false,
+      "前九邊界通過": false,
+      "至少三項正式邏輯同向": false,
+      "單碼信賴下限高於隨機基準": false
+    },
+    "module_consensus": [
+      {
+        "module": "full_frequency_balance",
+        "label": "全歷史頻率平衡",
+        "rank": 32,
+        "supports": false,
+        "contribution": -0.025298486
+      },
+      {
+        "module": "full_transition_correction",
+        "label": "全歷史轉移反向校正",
+        "rank": 1,
+        "supports": true,
+        "contribution": 0.778584857
+      },
+      {
+        "module": "full_signature_correction",
+        "label": "全歷史同型反向校正",
+        "rank": 30,
+        "supports": false,
+        "contribution": -0.20827506
+      },
+      {
+        "module": "full_overdue_correction",
+        "label": "全歷史遺漏反向校正",
+        "rank": 8,
+        "supports": true,
+        "contribution": 0.354765854
+      }
+    ],
+    "isolated_hits": 41,
+    "isolated_samples": 360,
+    "baseline_hits_before_specialist": 40,
+    "recent_54_hits": 8
   },
   "release_policy": {
     "official_release_allowed": true,
@@ -14201,6 +14260,20 @@
   },
   "tickets": [
     [
+      3,
+      15,
+      16,
+      24,
+      30
+    ],
+    [
+      3,
+      10,
+      20,
+      24,
+      31
+    ],
+    [
       15,
       19,
       20,
@@ -14209,20 +14282,6 @@
     ],
     [
       3,
-      10,
-      15,
-      24,
-      33
-    ],
-    [
-      2,
-      3,
-      20,
-      24,
-      31
-    ],
-    [
-      2,
       15,
       20,
       31,
@@ -14238,23 +14297,23 @@
     [
       2,
       3,
-      16,
-      31,
-      33
+      15,
+      24,
+      31
     ],
     [
       2,
       3,
-      15,
-      24,
+      16,
+      31,
       34
     ],
     [
       2,
       3,
-      15,
-      30,
-      31
+      19,
+      24,
+      34
     ]
   ],
   "full_history_scan": {
@@ -14282,7 +14341,7 @@
   },
   "backtest": {
     "samples": 360,
-    "single_hits": 40,
+    "single_hits": 41,
     "bottom1_hits": 48,
     "top9_hits": 423,
     "rank10_15_hits": 284,
@@ -14297,15 +14356,15 @@
     "rank10_15_slot_hit_rate": 0.131481,
     "boundary_expected_capture_rate": 0.6,
     "bottom9_avg_hits": 1.1111,
-    "avg_actual_rank": 19.8583,
+    "avg_actual_rank": 19.8639,
     "boundary_control_valid": false,
     "ranking_direction_valid": false,
     "single_direction_valid": false,
     "front_ranking_direction_valid": false,
     "evaluation": "最後三百六十期逐期只用當時以前九十期挑選模組正反方向",
-    "single_rate": 0.1111,
+    "single_rate": 0.1139,
     "single_random_baseline": 0.1282,
-    "single_wilson_lower95": 0.0827,
+    "single_wilson_lower95": 0.0851,
     "single_release_allowed": false,
     "top5_hit_distribution": {
       "0": 178,
@@ -14331,7 +14390,7 @@
     "strategy_selection_window": 90,
     "recent_54": {
       "samples": 54,
-      "single_hits": 5,
+      "single_hits": 8,
       "bottom1_hits": 3,
       "top9_hits": 69,
       "rank10_15_hits": 45,
@@ -14346,7 +14405,7 @@
       "rank10_15_slot_hit_rate": 0.138889,
       "boundary_expected_capture_rate": 0.6,
       "bottom9_avg_hits": 1.1111,
-      "avg_actual_rank": 19.437,
+      "avg_actual_rank": 19.4333,
       "boundary_control_valid": true,
       "ranking_direction_valid": false,
       "single_direction_valid": true,
@@ -14380,9 +14439,50 @@
       "0.950/0.00": 30,
       "0.950/0.25": 1
     },
+    "single_specialist_selection_counts": {
+      "0.990/0.25": 12,
+      "0.990/0.00": 14,
+      "0.995/0.25": 12,
+      "0.900/0.75": 30,
+      "0.900/0.00": 90,
+      "0.995/0.75": 36,
+      "0.995/0.50": 32,
+      "0.990/0.50": 24,
+      "0.990/0.75": 5,
+      "0.970/0.25": 6,
+      "0.970/0.50": 17,
+      "0.980/0.25": 4,
+      "0.980/0.50": 7,
+      "0.900/0.50": 18,
+      "0.995/0.00": 28,
+      "0.900/0.10": 3,
+      "0.980/0.75": 9,
+      "0.970/0.75": 13
+    },
+    "single_specialist_window": 30,
+    "single_specialist_baseline_hits": 40,
+    "single_specialist_hits": 41,
+    "single_specialist_lift": 1,
+    "single_specialist_method": "top_five_pool_thirty_draw_pre_result_specialist",
     "selected_next_strategy": {
       "ewma_alpha": 0.9,
       "full_history_blend": 0.5
+    },
+    "selected_next_single_strategy": {
+      "ewma_alpha": 0.995,
+      "full_history_blend": 0.75
+    },
+    "selected_next_single_polarities": {
+      "full_frequency_balance": -1.0,
+      "full_transition_correction": 1.0,
+      "full_signature_correction": -1.0,
+      "full_overdue_correction": 1.0
+    },
+    "selected_next_single_weights": {
+      "full_frequency_balance": -0.03333333333333333,
+      "full_transition_correction": 0.3666666666666667,
+      "full_signature_correction": -0.23333333333333336,
+      "full_overdue_correction": 0.3666666666666667
     },
     "selected_next_polarities": {
       "full_frequency_balance": 1.0,
@@ -14397,8 +14497,8 @@
       "full_overdue_correction": -0.3666666666666667
     },
     "next_ranked": [
-      2,
       3,
+      2,
       15,
       20,
       24,
@@ -14438,10 +14538,10 @@
       5
     ],
     "next_score": {
-      "2": 1.4233350464743624,
-      "3": 0.8997771649285795,
+      "3": 1.4233350464743624,
+      "2": 0.8997771649285795,
       "15": 0.8307572900901168,
-      "20": 0.7841241188728068,
+      "20": 0.7841241188728065,
       "24": 0.776336690118402,
       "31": 0.5913697777249942,
       "34": 0.5324560136052886,
@@ -14451,7 +14551,7 @@
       "18": 0.39497669977596833,
       "30": 0.2490745616362087,
       "33": 0.18195696805916536,
-      "14": 0.12547460059859886,
+      "14": 0.1254746005985988,
       "8": 0.1021543726671214,
       "22": 0.0295842562492664,
       "13": -0.01526527316534757,
@@ -14464,14 +14564,14 @@
       "35": -0.1698912145648975,
       "9": -0.17121870468010092,
       "25": -0.2019177832183326,
-      "29": -0.23672359119822514,
+      "29": -0.2367235911982251,
       "23": -0.2966609220003163,
-      "38": -0.33869801766270463,
+      "38": -0.3386980176627047,
       "4": -0.38175796994543465,
       "28": -0.38375260152526447,
       "27": -0.4875845772180203,
       "36": -0.5890419878567491,
-      "12": -0.6045882672107045,
+      "12": -0.6045882672107046,
       "7": -0.612747639607291,
       "11": -0.6159182105266973,
       "6": -0.6459269547420707,
@@ -14490,15 +14590,15 @@
       "9": -0.17121870461298655,
       "10": 0.5292491374903416,
       "11": -0.6159182104288221,
-      "12": -0.6045882671184222,
+      "12": -0.6045882671184223,
       "13": -0.015265273120604664,
-      "14": 0.12547460063495247,
+      "14": 0.12547460063495242,
       "15": 0.8307572900957096,
       "16": 0.5114394255812396,
       "17": -0.0633680230745157,
       "18": 0.39497669980393263,
       "19": 0.502629251188195,
-      "20": 0.784124118881196,
+      "20": 0.7841241188811958,
       "21": -0.015574661408712005,
       "22": 0.029584256291212873,
       "23": -0.29666092192481264,
@@ -14507,7 +14607,7 @@
       "26": -0.020449533738830548,
       "27": -0.4875845771313309,
       "28": -0.3837526014413715,
-      "29": -0.2367235911255179,
+      "29": -0.23672359112551786,
       "30": 0.24907456166696945,
       "31": 0.5913697777389764,
       "32": -0.10439321804032488,
@@ -14516,7 +14616,7 @@
       "35": -0.16989121450057956,
       "36": -0.5890419877672632,
       "37": -0.12287226848497616,
-      "38": -0.33869801758440454,
+      "38": -0.3386980175844046,
       "39": -0.0855551241047724
     },
     "next_repeat_audit": [
@@ -14599,7 +14699,7 @@
     "rolling_update_count": 360,
     "rolling_learning_rate": 0.0,
     "rolling_boundary_blend": 0.0,
-    "rolling_path_sha256": "0606eaa5173cddeb4ecc6f36e0cff1cddaa6b1ffbcbb3fb0d93aa1d750a9a6b5",
+    "rolling_path_sha256": "7b2ae17ce48feeb942a1ce947590d39fde40517b021b0fe7d38ddc09d2caae24",
     "method": "thirty_polarity_models_ninety_draw_walk_forward_selection",
     "core_three_model_diagnostic": {
       "samples": 360,
@@ -14687,10 +14787,10 @@
       ],
       "end_ensemble_weights": [
         {
-          "full_frequency_balance": 0.01911636831737625,
+          "full_frequency_balance": 0.019116368317376252,
           "full_transition_correction": 0.34574324146850727,
-          "full_signature_correction": 0.3531721672878668,
-          "full_overdue_correction": 0.2819682229262497
+          "full_signature_correction": 0.35317216728786677,
+          "full_overdue_correction": 0.28196822292624973
         },
         {
           "full_frequency_balance": 0.1335556634376274,
@@ -14710,6 +14810,47 @@
       "rolling_boundary_blend": 0.0,
       "rolling_path_sha256": "db496ddf2f1cce89a744171d14d92a8b47e809342ae934be6727c4e3fd92d341",
       "method": "three_balanced_models_borda_then_post_draw_top9_boundary_update"
-    }
+    },
+    "single_module_consensus": [
+      {
+        "module": "full_frequency_balance",
+        "label": "全歷史頻率平衡",
+        "rank": 32,
+        "supports": false,
+        "contribution": -0.025298486
+      },
+      {
+        "module": "full_transition_correction",
+        "label": "全歷史轉移反向校正",
+        "rank": 1,
+        "supports": true,
+        "contribution": 0.778584857
+      },
+      {
+        "module": "full_signature_correction",
+        "label": "全歷史同型反向校正",
+        "rank": 30,
+        "supports": false,
+        "contribution": -0.20827506
+      },
+      {
+        "module": "full_overdue_correction",
+        "label": "全歷史遺漏反向校正",
+        "rank": 8,
+        "supports": true,
+        "contribution": 0.354765854
+      }
+    ],
+    "single_consensus_votes": 2,
+    "single_strong_conditions": {
+      "單碼專模隔離提升": true,
+      "正式排序方向通過": false,
+      "最近五十四期方向通過": false,
+      "前九邊界通過": false,
+      "至少三項正式邏輯同向": false,
+      "單碼信賴下限高於隨機基準": false
+    },
+    "single_strong_recommendation": false,
+    "single_confidence_label": "本期綜合最強"
   }
 }

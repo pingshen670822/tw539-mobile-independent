@@ -1,9 +1,8 @@
 name: 手機雲端資料鐵律看門狗
 on:
   schedule:
-    # 台灣時間21:00、22:00、23:30與隔日07:00，獨立檢查公開頁是否跟上官方。
-    - cron: '0 13,14 * * 1-6'
-    - cron: '30 15 * * 1-6'
+    # 台灣時間21:00至隔日00:40每20分鐘檢查；22:40為開獎後兩小時硬期限。
+    - cron: '0,20,40 13-16 * * 1-6'
     - cron: '0 23 * * 1-6'
   workflow_dispatch: {}
 permissions:
@@ -29,7 +28,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh workflow run auto-update.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
+          gh workflow run auto-update.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}" -f repair=true
       - name: 修復後再次驗證
         if: steps.first_check.outcome == 'failure'
         run: |

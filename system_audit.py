@@ -140,6 +140,7 @@ else:
     expected_diagnostics[0]['production_ensemble_after_rolling']=ensemble_weights
     if not equivalent(expected_diagnostics,diagnostics): fail('滾動校正診斷無法完整重現')
     if (result.get('rolling_calibration') or {}).get('leaderboard')!=expected_selection.get('leaderboard'): fail('滾動候選排行榜無法重現')
+    recalculated_holdout=adaptive_polarity_backtest(draws,average_weights(anchor_ensemble),360,POLARITY_SELECTION_WINDOW)
     for case in evaluation_cases(draws,len(draws)-50,len(draws)):
         raw_case=scores_from_features(case['features'],weights)
         standard=rank_numbers(apply_repeat_qualification(raw_case,case['features'],weights,case['previous_numbers'],case['seed'],case['repeat_exposure'],case['repeat_hits'])[0],case['seed'])
@@ -155,16 +156,15 @@ ranked=result.get('ranked_top15') or []
 if len(ranked_all)!=39 or set(ranked_all)!=set(range(1,40)) or ranked!=ranked_all[:15]: fail('開獎前完整39碼排序缺失或前15不同步')
 if len(ranked)!=15 or len(set(ranked))!=15 or any(not 1<=int(n)<=39 for n in ranked): fail('前十五名資料錯誤')
 elif result.get('single_candidate')!=ranked[0] or result.get('single_published')!=ranked[0]: fail('1中1主選未固定產出並公開')
-if ranked!=rank_numbers(scores(draws,weights),latest['period'])[:15]: fail('正式方向模型排名不可重現')
+if ranked!=recalculated_holdout.get('next_ranked',[])[:15]: fail('正式方向模型與單碼專模排名不可重現')
 overlap=result.get('previous_draw_overlap_audit') or {}
 if overlap.get('method')!='model_score_with_repeat_qualification' or overlap.get('previous_numbers')!=list(latest['nums']): fail('上一期號碼檢查設定錯誤')
 if overlap.get('top5_overlap')!=len(set(ranked[:5])&set(latest['nums'])) or overlap.get('top9_overlap')!=len(set(ranked[:9])&set(latest['nums'])): fail('上一期號碼重複數與正式排名不同步')
 if overlap.get('full_previous_draw_copied_into_top9') or set(latest['nums']).issubset(ranked[:9]): fail('正式模型仍整批複製上一期號碼')
 current_state=formal_history_state(draws); current_features=current_state.features()
-raw_current=scores_from_features(current_features,weights)
-qualified_scores,recalculated_repeat=apply_repeat_qualification(
-    raw_current,current_features,weights,latest['nums'],latest['period'],
-    current_state.repeat_exposure,current_state.repeat_hits)
+raw_current=recalculated_holdout.get('next_raw_score') or {}
+qualified_scores=recalculated_holdout.get('next_score') or {}
+recalculated_repeat=recalculated_holdout.get('next_repeat_audit') or []
 if result.get('repeat_qualification')!=recalculated_repeat: fail('連莊資格沒有從正式模型獨立重算')
 recalculated_ranking=rank_numbers(qualified_scores,latest['period'])
 if ranked_all!=recalculated_ranking: fail('連莊資格後完整39碼排名與公開排名不同')
@@ -195,7 +195,7 @@ for ticket in tickets:
     if len(ticket)!=5 or len(set(ticket))!=5 or not valid_ticket(tuple(sorted(ticket))): fail('精選組合未通過牌型限制')
 for index,ticket in enumerate(tickets):
     if any(len(set(ticket)&set(other))>3 for other in tickets[:index]): fail('精選組合彼此重疊過高')
-full_ranking=rank_numbers(scores(draws,weights),latest['period'])
+full_ranking=list(recalculated_holdout.get('next_ranked') or [])
 forced_exclusion=set(full_ranking[-15:])
 if set(result.get('forced_ticket_exclusions') or [])!=forced_exclusion: fail('強制投注排除名單與正式排序不同步')
 for ticket in tickets:
@@ -215,8 +215,7 @@ if bool(backtest.get('ranking_direction_valid'))!=calculated_direction: fail('�
 if bool(backtest.get('single_direction_valid'))!=(backtest.get('single_hits',0)>backtest.get('bottom1_hits',0)): fail('1中1方向判定與實際數據不符')
 if not calculated_direction: warn('校正後正式模型的最後三百六十期排序方向未通過，已保留模型警報但不得阻斷官方資料發布')
 if backtest.get('next_signed_weights')!=weights or backtest.get('rolling_update_count')!=360: fail('隔離回測終點方向與正式主選不同步')
-recalculated_holdout=adaptive_polarity_backtest(draws,average_weights(anchor_ensemble),360,POLARITY_SELECTION_WINDOW)
-for key in ('samples','single_hits','bottom1_hits','top5_avg_hits','bottom5_avg_hits','top9_hits','rank10_15_hits','top15_hits','top9_avg_hits','rank10_15_avg_hits','top15_avg_hits','top9_capture_rate','top9_slot_hit_rate','rank10_15_slot_hit_rate','boundary_control_valid','bottom9_avg_hits','avg_actual_rank','ranking_direction_valid','top5_at_least_2_rate','top9_at_least_2_rate','next_signed_weights','next_ranked','rolling_update_count','rolling_path_sha256','method'):
+for key in ('samples','single_hits','bottom1_hits','top5_avg_hits','bottom5_avg_hits','top9_hits','rank10_15_hits','top15_hits','top9_avg_hits','rank10_15_avg_hits','top15_avg_hits','top9_capture_rate','top9_slot_hit_rate','rank10_15_slot_hit_rate','boundary_control_valid','bottom9_avg_hits','avg_actual_rank','ranking_direction_valid','top5_at_least_2_rate','top9_at_least_2_rate','single_specialist_window','single_specialist_baseline_hits','single_specialist_hits','single_specialist_lift','next_signed_weights','next_ranked','rolling_update_count','rolling_path_sha256','method'):
     if not equivalent(recalculated_holdout.get(key),backtest.get(key)): fail(f'最後三百六十期方向模型獨立重算不符：{key}')
 full_scan=result.get('full_history_scan') or {}
 recalculated_full=ranking_direction_metrics(draws,weights,320,len(draws))
@@ -238,7 +237,7 @@ if version.get('latest_period')!=latest['period'] or version.get('latest_draw_da
 
 page_rules={
     'index.html':{
-        'required':('本期分級主選','1中1','2中1～2','3中1～3','5中2～3','9中3～5','本期前15名單一明細','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不做補位'),
+        'required':('本期最強1顆','最強號碼多邏輯總結','強烈推薦守門','本期分級主選','1中1','2中1～2','3中1～3','5中2～3','9中3～5','本期前15名單一明細','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不做補位'),
         'forbidden':('最新一期命中結算','最後360期隔離回測','全歷史運算範圍','鐵律守門')},
     'backtest.html':{
         'required':('最後360期隔離回測','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),
@@ -253,7 +252,7 @@ page_rules={
         'required':('全歷史運算範圍','全歷史核心占比','正式方向模型','多模組校正規格','連莊資格驗算規格','相對指數至少75','全歷史連莊率不低於12.82%','不做補位'),
         'forbidden':('本期正式預測','最新一期命中結算','最後360期隔離回測','開獎前封存實戰紀錄')},
     'health.html':{
-        'required':('目前資料狀態','鐵律守門','模型健康與公開狀態','自動重新運算','手機同步'),
+        'required':('目前資料狀態','開獎後更新與自主修復','兩小時修復期限','自主修復狀態','鐵律守門','模型健康與公開狀態','自動重新運算','手機同步'),
         'forbidden':('本期正式預測','最新一期命中結算','最後360期隔離回測','正式方向模型')},
 }
 nav_files=set(page_rules)
@@ -286,7 +285,7 @@ if expected_direction not in visible_text(SITE/'backtest.html') or expected_dire
 service=(SITE/'service-worker.js').read_text(encoding='utf-8')
 sync=(SITE/'mobile-sync.js').read_text(encoding='utf-8')
 if "cache:'no-store'" not in service or 'system-health.json' not in service: fail('手機快取可能保留過期資料')
-if 'setInterval(checkVersion,30000)' not in sync: fail('手機每三十秒同步檢查已損壞')
+if 'setTimeout(checkVersion,30000)' not in sync or 'setTimeout(checkVersion,5000)' not in sync or 'visibilitychange' not in sync or 'pageshow' not in sync: fail('手機開啟即同步或重試機制已損壞')
 
 history_file=REPORTS/'prediction-history.jsonl'
 try:

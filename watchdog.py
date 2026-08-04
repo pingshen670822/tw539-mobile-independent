@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """比較官方最新期別與公開手機頁；手機頁落後即失敗。"""
 import hashlib, html, json, re, time, urllib.request
-from cloud_pipeline import fetch_latest
+from datetime import datetime, time as clock_time
+from cloud_pipeline import TAIPEI, expected_latest_date, fetch_latest
 
 PAGE='https://pingshen670822.github.io/tw539-mobile-independent/system-health.json'
 REPORT_ROOT='https://pingshen670822.github.io/tw539-mobile-independent/'
@@ -26,11 +27,17 @@ settlement_req=urllib.request.Request(SETTLEMENTS+'?t='+stamp,headers=headers)
 with urllib.request.urlopen(settlement_req,timeout=40) as r: settlements=[json.loads(line) for line in r.read().decode('utf-8').splitlines() if line.strip()]
 errors=[]
 warnings=[]
+now=datetime.now(TAIPEI)
+deadline_active=now.time()>=clock_time(22,40) or now.time()<clock_time(6,0)
+if deadline_active and official['draw_date']<expected_latest_date(now): errors.append('開獎後兩小時官方資料仍未取得，必須啟動自主修復')
 if str(health.get('latest_period'))!=str(official['period']): errors.append(f"公開期別 {health.get('latest_period')} != 官方 {official['period']}")
 if health.get('latest_draw_date')!=official['draw_date']: errors.append(f"公開日期 {health.get('latest_draw_date')} != 官方 {official['draw_date']}")
 if not health.get('freshness_ok'): errors.append('公開頁新鮮度未通過')
 if not health.get('full_history_mode'): errors.append('公開頁不是100%全歷史模式')
 if not health.get('history_database_sha256'): errors.append('公開頁缺資料庫指紋')
+for key in ('sync_completed_at','sync_delay_minutes','two_hour_repair_deadline','two_hour_deadline_met','self_repair_status','self_repair_count','last_public_verification_at','mobile_open_sync'):
+    if key not in health: errors.append('公開健康檔缺少自主修復欄位：'+key)
+if not health.get('two_hour_deadline_met',True): warnings.append('本期超過兩小時期限後才完成同步')
 data_latest=result.get('data_latest') or {}
 if str(data_latest.get('period'))!=str(official['period']) or data_latest.get('date')!=official['draw_date']: errors.append('公開結果未對應官方最新期別')
 ranked=result.get('ranked_top15') or []
@@ -100,7 +107,7 @@ if '最新一期命中結算' not in review_page or '錯誤模組與前9邊界�
 if '最後360期隔離回測' not in backtest_page or '最近54期獨立觀察' not in backtest_page or '全歷史逐期一致性掃描' not in backtest_page: errors.append('回測驗證分頁內容不完整')
 if '開獎前封存實戰紀錄' not in history_page or '錯誤模組與前9邊界逐項檢討' in history_page: errors.append('歷史封存分頁內容不完整或混入逐項檢討')
 if '正式方向模型' not in models_page or '連莊資格驗算規格' not in models_page or '全歷史連莊率不低於12.82%' not in models_page: errors.append('模型說明分頁內容不完整')
-if '鐵律守門' not in health_page or '手機同步' not in health_page: errors.append('系統健康分頁內容不完整')
+if '鐵律守門' not in health_page or '手機同步' not in health_page or '開獎後更新與自主修復' not in health_page or '兩小時修復期限' not in health_page: errors.append('系統健康分頁內容不完整')
 if any('低機率' in visible or '當期預測前九' in visible for visible in visible_pages.values()): errors.append('公開分頁仍含易誤解標示或事後回算內容')
 expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'
 if expected_direction not in backtest_page or expected_direction not in health_page: errors.append('回測或健康分頁未照實顯示排序方向')
