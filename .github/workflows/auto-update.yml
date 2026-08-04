@@ -53,7 +53,14 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add data reports site
           git diff --cached --quiet || git commit -m "開獎後自動更新"
-          git push
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            git fetch origin master
+            git rebase origin/master
+          done
+          exit 1
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with: {path: site}
