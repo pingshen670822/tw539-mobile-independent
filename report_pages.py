@@ -116,9 +116,13 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
         for item in (bt.get("single_module_consensus") or [])
     )
     single_rate=100*bt.get("single_rate",0)
+    guard_active=bool(bt.get("catastrophic_guard_current_trigger"))
+    guard_before=bt.get("catastrophic_guard_unguarded") or {}
+    guard_note=("已啟動：上一期前9零命中且實際平均名次達到深後段門檻。"
+                if guard_active else "未啟動：上一期未同時符合前9零命中與深後段門檻。")
     content = f"""
-<div class='band {'strong' if strong else 'primary'}'><div class='badge'>{confidence_label}</div><h2>本期最強1顆</h2><div class='number'>{ranking[0]:02}</div><p><b>單碼專模使用開獎前30期成績，在前5池內重排第1名；最後360期 {bt.get('single_specialist_hits',0)} 中，重排前為 {bt.get('single_specialist_baseline_hits',0)} 中；隔離命中率 {single_rate:.2f}%。</b></p><p class='note'>{'多重守門全部通過，列為超高信心強烈推薦。' if strong else '已產出本期綜合最強號碼；超高信心守門未全部通過，因此不偽造強烈推薦標籤。'}</p></div>
-<div class='band'><h2>最強號碼多邏輯總結</h2><div class='grid'><div class='card'><div class='label'>正式邏輯支持</div><div class='value'>{bt.get('single_consensus_votes',0)}／{len(bt.get('single_module_consensus') or [])}</div></div><div class='card'><div class='label'>單碼專模隔離提升</div><div class='value'>{bt.get('single_specialist_lift',0):+d}中</div></div><div class='card'><div class='label'>最近54期單碼命中</div><div class='value'>{(bt.get('recent_54') or {}).get('single_hits',0)}中</div></div></div><h3>強烈推薦守門</h3><div class='table-wrap'><table><thead><tr><th>必要條件</th><th>結果</th></tr></thead><tbody>{condition_rows}</tbody></table></div><h3>正式模組共識</h3><div class='table-wrap'><table><thead><tr><th>邏輯</th><th>單模組名次</th><th>是否支持前9</th></tr></thead><tbody>{consensus_rows}</tbody></table></div></div>
+<div class='band {'strong' if strong else 'primary'}'><div class='badge'>{confidence_label}</div><h2>本期最強1顆</h2><div class='number'>{ranking[0]:02}</div><p><b>已停用造成跨區間拖累的30期單碼重排；第1名直接採用通過排序與災難保護後的正式首位。最後360期命中 {bt.get('single_hits',0)} 次，隔離命中率 {single_rate:.2f}%。</b></p><p class='note'>{'多重守門全部通過，列為超高信心強烈推薦。' if strong else '已產出本期綜合最強號碼；超高信心守門未全部通過，因此不偽造強烈推薦標籤。'}</p></div>
+<div class='band'><h2>最強號碼多邏輯總結</h2><div class='grid'><div class='card'><div class='label'>正式邏輯支持</div><div class='value'>{bt.get('single_consensus_votes',0)}／{len(bt.get('single_module_consensus') or [])}</div></div><div class='card'><div class='label'>短窗單碼重排</div><div class='value'>已停用</div></div><div class='card'><div class='label'>最近54期單碼命中</div><div class='value'>{(bt.get('recent_54') or {}).get('single_hits',0)}中</div></div></div><h3>強烈推薦守門</h3><div class='table-wrap'><table><thead><tr><th>必要條件</th><th>結果</th></tr></thead><tbody>{condition_rows}</tbody></table></div><h3>正式模組共識</h3><div class='table-wrap'><table><thead><tr><th>邏輯</th><th>單模組名次</th><th>是否支持前9</th></tr></thead><tbody>{consensus_rows}</tbody></table></div></div>
 <div class='band'><h2>本期資料</h2><div class='grid'>
 <div class='card'><div class='label'>預測目標日</div><div class='value'>{target_date}</div></div>
 <div class='card'><div class='label'>歷史資料截止日</div><div class='value'>{latest['date']}</div></div>
@@ -126,6 +130,7 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
 <div class='card'><div class='label'>使用歷史期數</div><div class='value'>{len(draws):,}期</div></div>
 <div class='card'><div class='label'>戰報產生時間</div><div class='value'>{generated_at}</div></div>
 </div></div>
+<div class='band {'warning' if guard_active else ''}'><h2>災難失準保護</h2><p><b>{guard_note}</b></p><div class='grid'><div class='card'><div class='label'>啟動條件</div><div class='value'>前9零中且平均名次至少{bt.get('catastrophic_guard_avg_rank_floor',22):.0f}</div></div><div class='card'><div class='label'>歷史觸發</div><div class='value'>{bt.get('catastrophic_guard_trigger_count',0)}／{bt.get('samples',0)}期</div></div><div class='card'><div class='label'>原模型前9平均</div><div class='value'>{guard_before.get('top9_avg_hits',0)}</div></div><div class='card'><div class='label'>保護後前9平均</div><div class='value'>{bt.get('top9_avg_hits',0)}</div></div></div><p class='note'>原始前9：{_fmt((bt.get('next_unguarded_ranked') or [])[:9])}；正式前9：{_fmt(ranking[:9])}。啟動依據：{bt.get('catastrophic_guard_current_source','逐期隔離重演')}。</p></div>
 <div class='band'><h2>本期分級主選</h2><div class='table-wrap'><table><thead><tr><th>類型</th><th>正式號碼</th><th>顆數</th><th>狀態</th></tr></thead><tbody>
 <tr><td><b>1中1</b></td><td><b class='number'>{ranking[0]:02}</b></td><td>1</td><td class='ok'>已公開</td></tr>
 <tr><td><b>2中1～2</b></td><td class='number-line'>{_fmt(ranking[:2])}</td><td>2</td><td class='ok'>已公開</td></tr>
@@ -158,7 +163,7 @@ def _backtest_page(bt, full_scan):
     )
     recent_rows = "".join(
         f"<tr><td>{label}</td><td>{value}</td></tr>" for label, value in (
-            ("單碼專模命中", f"{recent.get('single_hits',0)}/{recent.get('samples',0)}"),
+            ("正式第1名命中", f"{recent.get('single_hits',0)}/{recent.get('samples',0)}"),
             ("前9平均命中", recent.get("top9_avg_hits", 0)),
             ("後9平均命中", recent.get("bottom9_avg_hits", 0)),
             ("前9零中期數", (recent.get("top9_hit_distribution") or {}).get("0", 0)),
@@ -180,8 +185,8 @@ def _backtest_page(bt, full_scan):
     content = f"""
 <div class='band'><h2>最後360期隔離回測</h2><div class='grid'>
 <div class='card'><div class='label'>隔離期數</div><div class='value'>{bt.get('samples',0)}期</div></div>
-<div class='card'><div class='label'>單碼專模命中</div><div class='value'>{bt.get('single_specialist_hits',0)}／{bt.get('samples',0)}</div></div>
-<div class='card'><div class='label'>單碼重排前命中</div><div class='value'>{bt.get('single_specialist_baseline_hits',0)}／{bt.get('samples',0)}</div></div>
+<div class='card'><div class='label'>正式第1名命中</div><div class='value'>{bt.get('single_hits',0)}／{bt.get('samples',0)}</div></div>
+<div class='card'><div class='label'>短窗單碼重排</div><div class='value'>已停用</div></div>
 <div class='card'><div class='label'>排序方向判定</div><div class='value'>排序方向{'通過' if bt.get('ranking_direction_valid') else '未通過'}</div></div>
 <div class='card'><div class='label'>前9至少2中比例</div><div class='value'>{100*bt.get('top9_at_least_2_rate',0):.2f}%</div></div>
 <div class='card'><div class='label'>前5至少2中比例</div><div class='value'>{100*bt.get('top5_at_least_2_rate',0):.2f}%</div></div>
@@ -211,6 +216,10 @@ def _review_page(settlements, weights, selection, feature_labels):
     )
     errors = "、".join(feature_labels.get(key, key) for key in item.get("error_modules", [])) or "本期沒有負向鑑別模組"
     diagnostic = selection.get("diagnostic") or {}
+    average_rank=float(item.get("average_actual_rank") or 0)
+    catastrophic=(not (item.get("top9_hits") or []) and average_rank>=22)
+    diagnosis=("本期5顆實際號碼整批落在排序深後段，屬於方向性失準，不是單一號碼誤差。已停用拖累的短窗單碼重排，並為下一期啟動經跨區間回測的災難失準保護。"
+               if catastrophic else "本期未達災難失準門檻；維持正式方向競賽並逐模組回灌。")
     content = f"""
 <div class='band'><h2>最新一期命中結算</h2><div class='grid'>
 <div class='card'><div class='label'>檢討開獎日</div><div class='value'>{item.get('target_draw_date','－')}</div></div>
@@ -218,7 +227,9 @@ def _review_page(settlements, weights, selection, feature_labels):
 <div class='card'><div class='label'>開獎前1中1主選</div><div class='value'>{int(item.get('single_published',0)):02}・{'命中' if item.get('single_hit') else '未中'}</div></div>
 <div class='card'><div class='label'>開獎前前9命中</div><div class='value'>{_fmt(item.get('top9_hits') or []) or '0顆'}</div></div>
 <div class='card'><div class='label'>第10至15名命中</div><div class='value'>{_fmt(item.get('rank10_15_hits') or []) or '0顆'}</div></div>
+<div class='card'><div class='label'>實際號碼平均名次</div><div class='value'>{average_rank:.1f}</div></div>
 </div></div>
+<div class='band {'warning' if catastrophic else ''}'><h2>本期重大瑕疵結論</h2><p><b>{diagnosis}</b></p></div>
 <div class='band'><h2>實際開獎號碼原始排名</h2><div class='table-wrap'><table><thead><tr><th>號碼</th><th>開獎前排名</th><th>相對指數</th><th>區段</th></tr></thead><tbody>{actual_rows}</tbody></table></div></div>
 <div class='band warning'><h2>錯誤模組與前9邊界逐項檢討</h2><p><b>失準模組：{errors}</b></p><div class='table-wrap'><table><thead><tr><th>模組</th><th>開獎號平均貢獻</th><th>前5落空號平均貢獻</th><th>整體鑑別差</th><th>邊界鑑別差</th><th>處理</th></tr></thead><tbody>{module_rows}</tbody></table></div></div>
 <div class='band'><h2>開獎後滾動權重重算</h2><p>本期已重新搜尋全部 {diagnostic.get('candidate_count',0)} 組權重，保留 {diagnostic.get('eligible_candidate_count',0)} 組均衡候選，再完成方向模型逐期重選。</p><div class='table-wrap'><table><thead><tr><th>模組</th><th>開獎前權重</th><th>重算後權重</th><th>調整</th></tr></thead><tbody>{weight_rows}</tbody></table></div></div>
@@ -256,7 +267,7 @@ def _models_page(draws, weights, bt, selection, repeat_audit, feature_labels):
 <div class='card'><div class='label'>全歷史核心占比</div><div class='value'>100%</div></div>
 <div class='card'><div class='label'>短期正式權重</div><div class='value'>0%</div></div>
 </div></div>
-<div class='band'><h2>正式方向模型</h2><p>每次預測與每一期回測都使用當時以前的全部歷史資料。先搜尋 {diagnostic.get('candidate_count',0)} 組錨定權重，保留 {diagnostic.get('eligible_candidate_count',0)} 組均衡候選，再建立 {bt.get('strategy_candidate_count',0)} 組模組正反方向模型；每一期只用此前 {bt.get('strategy_selection_window',0)} 期成績選擇下一期方向。前5池確定後，再由開獎前 {bt.get('single_specialist_window',0)} 期單碼專模只重排第1名，不改變前5與前9集合。</p><div class='table-wrap'><table><thead><tr><th>正式模組</th><th>資料來源</th><th>目前權重</th><th>方向</th></tr></thead><tbody>{formula_rows}</tbody></table></div></div>
+<div class='band'><h2>正式方向模型</h2><p>每次預測與每一期回測都使用當時以前的全部歷史資料。先搜尋 {diagnostic.get('candidate_count',0)} 組錨定權重，保留 {diagnostic.get('eligible_candidate_count',0)} 組均衡候選，再建立 {bt.get('strategy_candidate_count',0)} 組模組正反方向模型；每一期只用此前 {bt.get('strategy_selection_window',0)} 期成績選擇下一期方向。短窗單碼專模因跨區間拖累已停用；若上一期前9零命中且實際平均名次至少 {bt.get('catastrophic_guard_avg_rank_floor',22):.0f}，下一期才啟動有限度災難失準保護。</p><div class='table-wrap'><table><thead><tr><th>正式模組</th><th>資料來源</th><th>目前權重</th><th>方向</th></tr></thead><tbody>{formula_rows}</tbody></table></div></div>
 <div class='band'><h2>多模組校正規格</h2><div class='grid'>
 <div class='card'><div class='label'>錨定候選</div><div class='value'>{diagnostic.get('candidate_count',0)}組</div></div>
 <div class='card'><div class='label'>均衡候選</div><div class='value'>{diagnostic.get('eligible_candidate_count',0)}組</div></div>
@@ -280,6 +291,8 @@ def _health_page(draws, bt, full_scan, generated_at, settlements, health):
         ("命中檢討", "通過" if settled else "等待結算", "只採用開獎前封存資料"),
         ("前9邊界", "通過" if bt.get("boundary_control_valid") else "未通過", "比較每個排名位置命中率"),
         ("排序方向", direction, "最後360期隔離檢查"),
+        ("災難失準保護", "本期啟動" if bt.get("catastrophic_guard_current_trigger") else "待命中", "前9零中且實際平均名次至少22才啟動"),
+        ("短窗單碼重排", "已停用", "跨校正區與隔離區不穩定，不得改動正式第1名"),
         ("手機同步", "通過", "開啟、回到前景與重新連網時立即核對；同步後每30秒巡檢"),
         ("兩小時自修", "通過" if health.get("two_hour_deadline_met",True) else "逾時自修", "超過期限即重跑資料、模型、分頁、部署與公開驗收"),
     )

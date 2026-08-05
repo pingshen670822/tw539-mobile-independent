@@ -75,6 +75,8 @@ rate_selection=rolling.get('learning_rate_selection') or {}
 if rate_selection.get('candidate_count')!=30 or rate_selection.get('learning_rate_candidate_count')!=6 or rate_selection.get('boundary_blend_candidate_count')!=5 or not rate_selection.get('holdout_not_used'): errors.append('舊邊界診斷未保持隔離')
 if backtest.get('next_signed_weights')!=result.get('production_weights') or backtest.get('rolling_update_count')!=360: errors.append('隔離回測沒有重演方向模型逐期選擇')
 if backtest.get('strategy_candidate_count')!=30 or backtest.get('strategy_selection_window')!=90: errors.append('隔離回測缺少三十組方向模型或九十期選擇窗')
+if not backtest.get('catastrophic_guard_enabled'): errors.append('公開結果未啟用災難失準保護')
+if backtest.get('single_specialist_enabled'): errors.append('公開結果仍啟用已證明拖累的短窗單碼重排')
 full_scan=result.get('full_history_scan') or {}
 if full_scan.get('samples')!=result.get('draw_count',0)-320: errors.append('公開結果的全歷史逐期掃描期數錯誤')
 if not full_scan.get('ranking_direction_valid'): warnings.append('全歷史逐期排序方向未通過')
@@ -91,6 +93,18 @@ else:
     if not (review.get('data_integrity') or {}).get('no_post_draw_substitution'): errors.append('命中檢討未禁止開獎後換號')
     if not (review.get('rolling_adjustment') or {}).get('completed') or (review.get('rolling_adjustment') or {}).get('candidate_count')!=286 or (review.get('rolling_adjustment') or {}).get('boundary_parameter_candidate_count')!=30: errors.append('命中檢討後沒有完成286組權重與30組前9邊界重算')
     if not health.get('settled_previous'): errors.append('健康檔沒有標示最新命中檢討完成')
+    expected_guard=(len(review.get('top9_hits') or [])==0 and float(review.get('average_actual_rank') or 0)>=22)
+    if bool(backtest.get('catastrophic_guard_current_trigger'))!=expected_guard or bool(health.get('catastrophic_guard_current_trigger'))!=expected_guard: errors.append('災難失準保護沒有依最新封存檢討同步啟動')
+    base=list(backtest.get('next_unguarded_ranked') or [])
+    if expected_guard and len(base)==39:
+        previous=set(review.get('actual_numbers') or [])
+        qualified=previous.intersection(base[:9]);blocked=previous-qualified
+        rotated=base[12:]+base[:12]
+        eligible=[number for number in rotated if number not in blocked]
+        front=eligible[:9];expected_ranked=front+[number for number in rotated if number not in front]
+    else:
+        expected_ranked=base
+    if result.get('ranked_all')!=expected_ranked or backtest.get('next_ranked')!=expected_ranked: errors.append('公開正式排序未套用災難失準保護')
 visible_pages={}
 for name,page in pages.items():
     visible=re.sub(r'(?is)<(?:style|script)\b[^>]*>.*?</(?:style|script)>',' ',page)

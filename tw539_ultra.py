@@ -231,6 +231,9 @@ POLARITY_FULL_HISTORY_BLENDS = (0.0,.10,.25,.50,.75)
 POLARITY_SELECTION_WINDOW = 90
 POLARITY_WARMUP = 60
 SINGLE_SPECIALIST_WINDOW = 30
+CATASTROPHIC_TOP9_HIT_LIMIT = 0
+CATASTROPHIC_AVG_RANK_FLOOR = 22.0
+CATASTROPHIC_ROTATION = 12
 
 FEATURE_LABELS = {
     "full_freq": "全歷史頻率",
@@ -446,6 +449,17 @@ def fast_case_ranking(case: dict, weights: dict[str, float]) -> list[int]:
     return front+[n for n in base if n not in front]
 
 
+def apply_catastrophic_guard(ranked: list[int], previous_numbers: tuple[int, ...] | list[int]) -> list[int]:
+    """前9全空且實際落入深後段時，有限度前移中後段；上一期號碼仍受連莊資格約束。"""
+    rotated=ranked[CATASTROPHIC_ROTATION:]+ranked[:CATASTROPHIC_ROTATION]
+    previous=set(previous_numbers)
+    qualified_previous=previous.intersection(ranked[:9])
+    blocked_previous=previous-qualified_previous
+    eligible=[number for number in rotated if number not in blocked_previous]
+    front=eligible[:9]
+    return front+[number for number in rotated if number not in front]
+
+
 def _metric_prefix(rows: list[tuple[list[int],set[int],dict[str,float]]]) -> dict[str,list[float]]:
     keys=("single_hits","bottom1_hits","top5_hits","bottom5_hits","top9_hits",
           "rank10_15_hits","top15_hits","bottom9_hits","rank_sum")
@@ -521,9 +535,9 @@ def adaptive_polarity_backtest(
             })
     holdout_start=len(draws)-min(tests,ROLLING_HOLDOUT_DRAWS)
     start_offset=holdout_start-case_start
-    selected_metric=_empty_metric()
-    top5_distribution=Counter();top9_distribution=Counter();selection_counts=Counter();single_selection_counts=Counter();path=[];selected_rows=[]
-    baseline_single_hits=0
+    selected_metric=_empty_metric();unguarded_metric=_empty_metric()
+    top5_distribution=Counter();top9_distribution=Counter();selection_counts=Counter();single_selection_counts=Counter();path=[];selected_rows=[];unguarded_rows=[]
+    catastrophic_trigger_count=0;previous_base_ranked=None;previous_base_actual=None
     for draw_index in range(holdout_start,len(draws)):
         offset=draw_index-case_start
         window_start=max(0,offset-selection_window)
@@ -531,27 +545,32 @@ def adaptive_polarity_backtest(
             metric=_prefix_metric(strategy["prefix"],window_start,offset)
             return (direction_quality(metric),metric["single_hits"],-strategy["alpha"],-strategy["full_history_blend"])
         chosen=max(strategies,key=strategy_key)
-        base_ranked,actual,polarities=chosen["rows"][offset]
-        single_window_start=max(0,offset-SINGLE_SPECIALIST_WINDOW)
-        def single_strategy_key(strategy):
-            metric=_prefix_metric(strategy["prefix"],single_window_start,offset)
-            return (metric["single_hits"],metric["top5_avg_hits"],direction_quality(metric),
-                    -strategy["alpha"],-strategy["full_history_blend"])
-        single_chosen=max(strategies,key=single_strategy_key)
-        specialist_ranked=single_chosen["rows"][offset][0]
-        single=next(number for number in specialist_ranked if number in base_ranked[:5])
-        ranked=[single]+[number for number in base_ranked if number!=single]
-        baseline_single_hits+=int(base_ranked[0] in actual)
+        unguarded_ranked,actual,polarities=chosen["rows"][offset]
+        _add_ranking(unguarded_metric,unguarded_ranked,actual)
+        unguarded_rows.append((unguarded_ranked,actual,polarities))
+        catastrophic_trigger=False
+        if previous_base_ranked is not None:
+            previous_positions={number:index+1 for index,number in enumerate(previous_base_ranked)}
+            previous_top9_hits=len(previous_base_actual.intersection(previous_base_ranked[:9]))
+            previous_avg_rank=sum(previous_positions[number] for number in previous_base_actual)/5
+            catastrophic_trigger=(previous_top9_hits<=CATASTROPHIC_TOP9_HIT_LIMIT
+                                  and previous_avg_rank>=CATASTROPHIC_AVG_RANK_FLOOR)
+        ranked=(apply_catastrophic_guard(unguarded_ranked,case["previous_numbers"])
+                if catastrophic_trigger else list(unguarded_ranked))
+        catastrophic_trigger_count+=int(catastrophic_trigger)
+        single=ranked[0]
         _add_ranking(selected_metric,ranked,actual)
         selected_rows.append((ranked,actual,polarities))
         top5_distribution[len(actual.intersection(ranked[:5]))]+=1
         top9_distribution[len(actual.intersection(ranked[:9]))]+=1
         label=f"{chosen['alpha']:.3f}/{chosen['full_history_blend']:.2f}"
         selection_counts[label]+=1
-        single_label=f"{single_chosen['alpha']:.3f}/{single_chosen['full_history_blend']:.2f}"
+        single_label="穩定守門：不啟用短窗重排"
         single_selection_counts[single_label]+=1
         path.append({"period":draws[draw_index]["period"],"strategy":label,
-                     "single_strategy":single_label,"single":single,"polarities":polarities})
+                     "single_strategy":single_label,"single":single,"polarities":polarities,
+                     "catastrophic_guard":catastrophic_trigger})
+        previous_base_ranked=list(unguarded_ranked);previous_base_actual=set(actual)
     result=_finish_metric(selected_metric)
     result["single_direction_valid"]=result["single_hits"]>result["bottom1_hits"]
     result["front_ranking_direction_valid"]=(
@@ -577,6 +596,11 @@ def adaptive_polarity_backtest(
     recent_result["ranking_direction_valid"]=recent_result["front_ranking_direction_valid"]
     recent_result["top9_hit_distribution"]={str(k):recent_top9_distribution[k] for k in range(6)}
     recent_result["top9_at_least_2_rate"]=round(sum(v for k,v in recent_top9_distribution.items() if k>=2)/54,4)
+    unguarded_recent_metric=_empty_metric()
+    for unguarded_ranked,actual,_ in unguarded_rows[-54:]:
+        _add_ranking(unguarded_recent_metric,unguarded_ranked,actual)
+    unguarded_recent_result=_finish_metric(unguarded_recent_metric)
+    unguarded_result=_finish_metric(unguarded_metric)
     final_offset=len(cases)
     final_window_start=max(0,final_offset-selection_window)
     def final_strategy_key(strategy):
@@ -594,26 +618,15 @@ def adaptive_polarity_backtest(
         raw,features,signed_weights,draws[-1]["nums"],draws[-1]["period"],
         state.repeat_exposure,state.repeat_hits)
     base_next_ranked=rank_numbers(adjusted,draws[-1]["period"])
-    single_window_start=max(0,final_offset-SINGLE_SPECIALIST_WINDOW)
-    def final_single_strategy_key(strategy):
-        metric=_prefix_metric(strategy["prefix"],single_window_start,final_offset)
-        return (metric["single_hits"],metric["top5_avg_hits"],direction_quality(metric),
-                -strategy["alpha"],-strategy["full_history_blend"])
-    single_chosen=max(strategies,key=final_single_strategy_key)
-    single_polarities={}
-    for key in FORMAL_FEATURE_KEYS:
-        full_mean=single_chosen["cumulative"][key]/max(1,single_chosen["count"])
-        combined=(single_chosen["full_history_blend"]*full_mean
-                  +(1-single_chosen["full_history_blend"])*single_chosen["ewma"][key])
-        single_polarities[key]=1.0 if combined>=0 else -1.0
-    single_weights={key:float(anchor_weights[key])*single_polarities[key] for key in FORMAL_FEATURE_KEYS}
-    single_raw=scores_from_features(features,single_weights)
-    single_adjusted,_=apply_repeat_qualification(
-        single_raw,features,single_weights,draws[-1]["nums"],draws[-1]["period"],
-        state.repeat_exposure,state.repeat_hits)
-    specialist_next_ranked=rank_numbers(single_adjusted,draws[-1]["period"])
-    single=next(number for number in specialist_next_ranked if number in base_next_ranked[:5])
-    next_ranked=[single]+[number for number in base_next_ranked if number!=single]
+    reconstructed_guard=False
+    if previous_base_ranked is not None:
+        previous_positions={number:index+1 for index,number in enumerate(previous_base_ranked)}
+        previous_top9_hits=len(previous_base_actual.intersection(previous_base_ranked[:9]))
+        previous_avg_rank=sum(previous_positions[number] for number in previous_base_actual)/5
+        reconstructed_guard=(previous_top9_hits<=CATASTROPHIC_TOP9_HIT_LIMIT
+                             and previous_avg_rank>=CATASTROPHIC_AVG_RANK_FLOOR)
+    next_ranked=(apply_catastrophic_guard(base_next_ranked,draws[-1]["nums"])
+                 if reconstructed_guard else list(base_next_ranked))
     ordered_values=sorted(adjusted.values(),reverse=True)
     adjusted={number:ordered_values[index] for index,number in enumerate(next_ranked)}
     single_hits=int(selected_metric["single_hits"])
@@ -635,16 +648,26 @@ def adaptive_polarity_backtest(
         "strategy_selection_counts":dict(selection_counts),
         "single_specialist_selection_counts":dict(single_selection_counts),
         "single_specialist_window":SINGLE_SPECIALIST_WINDOW,
-        "single_specialist_baseline_hits":baseline_single_hits,
+        "single_specialist_baseline_hits":single_hits,
         "single_specialist_hits":single_hits,
-        "single_specialist_lift":single_hits-baseline_single_hits,
-        "single_specialist_method":"top_five_pool_thirty_draw_pre_result_specialist",
+        "single_specialist_lift":0,
+        "single_specialist_enabled":False,
+        "single_specialist_method":"disabled_by_cross_window_stability_gate",
         "selected_next_strategy":{"ewma_alpha":chosen["alpha"],"full_history_blend":chosen["full_history_blend"]},
-        "selected_next_single_strategy":{"ewma_alpha":single_chosen["alpha"],"full_history_blend":single_chosen["full_history_blend"]},
-        "selected_next_single_polarities":single_polarities,
-        "selected_next_single_weights":single_weights,
+        "selected_next_single_strategy":{"mode":"same_as_guarded_main_ranking"},
+        "selected_next_single_polarities":final_polarities,
+        "selected_next_single_weights":signed_weights,
         "selected_next_polarities":final_polarities,"next_signed_weights":signed_weights,
         "next_ranked":next_ranked,"next_score":adjusted,"next_raw_score":raw,"next_repeat_audit":repeat_audit,
+        "next_unguarded_ranked":base_next_ranked,
+        "catastrophic_guard_enabled":True,
+        "catastrophic_guard_top9_hit_limit":CATASTROPHIC_TOP9_HIT_LIMIT,
+        "catastrophic_guard_avg_rank_floor":CATASTROPHIC_AVG_RANK_FLOOR,
+        "catastrophic_guard_rotation":CATASTROPHIC_ROTATION,
+        "catastrophic_guard_trigger_count":catastrophic_trigger_count,
+        "catastrophic_guard_current_trigger_reconstructed":reconstructed_guard,
+        "catastrophic_guard_unguarded":unguarded_result,
+        "catastrophic_guard_unguarded_recent_54":unguarded_recent_result,
         "rolling_update_count":n,"rolling_learning_rate":0.0,"rolling_boundary_blend":0.0,
         "rolling_path_sha256":hashlib.sha256(json.dumps(path,ensure_ascii=False,sort_keys=True,separators=(",", ":")).encode()).hexdigest(),
         "method":"thirty_polarity_models_ninety_draw_walk_forward_selection",
@@ -1337,7 +1360,9 @@ def build_number_diagnostics(ranked: list[int], score: dict[int, float], raw_sco
 
 def prediction_seal_payload(based_on_period: str, target_draw_date: str, history_hash: str,
                              ranked_all: list[int], diagnostics: list[dict], weights: dict,
-                             selection: dict, ensemble_weights: list[dict] | None = None) -> dict:
+                             selection: dict, ensemble_weights: list[dict] | None = None,
+                             production_learning_rate: float = 0.0,
+                             production_boundary_blend: float = 0.0) -> dict:
     return {
         "based_on_period": based_on_period,
         "target_draw_date": target_draw_date,
@@ -1350,8 +1375,8 @@ def prediction_seal_payload(based_on_period: str, target_draw_date: str, history
         "calibration_window": selection["diagnostic"]["calibration_window"],
         "long_history_selection_window": selection["diagnostic"]["long_history_selection_window"],
         "holdout_window": selection["diagnostic"]["holdout_window"],
-        "rolling_learning_rate": selection["learning_rate_selection"]["selected_learning_rate"],
-        "rolling_boundary_blend": selection["learning_rate_selection"]["selected_boundary_blend"],
+        "rolling_learning_rate": production_learning_rate,
+        "rolling_boundary_blend": production_boundary_blend,
         "rolling_learning_rate_selection_window": selection["learning_rate_selection"]["selection_window"],
         "adaptive_polarity": selection.get("adaptive_polarity") or {},
     }
@@ -1466,6 +1491,29 @@ def main() -> None:
     core_bt = backtest(draws, anchor_ensemble, holdout, max(1, min(a.tickets, 30)), learning_rate, boundary_blend)
     bt = adaptive_polarity_backtest(draws, average_weights(anchor_ensemble), holdout, POLARITY_SELECTION_WINDOW)
     bt["core_three_model_diagnostic"] = core_bt
+    # 下一期是否啟動災難失準保護，以已公開且開獎後封存的實戰檢討為最高優先。
+    guard_trigger=bool(bt.get("catastrophic_guard_current_trigger_reconstructed"));guard_source="逐期隔離重演"
+    settlement_file=OUT/"published-settlements.jsonl"
+    if settlement_file.exists():
+        locked=[]
+        for line in settlement_file.read_text(encoding="utf-8").splitlines():
+            try: locked.append(json.loads(line))
+            except json.JSONDecodeError: continue
+        matching=[item for item in locked if item.get("target_draw_date")==draws[-1]["date"]
+                  and item.get("review_status")=="completed_from_pre_draw_seal"]
+        if matching:
+            latest_review=matching[-1]
+            guard_trigger=(len(latest_review.get("top9_hits") or [])<=CATASTROPHIC_TOP9_HIT_LIMIT
+                           and float(latest_review.get("average_actual_rank") or 0)>=CATASTROPHIC_AVG_RANK_FLOOR)
+            guard_source="開獎前封存實戰檢討"
+    unguarded_next=list(bt["next_unguarded_ranked"])
+    guarded_next=(apply_catastrophic_guard(unguarded_next,draws[-1]["nums"])
+                  if guard_trigger else unguarded_next)
+    ordered_values=sorted(bt["next_score"].values(),reverse=True)
+    bt["next_ranked"]=guarded_next
+    bt["next_score"]={number:ordered_values[index] for index,number in enumerate(guarded_next)}
+    bt["catastrophic_guard_current_trigger"]=guard_trigger
+    bt["catastrophic_guard_current_source"]=guard_source
     weights = dict(bt["next_signed_weights"])
     production_ensemble = []
     diagnostics[0]["production_weights_after_rolling"] = weights
@@ -1503,7 +1551,7 @@ def main() -> None:
         })
     consensus_votes=sum(item["supports"] for item in module_consensus)
     strong_conditions={
-        "單碼專模隔離提升":bt.get("single_specialist_lift",0)>0,
+        "單碼短窗重排未造成拖累":bt.get("single_specialist_hits",0)>=bt.get("single_specialist_baseline_hits",0),
         "正式排序方向通過":bool(bt.get("ranking_direction_valid")),
         "最近五十四期方向通過":bool((bt.get("recent_54") or {}).get("ranking_direction_valid")),
         "前九邊界通過":bool(bt.get("boundary_control_valid")),
@@ -1525,7 +1573,8 @@ def main() -> None:
     history_hash=hashlib.sha256(history_payload.encode()).hexdigest()
     seal_payload = prediction_seal_payload(
         draws[-1]["period"], target.isoformat(), history_hash, ranked,
-        number_diagnostics, weights, selection, production_ensemble)
+        number_diagnostics, weights, selection, production_ensemble,
+        bt["rolling_learning_rate"], bt["rolling_boundary_blend"])
     seal_sha256 = hashlib.sha256(json.dumps(seal_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     fingerprint = seal_sha256[:16]
     report_pages = render_report_pages(
@@ -1583,6 +1632,13 @@ def main() -> None:
             "single_specialist_window": bt["single_specialist_window"],
             "selected_next_single_strategy": bt["selected_next_single_strategy"],
             "selected_next_single_weights": bt["selected_next_single_weights"],
+            "single_specialist_enabled": bt["single_specialist_enabled"],
+            "catastrophic_guard_enabled": bt["catastrophic_guard_enabled"],
+            "catastrophic_guard_current_trigger": bt["catastrophic_guard_current_trigger"],
+            "catastrophic_guard_current_source": bt["catastrophic_guard_current_source"],
+            "catastrophic_guard_top9_hit_limit": bt["catastrophic_guard_top9_hit_limit"],
+            "catastrophic_guard_avg_rank_floor": bt["catastrophic_guard_avg_rank_floor"],
+            "catastrophic_guard_rotation": bt["catastrophic_guard_rotation"],
         },
         "model_selection_cutoff": {
             "period": diagnostics[0]["calibration_window"]["last_period"],
