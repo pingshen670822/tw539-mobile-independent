@@ -16,6 +16,7 @@ from tw539_ultra import (FORMAL_FEATURE_KEYS, GLOBAL_HISTORY_BLEND, MAX_ANCHOR_M
                          ROLLING_BOUNDARY_BLEND_CANDIDATES, ROLLING_LEARNING_RATE_CANDIDATES,
                          MIN_ENSEMBLE_WEIGHT_DISTANCE, POLARITY_SELECTION_WINDOW,
                          CATASTROPHIC_TOP9_HIT_LIMIT, CATASTROPHIC_AVG_RANK_FLOOR,
+                         STABILITY_CHAMPION_ANCHOR, anchor_challenger_wins,
                          adaptive_polarity_backtest,
                          apply_catastrophic_guard,
                          apply_repeat_qualification, average_weights, build_number_diagnostics,
@@ -117,7 +118,8 @@ else:
         for other in anchor_ensemble[:index]:
             if sum(abs(member[key]-other[key]) for key in FORMAL_FEATURE_KEYS)<MIN_ENSEMBLE_WEIGHT_DISTANCE-1e-12: fail('三個錨定模型仍高度同質')
     rolling_adjustment=result.get('rolling_weight_adjustment') or {}
-    if rolling_adjustment.get('anchor_weights')!=average_weights(anchor_ensemble) or rolling_adjustment.get('anchor_ensemble_weights')!=anchor_ensemble: fail('三模型錨定權重與逐期滾動未銜接')
+    challenger_anchor=average_weights(anchor_ensemble)
+    if rolling_adjustment.get('candidate_anchor_weights')!=challenger_anchor or rolling_adjustment.get('anchor_ensemble_weights')!=anchor_ensemble: fail('每日挑戰模型與三模型錨定搜尋未銜接')
     if rolling_adjustment.get('production_weights')!=weights or rolling_adjustment.get('production_ensemble_weights')!=ensemble_weights: fail('三模型終點權重與正式主選未銜接')
     if rolling_adjustment.get('updates')!=360 or rolling_adjustment.get('method')!='thirty_polarity_models_ninety_draw_walk_forward_selection': fail('最新開獎錯誤沒有觸發三十組方向模型逐期重選')
     if rolling_adjustment.get('strategy_candidate_count')!=30 or rolling_adjustment.get('strategy_selection_window')!=POLARITY_SELECTION_WINDOW: fail('方向模型數或九十期選擇窗錯誤')
@@ -142,7 +144,12 @@ else:
     expected_diagnostics[0]['production_ensemble_after_rolling']=ensemble_weights
     if not equivalent(expected_diagnostics,diagnostics): fail('滾動校正診斷無法完整重現')
     if (result.get('rolling_calibration') or {}).get('leaderboard')!=expected_selection.get('leaderboard'): fail('滾動候選排行榜無法重現')
-    recalculated_holdout=adaptive_polarity_backtest(draws,average_weights(anchor_ensemble),360,POLARITY_SELECTION_WINDOW)
+    challenger_holdout=adaptive_polarity_backtest(draws,challenger_anchor,360,POLARITY_SELECTION_WINDOW)
+    champion_holdout=adaptive_polarity_backtest(draws,dict(STABILITY_CHAMPION_ANCHOR),360,POLARITY_SELECTION_WINDOW)
+    challenger_allowed=anchor_challenger_wins(challenger_holdout,champion_holdout)
+    expected_production_anchor=challenger_anchor if challenger_allowed else dict(STABILITY_CHAMPION_ANCHOR)
+    recalculated_holdout=challenger_holdout if challenger_allowed else champion_holdout
+    if result.get('production_anchor_weights')!=expected_production_anchor or rolling_adjustment.get('anchor_weights')!=expected_production_anchor: fail('穩定冠軍與每日挑戰模型選擇不可重現')
     for case in evaluation_cases(draws,len(draws)-50,len(draws)):
         raw_case=scores_from_features(case['features'],weights)
         standard=rank_numbers(apply_repeat_qualification(raw_case,case['features'],weights,case['previous_numbers'],case['seed'],case['repeat_exposure'],case['repeat_hits'])[0],case['seed'])
@@ -156,6 +163,9 @@ if health.get('history_database_sha256')!=database_hash or site_health.get('hist
 ranked_all=result.get('ranked_all') or []
 ranked=result.get('ranked_top15') or []
 backtest=result.get('backtest') or {}
+stability=backtest.get('anchor_stability') or {}
+if stability.get('selected') not in ('穩定冠軍','每日挑戰者') or bool(stability.get('challenger_allowed'))!=challenger_allowed: fail('穩定冠軍與每日挑戰模型守門紀錄不完整')
+if (result.get('rolling_calibration') or {}).get('anchor_stability')!=stability or (result.get('rolling_weight_adjustment') or {}).get('anchor_stability')!=stability: fail('穩定模型守門未同步封存')
 if len(ranked_all)!=39 or set(ranked_all)!=set(range(1,40)) or ranked!=ranked_all[:15]: fail('開獎前完整39碼排序缺失或前15不同步')
 if len(ranked)!=15 or len(set(ranked))!=15 or any(not 1<=int(n)<=39 for n in ranked): fail('前十五名資料錯誤')
 elif result.get('single_candidate')!=ranked[0] or result.get('single_published')!=ranked[0]: fail('1中1主選未固定產出並公開')
@@ -193,6 +203,7 @@ if seal.get('algorithm')!='sha256' or seal.get('sha256')!=seal_hash or not seal.
 if sealed_payload.get('based_on_period')!=latest['period'] or sealed_payload.get('target_draw_date')!=target.isoformat(): fail('開獎前封存期別日期錯誤')
 if sealed_payload.get('history_database_sha256')!=coverage.get('database_sha256') or sealed_payload.get('ranked_all')!=ranked_all or sealed_payload.get('number_diagnostics')!=result.get('number_diagnostics'): fail('開獎前封存內容與公開結果不同步')
 if sealed_payload.get('production_ensemble_weights')!=ensemble_weights: fail('開獎前封存缺少三模型終點權重')
+if sealed_payload.get('production_anchor_weights')!=result.get('production_anchor_weights'): fail('開獎前封存缺少穩定模型錨定權重')
 if sealed_payload.get('rolling_learning_rate')!=(result.get('rolling_weight_adjustment') or {}).get('learning_rate'): fail('開獎前封存缺少正式模型學習幅度')
 if sealed_payload.get('rolling_boundary_blend')!=(result.get('rolling_weight_adjustment') or {}).get('boundary_blend'): fail('開獎前封存缺少前9邊界占比')
 if result.get('recalculation_fingerprint')!=seal_hash[:16]: fail('預測重算指紋沒有取自完整開獎前封存資料')
@@ -241,6 +252,7 @@ for label,item in (('戰報健康檔',health),('手機健康檔',site_health)):
     if bool(item.get('ranking_direction_valid'))!=bool(backtest.get('ranking_direction_valid')): fail(f'{label}未同步排序方向狀態')
     if item.get('rank10_15_avg_hits')!=backtest.get('rank10_15_avg_hits') or item.get('top9_capture_rate')!=backtest.get('top9_capture_rate') or bool(item.get('boundary_control_valid'))!=bool(backtest.get('boundary_control_valid')): fail(f'{label}未同步前9邊界狀態')
     if not item.get('catastrophic_guard_enabled') or bool(item.get('catastrophic_guard_current_trigger'))!=bool(backtest.get('catastrophic_guard_current_trigger')): fail(f'{label}未同步災難失準保護狀態')
+    if item.get('production_anchor_weights')!=result.get('production_anchor_weights') or item.get('anchor_stability')!=backtest.get('anchor_stability'): fail(f'{label}未同步穩定模型守門狀態')
     if item.get('single_specialist_enabled'): fail(f'{label}仍啟用已證明拖累的短窗單碼重排')
 if version.get('latest_period')!=latest['period'] or version.get('latest_draw_date')!=latest['date']: fail('手機版本檔期別日期錯誤')
 

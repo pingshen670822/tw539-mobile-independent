@@ -131,6 +131,8 @@ def enrich_settlement(item, prediction, latest):
     diagnostics_by_number={int(x['number']):x for x in diagnostics}
     if set(diagnostics_by_number)!=set(range(1,40)): raise RuntimeError('開獎前39碼診斷不完整')
     actual=set(latest['nums']); top5=ranked[:5]; top9=ranked[:9]
+    unguarded=list((prediction.get('backtest') or {}).get('next_unguarded_ranked') or ranked)
+    unguarded_single=unguarded[0] if unguarded else None
     missed=[n for n in top5 if n not in actual]
     boundary_hits=[n for n in ranked[9:15] if n in actual]
     false_top9=[n for n in top9 if n not in actual]
@@ -166,6 +168,11 @@ def enrich_settlement(item, prediction, latest):
         'top5_published':top5,'top9_published':top9,
         'single_published':prediction.get('single_published'),
         'single_hit':bool(prediction.get('single_published') in actual),
+        'unguarded_single':unguarded_single,
+        'unguarded_single_hit':bool(unguarded_single in actual),
+        'catastrophic_guard_was_active':bool((prediction.get('backtest') or {}).get('catastrophic_guard_current_trigger')),
+        'catastrophic_guard_single_effect':('removed_hit' if unguarded_single in actual and prediction.get('single_published') not in actual
+                                           else 'preserved_or_no_hit'),
         'top5_hits':sorted(actual.intersection(top5)),'top9_hits':sorted(actual.intersection(top9)),
         'rank10_15_hits':sorted(boundary_hits),'false_top9':false_top9,
         'boundary_review_status':'triggered_and_recalculated' if boundary_hits else 'checked_no_rank_10_15_hit',
@@ -250,7 +257,9 @@ def refresh_report_pages(current):
     pages=render_report_pages(
         draws,current.get('production_weights') or {},score,current.get('tickets') or [],
         current.get('backtest') or {},current.get('full_history_scan') or {},
-        current.get('repeat_qualification') or [],{'diagnostic':selected},REPORTS,FEATURE_LABELS)
+        current.get('repeat_qualification') or [],
+        {'diagnostic':selected,'anchor_stability':(current.get('backtest') or {}).get('anchor_stability') or {}},
+        REPORTS,FEATURE_LABELS)
     for filename,page in pages.items():
         (REPORTS/filename).write_text(page,encoding='utf-8')
     REPORT.write_text(pages['index.html'],encoding='utf-8')
@@ -274,6 +283,7 @@ def build_site(latest, changed, previous=None):
             'selected_boundary_blend':(current.get('rolling_weight_adjustment') or {}).get('boundary_blend'),
             'polarity_model_candidate_count':(current.get('rolling_weight_adjustment') or {}).get('strategy_candidate_count'),
             'polarity_selection_window':(current.get('rolling_weight_adjustment') or {}).get('strategy_selection_window'),
+            'anchor_stability':(current.get('rolling_weight_adjustment') or {}).get('anchor_stability'),
             'next_single':current.get('single_published'),
             'next_prediction_seal_sha256':(current.get('pre_draw_seal') or {}).get('sha256')}
         evidence={k:v for k,v in settlement.items() if k!='review_evidence_sha256'}
@@ -325,6 +335,8 @@ def build_site(latest, changed, previous=None):
         'catastrophic_guard_current_trigger':bool(backtest.get('catastrophic_guard_current_trigger')),
         'catastrophic_guard_current_source':backtest.get('catastrophic_guard_current_source'),
         'catastrophic_guard_trigger_count':backtest.get('catastrophic_guard_trigger_count'),
+        'anchor_stability':backtest.get('anchor_stability'),
+        'production_anchor_weights':current.get('production_anchor_weights'),
         'polarity_model_candidate_count':backtest.get('strategy_candidate_count'),
         'polarity_selection_window':backtest.get('strategy_selection_window'),
         'model_drift':'ranking_direction_invalid' if not direction_ok else ('no_verified_edge' if degraded else 'stable_or_observing'),

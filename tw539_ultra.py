@@ -234,6 +234,12 @@ SINGLE_SPECIALIST_WINDOW = 30
 CATASTROPHIC_TOP9_HIT_LIMIT = 0
 CATASTROPHIC_AVG_RANK_FLOOR = 22.0
 CATASTROPHIC_ROTATION = 12
+STABILITY_CHAMPION_ANCHOR = {
+    "full_frequency_balance": 1/30,
+    "full_transition_correction": 8/30,
+    "full_signature_correction": 9/30,
+    "full_overdue_correction": 12/30,
+}
 
 FEATURE_LABELS = {
     "full_freq": "全歷史頻率",
@@ -450,14 +456,33 @@ def fast_case_ranking(case: dict, weights: dict[str, float]) -> list[int]:
 
 
 def apply_catastrophic_guard(ranked: list[int], previous_numbers: tuple[int, ...] | list[int]) -> list[int]:
-    """前9全空且實際落入深後段時，有限度前移中後段；上一期號碼仍受連莊資格約束。"""
+    """前9全空且實際落入深後段時保留原始第1名，只調整其餘名次。"""
+    first=ranked[0]
     rotated=ranked[CATASTROPHIC_ROTATION:]+ranked[:CATASTROPHIC_ROTATION]
     previous=set(previous_numbers)
     qualified_previous=previous.intersection(ranked[:9])
     blocked_previous=previous-qualified_previous
-    eligible=[number for number in rotated if number not in blocked_previous]
-    front=eligible[:9]
+    eligible=[number for number in rotated if number!=first and number not in blocked_previous]
+    front=[first]+eligible[:8]
     return front+[number for number in rotated if number not in front]
+
+
+def anchor_challenger_wins(challenger: dict, champion: dict) -> bool:
+    """新錨定必須在長短區間全面不差且至少三項明確改善，才准取代穩定冠軍。"""
+    recent_new=challenger.get("recent_54") or {};recent_old=champion.get("recent_54") or {}
+    comparisons=(
+        (challenger.get("single_hits",0),champion.get("single_hits",0)),
+        (challenger.get("top5_avg_hits",0),champion.get("top5_avg_hits",0)),
+        (challenger.get("top9_avg_hits",0),champion.get("top9_avg_hits",0)),
+        (recent_new.get("single_hits",0),recent_old.get("single_hits",0)),
+        (recent_new.get("top5_avg_hits",0),recent_old.get("top5_avg_hits",0)),
+        (recent_new.get("top9_avg_hits",0),recent_old.get("top9_avg_hits",0)),
+    )
+    no_worse=all(new>=old for new,old in comparisons)
+    improvements=sum(new>old for new,old in comparisons)
+    direction_ok=(bool(challenger.get("ranking_direction_valid"))
+                  and bool(recent_new.get("ranking_direction_valid")))
+    return no_worse and improvements>=3 and direction_ok
 
 
 def _metric_prefix(rows: list[tuple[list[int],set[int],dict[str,float]]]) -> dict[str,list[float]]:
@@ -1362,7 +1387,8 @@ def prediction_seal_payload(based_on_period: str, target_draw_date: str, history
                              ranked_all: list[int], diagnostics: list[dict], weights: dict,
                              selection: dict, ensemble_weights: list[dict] | None = None,
                              production_learning_rate: float = 0.0,
-                             production_boundary_blend: float = 0.0) -> dict:
+                             production_boundary_blend: float = 0.0,
+                             production_anchor_weights: dict | None = None) -> dict:
     return {
         "based_on_period": based_on_period,
         "target_draw_date": target_draw_date,
@@ -1371,6 +1397,7 @@ def prediction_seal_payload(based_on_period: str, target_draw_date: str, history
         "number_diagnostics": diagnostics,
         "production_weights": weights,
         "production_ensemble_weights": ensemble_weights or [],
+        "production_anchor_weights": production_anchor_weights or {},
         "candidate_grid_sha256": selection["diagnostic"]["candidate_grid_sha256"],
         "calibration_window": selection["diagnostic"]["calibration_window"],
         "long_history_selection_window": selection["diagnostic"]["long_history_selection_window"],
@@ -1489,7 +1516,44 @@ def main() -> None:
     diagnostics[0]["learning_rate_selection"] = learning_rate_selection
     quality = [diagnostics[0]["quality"]]
     core_bt = backtest(draws, anchor_ensemble, holdout, max(1, min(a.tickets, 30)), learning_rate, boundary_blend)
-    bt = adaptive_polarity_backtest(draws, average_weights(anchor_ensemble), holdout, POLARITY_SELECTION_WINDOW)
+    challenger_anchor_weights = average_weights(anchor_ensemble)
+    challenger_bt = adaptive_polarity_backtest(
+        draws, challenger_anchor_weights, holdout, POLARITY_SELECTION_WINDOW)
+    champion_anchor_weights = dict(STABILITY_CHAMPION_ANCHOR)
+    champion_bt = adaptive_polarity_backtest(
+        draws, champion_anchor_weights, holdout, POLARITY_SELECTION_WINDOW)
+    challenger_allowed = anchor_challenger_wins(challenger_bt, champion_bt)
+    if challenger_allowed:
+        production_anchor_weights = challenger_anchor_weights
+        bt = challenger_bt
+        stability_choice = "每日挑戰者"
+    else:
+        production_anchor_weights = champion_anchor_weights
+        bt = champion_bt
+        stability_choice = "穩定冠軍"
+    def stability_metrics(item: dict) -> dict:
+        recent=item.get("recent_54") or {}
+        return {
+            "last360_single_hits": item.get("single_hits",0),
+            "last360_top5_avg_hits": item.get("top5_avg_hits",0),
+            "last360_top9_avg_hits": item.get("top9_avg_hits",0),
+            "last360_direction_valid": bool(item.get("ranking_direction_valid")),
+            "recent54_single_hits": recent.get("single_hits",0),
+            "recent54_top5_avg_hits": recent.get("top5_avg_hits",0),
+            "recent54_top9_avg_hits": recent.get("top9_avg_hits",0),
+            "recent54_direction_valid": bool(recent.get("ranking_direction_valid")),
+        }
+    anchor_stability = {
+        "selected": stability_choice,
+        "challenger_allowed": challenger_allowed,
+        "replacement_rule": "長期與近期六項指標全部不差、至少三項改善，且長短期排序方向均通過",
+        "production_anchor_weights": production_anchor_weights,
+        "champion_anchor_weights": champion_anchor_weights,
+        "challenger_anchor_weights": challenger_anchor_weights,
+        "champion_metrics": stability_metrics(champion_bt),
+        "challenger_metrics": stability_metrics(challenger_bt),
+    }
+    bt["anchor_stability"] = anchor_stability
     bt["core_three_model_diagnostic"] = core_bt
     # 下一期是否啟動災難失準保護，以已公開且開獎後封存的實戰檢討為最高優先。
     guard_trigger=bool(bt.get("catastrophic_guard_current_trigger_reconstructed"));guard_source="逐期隔離重演"
@@ -1523,6 +1587,7 @@ def main() -> None:
     selection["rolling_update_count"] = bt["rolling_update_count"]
     selection["rolling_path_sha256"] = bt["rolling_path_sha256"]
     selection["learning_rate_selection"] = learning_rate_selection
+    selection["anchor_stability"] = anchor_stability
     selection["adaptive_polarity"] = {
         "method": bt["method"],
         "strategy_candidate_count": bt["strategy_candidate_count"],
@@ -1530,6 +1595,7 @@ def main() -> None:
         "selected_next_strategy": bt["selected_next_strategy"],
         "selected_next_polarities": bt["selected_next_polarities"],
         "path_sha256": bt["rolling_path_sha256"],
+        "anchor_stability": anchor_stability,
     }
     full_scan = ranking_direction_metrics(draws, weights, 320, len(draws))
     full_scan["validation_eligible"] = False
@@ -1574,7 +1640,8 @@ def main() -> None:
     seal_payload = prediction_seal_payload(
         draws[-1]["period"], target.isoformat(), history_hash, ranked,
         number_diagnostics, weights, selection, production_ensemble,
-        bt["rolling_learning_rate"], bt["rolling_boundary_blend"])
+        bt["rolling_learning_rate"], bt["rolling_boundary_blend"],
+        production_anchor_weights)
     seal_sha256 = hashlib.sha256(json.dumps(seal_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     fingerprint = seal_sha256[:16]
     report_pages = render_report_pages(
@@ -1608,6 +1675,7 @@ def main() -> None:
             "global_history_features": FORMAL_FEATURE_KEYS
         },
         "production_weights": weights,
+        "production_anchor_weights": production_anchor_weights,
         "production_ensemble_weights": production_ensemble,
         "anchor_ensemble_weights": anchor_ensemble,
         "audit_weights": weights,
@@ -1615,8 +1683,10 @@ def main() -> None:
         "weight_selection_diagnostics": diagnostics,
         "rolling_calibration": selection,
         "rolling_weight_adjustment": {
-            "anchor_weights": average_weights(anchor_ensemble),
+            "anchor_weights": production_anchor_weights,
+            "candidate_anchor_weights": challenger_anchor_weights,
             "anchor_ensemble_weights": anchor_ensemble,
+            "anchor_stability": anchor_stability,
             "production_weights": weights,
             "production_ensemble_weights": production_ensemble,
             "updates": bt["rolling_update_count"],
