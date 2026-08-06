@@ -14,7 +14,7 @@ checks={
     ROOT/'system_audit.py':['整套系統驗收失敗','1中1主選未固定產出並公開','戰報可見英文','正式主選與隔離回測不是同一組權重','最新開獎錯誤沒有觸發三十組方向模型逐期重選','命中檢討','三十組前9邊界參數','推薦牌組含強制投注排除號碼'],
     ROOT/'site/service-worker.js':["cache:'no-store'",'tw539-mobile-ironlaw-v5','system-health.json','backtest.html','review.html','history.html','models.html','health.html'],
     ROOT/'site/mobile-sync.js':['setTimeout(checkVersion,30000)','setTimeout(checkVersion,5000)','visibilitychange','pageshow','online','同步正常','同步重試中'],
-    ROOT/'.github/workflows/watchdog.yml':['watchdog.py','auto-update.yml','repair=true','0,20,40 13-16','actions: write','actions/checkout@v7','actions/setup-python@v7'],
+    ROOT/'.github/workflows/watchdog.yml':['watchdog.py','auto-update.yml','repair=true','30,35,40,45,50,55 12','*/5 13-16','actions: write','actions/checkout@v7','actions/setup-python@v7'],
     ROOT/'watchdog.py':['system-health.json','published-settlements.jsonl','full_history_mode','latest_period','開獎後兩小時官方資料仍未取得','自主修復欄位','最新開獎錯誤沒有觸發三十組方向模型與九十期逐期重選','第10至15名偏移檢查','REPORT_PAGES','本期預測頁混入其他分類資料','開獎檢討分頁內容不完整'],
 }
 parser=argparse.ArgumentParser()
