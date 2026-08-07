@@ -264,10 +264,10 @@ page_rules={
         'required':('最後360期隔離回測','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),
         'forbidden':('本期正式預測','最新一期命中結算','開獎前封存實戰紀錄','正式方向模型')},
     'review.html':{
-        'required':('最新一期命中結算','本期重大瑕疵結論','實際開獎號碼原始排名','錯誤模組與前9邊界逐項檢討','第10至15名命中','開獎後滾動權重重算','禁止開獎後換號或補號'),
+        'required':('最新一期命中結算','開獎前前5正式預測','前5命中資料','本期重大瑕疵結論','實際開獎號碼原始排名','錯誤模組與前9邊界逐項檢討','第10至15名命中','開獎後滾動權重重算','禁止開獎後換號或補號'),
         'forbidden':('本期正式預測','最後360期隔離回測','開獎前封存實戰紀錄','全歷史運算範圍')},
     'history.html':{
-        'required':('開獎前封存實戰紀錄','開獎前1中1','開獎前前9','主選結果','第10至15名命中'),
+        'required':('開獎前封存實戰紀錄','開獎前1中1','開獎前前5','前5命中資料','開獎前前9','主選結果','第10至15名命中'),
         'forbidden':('本期正式預測','錯誤模組與前9邊界逐項檢討','最後360期隔離回測','正式方向模型')},
     'models.html':{
         'required':('全歷史運算範圍','全歷史核心占比','正式方向模型','多模組校正規格','連莊資格驗算規格','相對指數至少75','全歷史連莊率不低於12.82%','不做補位'),
@@ -335,6 +335,8 @@ else:
         if (result.get('rolling_weight_adjustment') or {}).get('catastrophic_guard_current_trigger')!=expected_guard: fail('滾動修正沒有封存災難失準保護狀態')
         for item in report_rows:
             if item.get('single_published') is None or item.get('single_hit') not in (True,False) or len(item.get('top5_published') or [])!=5: fail('已結算紀錄缺少開獎前封存主選或前5')
+            expected_top5_hits=sorted(set(item.get('actual_numbers') or []).intersection(item.get('top5_published') or []))
+            if sorted(item.get('top5_hits') or [])!=expected_top5_hits: fail('命中檢討的前5命中資料錯誤')
             sealed=[x for x in records if x.get('target_draw_date')==item.get('target_draw_date') and x.get('recalculation_fingerprint')==item.get('fingerprint')]
             if len(sealed)!=1: fail('已結算紀錄沒有唯一對應的開獎前正式封存')
             if item.get('review_status')!='completed_from_pre_draw_seal' or not item.get('rolling_recalculation_required'): fail('已結算紀錄沒有完成開獎前封存命中檢討')

@@ -89,6 +89,8 @@ else:
     review=settlements[-1]
     if review.get('target_draw_date')!=official['draw_date'] or str(review.get('official_period'))!=str(official['period']): errors.append('最新命中檢討未對應官方最新期別')
     if review.get('review_status')!='completed_from_pre_draw_seal' or len(review.get('actual_rankings') or [])!=5 or len(review.get('module_review') or [])!=len(result.get('production_weights') or {}): errors.append('最新命中檢討缺少實際排名或錯誤模組分析')
+    expected_top5_hits=sorted(set(review.get('actual_numbers') or []).intersection(review.get('top5_published') or []))
+    if len(review.get('top5_published') or [])!=5 or sorted(review.get('top5_hits') or [])!=expected_top5_hits: errors.append('最新命中檢討缺少或算錯前5命中資料')
     actual_boundary=sorted(x.get('number') for x in (review.get('actual_rankings') or []) if 10<=int(x.get('rank',99))<=15)
     if sorted(review.get('rank10_15_hits') or [])!=actual_boundary or review.get('boundary_review_status') not in ('triggered_and_recalculated','checked_no_rank_10_15_hit'): errors.append('最新命中檢討缺少第10至15名偏移檢查')
     if any(any(key not in module for key in ('boundary_actual_mean','false_top9_mean','boundary_discrimination_gap','boundary_error_flag')) for module in (review.get('module_review') or [])): errors.append('最新命中檢討缺少前9邊界逐模組比較')
@@ -121,9 +123,9 @@ for name,page in pages.items():
 home=visible_pages['index.html']; review_page=visible_pages['review.html']; backtest_page=visible_pages['backtest.html']; history_page=visible_pages['history.html']; models_page=visible_pages['models.html']; health_page=visible_pages['health.html']
 if '本期最強1顆' not in home or '1中1' not in home or (ranked and f'{int(ranked[0]):02}' not in home): errors.append('本期預測頁未顯示1中1主選')
 if any(term in home for term in ('最新一期命中結算','最後360期隔離回測','全歷史運算範圍','鐵律守門')): errors.append('本期預測頁混入其他分類資料')
-if '最新一期命中結算' not in review_page or '錯誤模組與前9邊界逐項檢討' not in review_page or '第10至15名命中' not in review_page or '開獎後滾動權重重算' not in review_page or '禁止開獎後換號或補號' not in review_page: errors.append('開獎檢討分頁內容不完整')
+if '最新一期命中結算' not in review_page or '開獎前前5正式預測' not in review_page or '前5命中資料' not in review_page or '錯誤模組與前9邊界逐項檢討' not in review_page or '第10至15名命中' not in review_page or '開獎後滾動權重重算' not in review_page or '禁止開獎後換號或補號' not in review_page: errors.append('開獎檢討分頁內容不完整')
 if '最後360期隔離回測' not in backtest_page or '最近54期獨立觀察' not in backtest_page or '全歷史逐期一致性掃描' not in backtest_page: errors.append('回測驗證分頁內容不完整')
-if '開獎前封存實戰紀錄' not in history_page or '錯誤模組與前9邊界逐項檢討' in history_page: errors.append('歷史封存分頁內容不完整或混入逐項檢討')
+if '開獎前封存實戰紀錄' not in history_page or '前5命中資料' not in history_page or '錯誤模組與前9邊界逐項檢討' in history_page: errors.append('歷史封存分頁內容不完整或混入逐項檢討')
 if '正式方向模型' not in models_page or '穩定冠軍與每日挑戰模型' not in models_page or '連莊資格驗算規格' not in models_page or '全歷史連莊率不低於12.82%' not in models_page: errors.append('模型說明分頁內容不完整')
 if '鐵律守門' not in health_page or '手機同步' not in health_page or '開獎後更新與自主修復' not in health_page or '兩小時修復期限' not in health_page: errors.append('系統健康分頁內容不完整')
 if any('低機率' in visible or '當期預測前九' in visible for visible in visible_pages.values()): errors.append('公開分頁仍含易誤解標示或事後回算內容')

@@ -217,6 +217,8 @@ def _review_page(settlements, weights, selection, feature_labels):
     errors = "、".join(feature_labels.get(key, key) for key in item.get("error_modules", [])) or "本期沒有負向鑑別模組"
     diagnostic = selection.get("diagnostic") or {}
     average_rank=float(item.get("average_actual_rank") or 0)
+    top5_published=item.get("top5_published") or []
+    top5_hits=item.get("top5_hits") or []
     catastrophic=(not (item.get("top9_hits") or []) and average_rank>=22)
     guard_removed_hit=item.get("catastrophic_guard_single_effect")=="removed_hit"
     if guard_removed_hit:
@@ -233,6 +235,8 @@ def _review_page(settlements, weights, selection, feature_labels):
 <div class='card'><div class='label'>實際開獎</div><div class='value number-line'>{_fmt(item.get('actual_numbers') or [])}</div></div>
 <div class='card'><div class='label'>開獎前1中1主選</div><div class='value'>{int(item.get('single_published',0)):02}・{'命中' if item.get('single_hit') else '未中'}</div></div>
 <div class='card'><div class='label'>保護前原始第1名</div><div class='value'>{int(item.get('unguarded_single') or item.get('single_published',0)):02}・{'命中' if item.get('unguarded_single_hit') else '未中'}</div></div>
+<div class='card'><div class='label'>開獎前前5正式預測</div><div class='value number-line'>{_fmt(top5_published)}</div></div>
+<div class='card'><div class='label'>前5命中資料</div><div class='value'>{_fmt(top5_hits) or '未命中'}・共{len(top5_hits)}顆</div></div>
 <div class='card'><div class='label'>開獎前前9命中</div><div class='value'>{_fmt(item.get('top9_hits') or []) or '0顆'}</div></div>
 <div class='card'><div class='label'>第10至15名命中</div><div class='value'>{_fmt(item.get('rank10_15_hits') or []) or '0顆'}</div></div>
 <div class='card'><div class='label'>實際號碼平均名次</div><div class='value'>{average_rank:.1f}</div></div>
@@ -247,13 +251,13 @@ def _review_page(settlements, weights, selection, feature_labels):
 
 def _history_page(settlements):
     rows = "".join(
-        f"<tr><td>{item.get('target_draw_date','－')}</td><td>{int(item.get('single_published',0)):02}</td><td>{_fmt(item.get('top9_published') or [])}</td><td>{_fmt(item.get('actual_numbers') or [])}</td><td>{'命中' if item.get('single_hit') else '未中'}</td><td>{_fmt(item.get('top9_hits') or []) or '0顆'}</td><td>{_fmt(item.get('rank10_15_hits') or []) or '0顆'}</td></tr>"
+        f"<tr><td>{item.get('target_draw_date','－')}</td><td>{int(item.get('single_published',0)):02}</td><td>{_fmt(item.get('top5_published') or [])}</td><td>{_fmt(item.get('top5_hits') or []) or '未命中'}・{len(item.get('top5_hits') or [])}顆</td><td>{_fmt(item.get('top9_published') or [])}</td><td>{_fmt(item.get('actual_numbers') or [])}</td><td>{'命中' if item.get('single_hit') else '未中'}</td><td>{_fmt(item.get('top9_hits') or []) or '0顆'}</td><td>{_fmt(item.get('rank10_15_hits') or []) or '0顆'}</td></tr>"
         for item in reversed(settlements)
     )
     if not rows:
-        rows = "<tr><td colspan='7'>尚無已結算封存紀錄</td></tr>"
+        rows = "<tr><td colspan='9'>尚無已結算封存紀錄</td></tr>"
     content = f"""
-<div class='band'><h2>開獎前封存實戰紀錄</h2><p class='note'>本頁只列歷史結算總表；最新一期的逐模組原因與權重調整請看「開獎檢討」。</p><div class='table-wrap'><table><thead><tr><th>開獎日</th><th>開獎前1中1</th><th>開獎前前9</th><th>實際開獎</th><th>主選結果</th><th>前9命中</th><th>第10至15名命中</th></tr></thead><tbody>{rows}</tbody></table></div></div>"""
+<div class='band'><h2>開獎前封存實戰紀錄</h2><p class='note'>本頁只列歷史結算總表；最新一期的逐模組原因與權重調整請看「開獎檢討」。</p><div class='table-wrap'><table><thead><tr><th>開獎日</th><th>開獎前1中1</th><th>開獎前前5</th><th>前5命中資料</th><th>開獎前前9</th><th>實際開獎</th><th>主選結果</th><th>前9命中</th><th>第10至15名命中</th></tr></thead><tbody>{rows}</tbody></table></div></div>"""
     return _page_shell("history.html", "歷史封存", "只顯示各期開獎前正式封存與結算", content)
 
 
