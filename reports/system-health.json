@@ -1,6 +1,6 @@
 {
   "status": "healthy",
-  "checked_at": "2026-08-08T23:40:17+08:00",
+  "checked_at": "2026-08-09T00:02:37+08:00",
   "latest_period": "115000192",
   "latest_draw_date": "2026-08-08",
   "expected_latest_date": "2026-08-08",
@@ -14,7 +14,7 @@
   "self_repair_status": "待命中",
   "self_repair_count": 1,
   "last_self_repair_at": "2026-08-06T22:45:29+08:00",
-  "last_public_verification_at": "2026-08-08T23:40:17+08:00",
+  "last_public_verification_at": "2026-08-09T00:02:37+08:00",
   "mobile_open_sync": "開啟、回到前景、重新連網均立即核對版本",
   "model_release_allowed": true,
   "single_release_allowed": true,
