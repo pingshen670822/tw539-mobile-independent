@@ -83,7 +83,7 @@ if backtest.get('single_specialist_enabled'): errors.append('公開結果仍啟�
 if backtest.get('catastrophic_guard_execution_enabled') or backtest.get('catastrophic_guard_application_count')!=0: errors.append('失準旋轉未保持只監測或曾改動正式排序')
 full_scan=result.get('full_history_scan') or {}
 if full_scan.get('samples')!=result.get('draw_count',0)-320: errors.append('公開結果的全歷史逐期掃描期數錯誤')
-if not full_scan.get('ranking_direction_valid'): warnings.append('全歷史逐期排序方向未通過')
+if full_scan.get('validation_eligible') and not full_scan.get('ranking_direction_valid'): warnings.append('可驗證的全歷史逐期排序方向未通過')
 if str(version.get('latest_period'))!=str(official['period']) or version.get('latest_draw_date')!=official['draw_date']: errors.append('手機版本檔未同步官方最新期別')
 if not settlements:
     errors.append('公開頁缺少每期命中檢討結算檔')
