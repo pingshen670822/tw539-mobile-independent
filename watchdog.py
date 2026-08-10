@@ -70,15 +70,17 @@ if bool(backtest.get('ranking_direction_valid'))!=bool(health.get('ranking_direc
 if backtest.get('rank10_15_avg_hits')!=health.get('rank10_15_avg_hits') or backtest.get('top9_capture_rate')!=health.get('top9_capture_rate') or bool(backtest.get('boundary_control_valid'))!=bool(health.get('boundary_control_valid')): errors.append('公開結果與健康檔的前9邊界狀態不同步')
 if backtest.get('next_signed_weights')!=result.get('production_weights') or result.get('audit_weights')!=result.get('production_weights'): errors.append('公開主選與方向模型隔離回測權重不同')
 rolling=result.get('rolling_weight_adjustment') or {}
-if rolling.get('production_weights')!=result.get('production_weights') or rolling.get('production_ensemble_weights')!=ensemble or rolling.get('anchor_ensemble_weights')!=selection.get('ensemble_members') or rolling.get('updates')!=360 or rolling.get('method')!='thirty_polarity_models_ninety_draw_walk_forward_selection' or rolling.get('strategy_candidate_count')!=30 or rolling.get('strategy_selection_window')!=90: errors.append('最新開獎錯誤沒有觸發三十組方向模型與九十期逐期重選')
+if rolling.get('production_weights')!=result.get('production_weights') or rolling.get('production_ensemble_weights')!=ensemble or rolling.get('anchor_ensemble_weights')!=selection.get('ensemble_members') or rolling.get('updates')!=360 or rolling.get('method')!='thirty_polarity_models_360_draw_five_member_weight_consensus' or rolling.get('strategy_candidate_count')!=30 or rolling.get('strategy_selection_window')!=360 or rolling.get('strategy_consensus_member_count')!=5: errors.append('最新開獎錯誤沒有觸發三十組方向模型、三百六十期選擇窗與五組權重共識')
 rate_selection=rolling.get('learning_rate_selection') or {}
 if rate_selection.get('candidate_count')!=30 or rate_selection.get('learning_rate_candidate_count')!=6 or rate_selection.get('boundary_blend_candidate_count')!=5 or not rate_selection.get('holdout_not_used'): errors.append('舊邊界診斷未保持隔離')
 if backtest.get('next_signed_weights')!=result.get('production_weights') or backtest.get('rolling_update_count')!=360: errors.append('隔離回測沒有重演方向模型逐期選擇')
-if backtest.get('strategy_candidate_count')!=30 or backtest.get('strategy_selection_window')!=90: errors.append('隔離回測缺少三十組方向模型或九十期選擇窗')
+if backtest.get('strategy_candidate_count')!=30 or backtest.get('strategy_selection_window')!=360 or backtest.get('strategy_consensus_member_count')!=5: errors.append('隔離回測缺少三十組方向模型、三百六十期選擇窗或五組权重共识')
+if health.get('polarity_selection_window')!=360 or health.get('polarity_consensus_member_count')!=5: errors.append('公開健康檔未同步三百六十期五組權重共識')
 stability=backtest.get('anchor_stability') or {}
 if stability.get('selected') not in ('穩定冠軍','每日挑戰者') or rolling.get('anchor_stability')!=stability or health.get('anchor_stability')!=stability or rolling.get('anchor_weights')!=result.get('production_anchor_weights') or health.get('production_anchor_weights')!=result.get('production_anchor_weights'): errors.append('穩定冠軍與每日挑戰模型守門未完整同步')
 if not backtest.get('catastrophic_guard_enabled'): errors.append('公開結果未啟用災難失準保護')
 if backtest.get('single_specialist_enabled'): errors.append('公開結果仍啟用已證明拖累的短窗單碼重排')
+if backtest.get('catastrophic_guard_execution_enabled') or backtest.get('catastrophic_guard_application_count')!=0: errors.append('失準旋轉未保持只監測或曾改動正式排序')
 full_scan=result.get('full_history_scan') or {}
 if full_scan.get('samples')!=result.get('draw_count',0)-320: errors.append('公開結果的全歷史逐期掃描期數錯誤')
 if not full_scan.get('ranking_direction_valid'): warnings.append('全歷史逐期排序方向未通過')
@@ -97,7 +99,9 @@ else:
     if not (review.get('data_integrity') or {}).get('no_post_draw_substitution'): errors.append('命中檢討未禁止開獎後換號')
     if not (review.get('rolling_adjustment') or {}).get('completed') or (review.get('rolling_adjustment') or {}).get('candidate_count')!=286 or (review.get('rolling_adjustment') or {}).get('boundary_parameter_candidate_count')!=30: errors.append('命中檢討後沒有完成286組權重與30組前9邊界重算')
     if not health.get('settled_previous'): errors.append('健康檔沒有標示最新命中檢討完成')
-    expected_guard=(len(review.get('top9_hits') or [])==0 and float(review.get('average_actual_rank') or 0)>=22)
+    expected_condition=(len(review.get('top9_hits') or [])==0 and float(review.get('average_actual_rank') or 0)>=22)
+    expected_guard=expected_condition and bool(backtest.get('catastrophic_guard_policy_recommends'))
+    if bool(backtest.get('catastrophic_guard_current_condition'))!=expected_condition or bool(health.get('catastrophic_guard_current_condition'))!=expected_condition: errors.append('災難失準條件沒有依最新封存檢討同步')
     if bool(backtest.get('catastrophic_guard_current_trigger'))!=expected_guard or bool(health.get('catastrophic_guard_current_trigger'))!=expected_guard: errors.append('災難失準保護沒有依最新封存檢討同步啟動')
     base=list(backtest.get('next_unguarded_ranked') or [])
     if expected_guard and len(base)==39:
@@ -126,8 +130,8 @@ if any(term in home for term in ('最新一期命中結算','最後360期隔離�
 if '最新一期命中結算' not in review_page or '開獎前前5正式預測' not in review_page or '前5命中資料' not in review_page or '錯誤模組與前9邊界逐項檢討' not in review_page or '第10至15名命中' not in review_page or '開獎後滾動權重重算' not in review_page or '禁止開獎後換號或補號' not in review_page: errors.append('開獎檢討分頁內容不完整')
 if '最後360期隔離回測' not in backtest_page or '最近54期獨立觀察' not in backtest_page or '全歷史逐期一致性掃描' not in backtest_page: errors.append('回測驗證分頁內容不完整')
 if '開獎前封存實戰紀錄' not in history_page or '前5命中資料' not in history_page or '錯誤模組與前9邊界逐項檢討' in history_page: errors.append('歷史封存分頁內容不完整或混入逐項檢討')
-if '正式方向模型' not in models_page or '穩定冠軍與每日挑戰模型' not in models_page or '連莊資格驗算規格' not in models_page or '全歷史連莊率不低於12.82%' not in models_page: errors.append('模型說明分頁內容不完整')
-if '鐵律守門' not in health_page or '手機同步' not in health_page or '開獎後更新與自主修復' not in health_page or '兩小時修復期限' not in health_page: errors.append('系統健康分頁內容不完整')
+if '正式方向模型' not in models_page or '全系統重組' not in models_page or '五組正式權重共識' not in models_page or '穩定冠軍與每日挑戰模型' not in models_page or '連莊資格驗算規格' not in models_page or '全歷史連莊率不低於12.82%' not in models_page: errors.append('模型說明分頁內容不完整')
+if '鐵律守門' not in health_page or '五組權重共識' not in health_page or '手機同步' not in health_page or '開獎後更新與自主修復' not in health_page or '兩小時修復期限' not in health_page: errors.append('系統健康分頁內容不完整')
 if any('低機率' in visible or '當期預測前九' in visible for visible in visible_pages.values()): errors.append('公開分頁仍含易誤解標示或事後回算內容')
 expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'
 if expected_direction not in backtest_page or expected_direction not in health_page: errors.append('回測或健康分頁未照實顯示排序方向')

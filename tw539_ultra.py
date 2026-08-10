@@ -228,12 +228,16 @@ ROLLING_LEARNING_RATE_CANDIDATES = (.0005,.001,.002,.003,.005,.01)
 ROLLING_BOUNDARY_BLEND_CANDIDATES = (0.0,.25,.50,.75,1.0)
 POLARITY_EWMA_ALPHAS = (.90,.95,.97,.98,.99,.995)
 POLARITY_FULL_HISTORY_BLENDS = (0.0,.10,.25,.50,.75)
-POLARITY_SELECTION_WINDOW = 90
+POLARITY_SELECTION_WINDOW = 360
+POLARITY_CONSENSUS_MEMBERS = 5
 POLARITY_WARMUP = 60
 SINGLE_SPECIALIST_WINDOW = 30
 CATASTROPHIC_TOP9_HIT_LIMIT = 0
 CATASTROPHIC_AVG_RANK_FLOOR = 22.0
 CATASTROPHIC_ROTATION = 12
+CATASTROPHIC_POLICY_WINDOW = 20
+CATASTROPHIC_POLICY_MIN_TRIALS = 10
+CATASTROPHIC_GUARD_EXECUTION_ENABLED = False
 STABILITY_CHAMPION_ANCHOR = {
     "full_frequency_balance": 1/30,
     "full_transition_correction": 8/30,
@@ -519,12 +523,17 @@ def adaptive_polarity_backtest(
     tests: int = ROLLING_HOLDOUT_DRAWS,
     selection_window: int = POLARITY_SELECTION_WINDOW,
 ) -> dict:
-    """三十組模組正反方向逐期競賽；每期只用前九十期成績選下一期，禁止看答案。"""
+    """三十組方向模型逐期競賽；用前360期选出五组并平均正式权重，禁止看答案。"""
     def direction_quality(metric: dict) -> float:
         n=metric["samples"]
         return ((metric["top9_avg_hits"]-metric["bottom9_avg_hits"])*n*7
                 +(metric["top9_slot_hit_rate"]-metric["rank10_15_slot_hit_rate"])*n*180
                 +(20-metric["avg_actual_rank"])*n)
+    def combined_weights(member_polarities: list[dict[str,float]]) -> dict[str,float]:
+        combined={key:sum(float(anchor_weights[key])*polarities[key] for polarities in member_polarities)
+                  /len(member_polarities) for key in FORMAL_FEATURE_KEYS}
+        scale=sum(abs(value) for value in combined.values()) or 1.0
+        return {key:value/scale for key,value in combined.items()}
     case_start=320
     cases=evaluation_cases(draws,case_start,len(draws))
     strategies=[]
@@ -562,39 +571,69 @@ def adaptive_polarity_backtest(
     start_offset=holdout_start-case_start
     selected_metric=_empty_metric();unguarded_metric=_empty_metric()
     top5_distribution=Counter();top9_distribution=Counter();selection_counts=Counter();single_selection_counts=Counter();path=[];selected_rows=[];unguarded_rows=[]
-    catastrophic_trigger_count=0;previous_base_ranked=None;previous_base_actual=None
+    catastrophic_trigger_count=0;catastrophic_application_count=0
+    catastrophic_trials=[];previous_base_ranked=None;previous_base_actual=None
+    def guard_policy_recommends() -> bool:
+        recent=catastrophic_trials[-CATASTROPHIC_POLICY_WINDOW:]
+        if len(recent)<CATASTROPHIC_POLICY_MIN_TRIALS:
+            return False
+        guard9=sum(item["guard9"] for item in recent);base9=sum(item["base9"] for item in recent)
+        guard5=sum(item["guard5"] for item in recent);base5=sum(item["base5"] for item in recent)
+        guard_rank=sum(item["guard_rank_sum"] for item in recent);base_rank=sum(item["base_rank_sum"] for item in recent)
+        return (guard9-base9,guard5-base5,base_rank-guard_rank)>(0,0,0)
     for draw_index in range(holdout_start,len(draws)):
         offset=draw_index-case_start
         window_start=max(0,offset-selection_window)
         def strategy_key(strategy):
             metric=_prefix_metric(strategy["prefix"],window_start,offset)
             return (direction_quality(metric),metric["single_hits"],-strategy["alpha"],-strategy["full_history_blend"])
-        chosen=max(strategies,key=strategy_key)
-        unguarded_ranked,actual,polarities=chosen["rows"][offset]
+        chosen_members=sorted(strategies,key=strategy_key,reverse=True)[:POLARITY_CONSENSUS_MEMBERS]
+        signed_consensus=combined_weights([member["rows"][offset][2] for member in chosen_members])
+        unguarded_ranked=fast_case_ranking(cases[offset],signed_consensus)
+        actual=set(cases[offset]["actual"])
+        polarities={key:(1.0 if signed_consensus[key]>0 else (-1.0 if signed_consensus[key]<0 else 0.0))
+                    for key in FORMAL_FEATURE_KEYS}
         _add_ranking(unguarded_metric,unguarded_ranked,actual)
         unguarded_rows.append((unguarded_ranked,actual,polarities))
-        catastrophic_trigger=False
+        catastrophic_condition=False
         if previous_base_ranked is not None:
             previous_positions={number:index+1 for index,number in enumerate(previous_base_ranked)}
             previous_top9_hits=len(previous_base_actual.intersection(previous_base_ranked[:9]))
             previous_avg_rank=sum(previous_positions[number] for number in previous_base_actual)/5
-            catastrophic_trigger=(previous_top9_hits<=CATASTROPHIC_TOP9_HIT_LIMIT
-                                  and previous_avg_rank>=CATASTROPHIC_AVG_RANK_FLOOR)
-        ranked=(apply_catastrophic_guard(unguarded_ranked,case["previous_numbers"])
-                if catastrophic_trigger else list(unguarded_ranked))
-        catastrophic_trigger_count+=int(catastrophic_trigger)
+            catastrophic_condition=(previous_top9_hits<=CATASTROPHIC_TOP9_HIT_LIMIT
+                                    and previous_avg_rank>=CATASTROPHIC_AVG_RANK_FLOOR)
+        guarded_candidate=(apply_catastrophic_guard(unguarded_ranked,cases[offset]["previous_numbers"])
+                           if catastrophic_condition else list(unguarded_ranked))
+        catastrophic_apply=(CATASTROPHIC_GUARD_EXECUTION_ENABLED
+                            and catastrophic_condition and guard_policy_recommends())
+        ranked=list(guarded_candidate if catastrophic_apply else unguarded_ranked)
+        catastrophic_trigger_count+=int(catastrophic_condition)
+        catastrophic_application_count+=int(catastrophic_apply)
         single=ranked[0]
         _add_ranking(selected_metric,ranked,actual)
         selected_rows.append((ranked,actual,polarities))
         top5_distribution[len(actual.intersection(ranked[:5]))]+=1
         top9_distribution[len(actual.intersection(ranked[:9]))]+=1
-        label=f"{chosen['alpha']:.3f}/{chosen['full_history_blend']:.2f}"
+        label="+".join(f"{member['alpha']:.3f}/{member['full_history_blend']:.2f}" for member in chosen_members)
         selection_counts[label]+=1
         single_label="穩定守門：不啟用短窗重排"
         single_selection_counts[single_label]+=1
-        path.append({"period":draws[draw_index]["period"],"strategy":label,
+        path.append({"period":draws[draw_index]["period"],"strategy_members":label,
                      "single_strategy":single_label,"single":single,"polarities":polarities,
-                     "catastrophic_guard":catastrophic_trigger})
+                     "consensus_weights":signed_consensus,
+                     "catastrophic_condition":catastrophic_condition,
+                     "catastrophic_guard_applied":catastrophic_apply})
+        if catastrophic_condition:
+            base_positions={number:index+1 for index,number in enumerate(unguarded_ranked)}
+            guard_positions={number:index+1 for index,number in enumerate(guarded_candidate)}
+            catastrophic_trials.append({
+                "base5":len(actual.intersection(unguarded_ranked[:5])),
+                "guard5":len(actual.intersection(guarded_candidate[:5])),
+                "base9":len(actual.intersection(unguarded_ranked[:9])),
+                "guard9":len(actual.intersection(guarded_candidate[:9])),
+                "base_rank_sum":sum(base_positions[number] for number in actual),
+                "guard_rank_sum":sum(guard_positions[number] for number in actual),
+            })
         previous_base_ranked=list(unguarded_ranked);previous_base_actual=set(actual)
     result=_finish_metric(selected_metric)
     result["single_direction_valid"]=result["single_hits"]>result["bottom1_hits"]
@@ -631,25 +670,34 @@ def adaptive_polarity_backtest(
     def final_strategy_key(strategy):
         metric=_prefix_metric(strategy["prefix"],final_window_start,final_offset)
         return (direction_quality(metric),metric["single_hits"],-strategy["alpha"],-strategy["full_history_blend"])
-    chosen=max(strategies,key=final_strategy_key)
-    final_polarities={}
-    for key in FORMAL_FEATURE_KEYS:
-        full_mean=chosen["cumulative"][key]/max(1,chosen["count"])
-        combined=chosen["full_history_blend"]*full_mean+(1-chosen["full_history_blend"])*chosen["ewma"][key]
-        final_polarities[key]=1.0 if combined>=0 else -1.0
-    signed_weights={key:float(anchor_weights[key])*final_polarities[key] for key in FORMAL_FEATURE_KEYS}
+    chosen_members=sorted(strategies,key=final_strategy_key,reverse=True)[:POLARITY_CONSENSUS_MEMBERS]
+    member_final_polarities=[]
+    for member in chosen_members:
+        member_polarities={}
+        for key in FORMAL_FEATURE_KEYS:
+            full_mean=member["cumulative"][key]/max(1,member["count"])
+            combined=member["full_history_blend"]*full_mean+(1-member["full_history_blend"])*member["ewma"][key]
+            member_polarities[key]=1.0 if combined>=0 else -1.0
+        member_final_polarities.append(member_polarities)
+    signed_weights=combined_weights(member_final_polarities)
+    final_polarities={key:(1.0 if signed_weights[key]>0 else (-1.0 if signed_weights[key]<0 else 0.0))
+                      for key in FORMAL_FEATURE_KEYS}
     state=formal_history_state(draws);features=state.features();raw=scores_from_features(features,signed_weights)
     adjusted,repeat_audit=apply_repeat_qualification(
         raw,features,signed_weights,draws[-1]["nums"],draws[-1]["period"],
         state.repeat_exposure,state.repeat_hits)
     base_next_ranked=rank_numbers(adjusted,draws[-1]["period"])
-    reconstructed_guard=False
+    reconstructed_guard_condition=False
     if previous_base_ranked is not None:
         previous_positions={number:index+1 for index,number in enumerate(previous_base_ranked)}
         previous_top9_hits=len(previous_base_actual.intersection(previous_base_ranked[:9]))
         previous_avg_rank=sum(previous_positions[number] for number in previous_base_actual)/5
-        reconstructed_guard=(previous_top9_hits<=CATASTROPHIC_TOP9_HIT_LIMIT
-                             and previous_avg_rank>=CATASTROPHIC_AVG_RANK_FLOOR)
+        reconstructed_guard_condition=(previous_top9_hits<=CATASTROPHIC_TOP9_HIT_LIMIT
+                                       and previous_avg_rank>=CATASTROPHIC_AVG_RANK_FLOOR)
+    counterfactual_guard_preference=guard_policy_recommends()
+    reconstructed_guard_recommended=(CATASTROPHIC_GUARD_EXECUTION_ENABLED
+                                     and counterfactual_guard_preference)
+    reconstructed_guard=reconstructed_guard_condition and reconstructed_guard_recommended
     next_ranked=(apply_catastrophic_guard(base_next_ranked,draws[-1]["nums"])
                  if reconstructed_guard else list(base_next_ranked))
     ordered_values=sorted(adjusted.values(),reverse=True)
@@ -659,7 +707,7 @@ def adaptive_polarity_backtest(
     center=(phat+z*z/(2*n))/(1+z*z/n)
     margin=z*math.sqrt(phat*(1-phat)/n+z*z/(4*n*n))/(1+z*z/n)
     result.update({
-        "evaluation":"最後三百六十期逐期只用當時以前九十期挑選模組正反方向",
+        "evaluation":"最後三百六十期逐期只用當時以前三百六十期挑选五组方向模型并平均正式权重",
         "single_rate":round(phat,4),"single_random_baseline":round(p0,4),
         "single_wilson_lower95":round(center-margin,4),"single_release_allowed":center-margin>p0,
         "top5_hit_distribution":{str(k):top5_distribution[k] for k in range(6)},
@@ -669,6 +717,7 @@ def adaptive_polarity_backtest(
         "top9_at_least_2_rate":round(sum(v for k,v in top9_distribution.items() if k>=2)/n,4),
         "top9_at_least_3_rate":round(sum(v for k,v in top9_distribution.items() if k>=3)/n,4),
         "strategy_candidate_count":len(strategies),"strategy_selection_window":selection_window,
+        "strategy_consensus_member_count":POLARITY_CONSENSUS_MEMBERS,
         "recent_54":recent_result,
         "strategy_selection_counts":dict(selection_counts),
         "single_specialist_selection_counts":dict(single_selection_counts),
@@ -678,7 +727,9 @@ def adaptive_polarity_backtest(
         "single_specialist_lift":0,
         "single_specialist_enabled":False,
         "single_specialist_method":"disabled_by_cross_window_stability_gate",
-        "selected_next_strategy":{"ewma_alpha":chosen["alpha"],"full_history_blend":chosen["full_history_blend"]},
+        "selected_next_strategy":{"method":"five_member_signed_weight_consensus",
+                                  "members":[{"ewma_alpha":member["alpha"],"full_history_blend":member["full_history_blend"]}
+                                             for member in chosen_members]},
         "selected_next_single_strategy":{"mode":"same_as_guarded_main_ranking"},
         "selected_next_single_polarities":final_polarities,
         "selected_next_single_weights":signed_weights,
@@ -690,12 +741,20 @@ def adaptive_polarity_backtest(
         "catastrophic_guard_avg_rank_floor":CATASTROPHIC_AVG_RANK_FLOOR,
         "catastrophic_guard_rotation":CATASTROPHIC_ROTATION,
         "catastrophic_guard_trigger_count":catastrophic_trigger_count,
+        "catastrophic_guard_application_count":catastrophic_application_count,
+        "catastrophic_guard_policy_window":CATASTROPHIC_POLICY_WINDOW,
+        "catastrophic_guard_policy_min_trials":CATASTROPHIC_POLICY_MIN_TRIALS,
+        "catastrophic_guard_policy_trial_count":len(catastrophic_trials),
+        "catastrophic_guard_policy_recommends":reconstructed_guard_recommended,
+        "catastrophic_guard_counterfactual_preference":counterfactual_guard_preference,
+        "catastrophic_guard_execution_enabled":CATASTROPHIC_GUARD_EXECUTION_ENABLED,
+        "catastrophic_guard_current_condition_reconstructed":reconstructed_guard_condition,
         "catastrophic_guard_current_trigger_reconstructed":reconstructed_guard,
         "catastrophic_guard_unguarded":unguarded_result,
         "catastrophic_guard_unguarded_recent_54":unguarded_recent_result,
         "rolling_update_count":n,"rolling_learning_rate":0.0,"rolling_boundary_blend":0.0,
         "rolling_path_sha256":hashlib.sha256(json.dumps(path,ensure_ascii=False,sort_keys=True,separators=(",", ":")).encode()).hexdigest(),
-        "method":"thirty_polarity_models_ninety_draw_walk_forward_selection",
+        "method":"thirty_polarity_models_360_draw_five_member_weight_consensus",
     })
     return result
 
@@ -1494,11 +1553,11 @@ def render(draws: list[dict], weights: dict, quality: list[float], score: dict, 
 <div class='band warn' id='review'><h2>每期開獎命中檢討與滾動修正</h2>{review_html}</div>
 <div class='band' id='low'><h2>強制投注排除名單</h2><p><b>以下後15名已從本系統全部推薦牌組強制排除，系統產生的任何牌組都不得包含。</b></p><table><thead><tr><th>區段</th><th>號碼</th><th>動作</th><th>鐵律</th></tr></thead><tbody>{lowrows}</tbody></table></div>
 <div class='band'><h2>連莊資格驗算</h2><p><b>上一期號碼必須同時符合：相對指數至少75、全歷史轉移貢獻為正、至少兩個正式模組正貢獻、該號碼全歷史連莊率不低於12.82%，且全系統{full_scan['samples']}期掃描與最後360期隔離回測均通過，才准列入前9。</b>資格在正式排名前判定，不限制連莊顆數、不做事後補號。</p><table><thead><tr><th>上一期號碼</th><th>相對指數</th><th>轉移貢獻</th><th>正貢獻模組數</th><th>連莊命中／樣本</th><th>個別回測</th><th>資格</th><th>最終名次</th><th>結果</th></tr></thead><tbody>{repeat_rows}</tbody></table></div>
-<div class='band' id='models'><h2>公式模型實驗室</h2><p><b>每次預測與每一期回測都使用當時以前的全部歷史資料。</b>正式特徵100%由逐期擴展全歷史資料庫產生；每期先搜尋286組錨定權重並強制三個候選保持足夠差異，再建立三十組模組正反方向模型。每一期只用該期以前九十期實績挑選下一期方向，轉移、型態、遺漏若持續把開獎號壓到後段就會自動反轉，不准用同一期答案改寫同一期排名。前9與第10至15名以每個排名位置的命中率比較，禁止再用九個位置對六個位置的總數製造假通過。上一期號碼仍須先通過連莊資格，不限制重複顆數、不做事後補位；同分號碼以當時已知期別公平破同分。</p><table><thead><tr><th>公式</th><th>資料範圍</th><th>實際權重</th><th>動作</th></tr></thead><tbody>{formula_rows}</tbody></table></div>
+<div class='band' id='models'><h2>公式模型實驗室</h2><p><b>每次預測與每一期回測都使用當時以前的全部歷史資料。</b>正式特徵100%由逐期擴展全歷史資料庫產生；每期先搜尋286組錨定權重并建立三十组方向模型，再用该期以前三百六十期实绩选出五组，平均成可重现的正式权重。禁止用同一期答案改写同一期排名。前9与第10至15名以每个排名位置的命中率比较；上一期号码仍须先通过连庄资格，不做事后补位。</p><table><thead><tr><th>公式</th><th>資料範圍</th><th>實際權重</th><th>動作</th></tr></thead><tbody>{formula_rows}</tbody></table></div>
 <div class='band'><h2>全歷史逐期一致性掃描</h2><p>從第321期開始逐期重算，共 {full_scan['samples']} 期：高分第1名 {full_scan['single_hits']} 中、最低分第1名 {full_scan['bottom1_hits']} 中；前5平均 {full_scan['top5_avg_hits']}、後5平均 {full_scan['bottom5_avg_hits']}；前9平均 {full_scan['top9_avg_hits']}、第10至15名平均 {full_scan['rank10_15_avg_hits']}、後9平均 {full_scan['bottom9_avg_hits']}；前9占前15命中 {100*full_scan['top9_capture_rate']:.2f}%；實際開獎號平均名次 {full_scan['avg_actual_rank']}。判定：{'排序方向通過' if full_scan['ranking_direction_valid'] else '排序方向未通過'}。</p></div>
-<div class='band warn'><h2>實戰失準回灌重排</h2><p>隔離保留 {bt['samples']} 期：高分第1名 {bt.get('single_hits',0)} 中、最低分第1名 {bt.get('bottom1_hits',0)} 中；前5平均 {bt.get('top5_avg_hits',0)}、後5平均 {bt.get('bottom5_avg_hits',0)}；前9平均 {bt.get('top9_avg_hits',0)}、第10至15名滯留平均 {bt.get('rank10_15_avg_hits',0)}、後9平均 {bt.get('bottom9_avg_hits',0)}；前9占前15命中 {100*bt.get('top9_capture_rate',0):.2f}%；實際開獎號平均名次 {bt.get('avg_actual_rank',0)}（中立值20）。前9逐期分布：{dist}。</p><p>最近54期獨立逐期結果：前9平均 {bt.get('recent_54',{}).get('top9_avg_hits',0)}、後9平均 {bt.get('recent_54',{}).get('bottom9_avg_hits',0)}、前9零中 {bt.get('recent_54',{}).get('top9_hit_distribution',{}).get('0',0)} 期、實際開獎號平均名次 {bt.get('recent_54',{}).get('avg_actual_rank',0)}。</p><p><b>三十組方向模型每期只讀當時以前資料，使用前九十期選出下一期方向；隔離期共完成 {bt.get('rolling_update_count',0)} 次開獎前選模。前5至少2中比例 {100*bt.get('top5_at_least_2_rate',0):.2f}%、前5至少3中比例 {100*bt.get('top5_at_least_3_rate',0):.2f}%、前9至少2中比例 {100*bt.get('top9_at_least_2_rate',0):.2f}%、前9至少3中比例 {100*bt.get('top9_at_least_3_rate',0):.2f}%。禁止用同一期答案改寫同一期預測。</b></p></div>
+<div class='band warn'><h2>實戰失準回灌重排</h2><p>隔離保留 {bt['samples']} 期：高分第1名 {bt.get('single_hits',0)} 中、最低分第1名 {bt.get('bottom1_hits',0)} 中；前5平均 {bt.get('top5_avg_hits',0)}、後5平均 {bt.get('bottom5_avg_hits',0)}；前9平均 {bt.get('top9_avg_hits',0)}、第10至15名滯留平均 {bt.get('rank10_15_avg_hits',0)}、後9平均 {bt.get('bottom9_avg_hits',0)}；前9占前15命中 {100*bt.get('top9_capture_rate',0):.2f}%；實際開獎號平均名次 {bt.get('avg_actual_rank',0)}（中立值20）。前9逐期分布：{dist}。</p><p>最近54期獨立逐期結果：前9平均 {bt.get('recent_54',{}).get('top9_avg_hits',0)}、後9平均 {bt.get('recent_54',{}).get('bottom9_avg_hits',0)}、前9零中 {bt.get('recent_54',{}).get('top9_hit_distribution',{}).get('0',0)} 期、實際開獎號平均名次 {bt.get('recent_54',{}).get('avg_actual_rank',0)}。</p><p><b>三十组方向模型每期只读当时以前资料，使用前三百六十期选出五组并平均正式权重；隔离期共完成 {bt.get('rolling_update_count',0)} 次开奖前选模。前5至少2中比例 {100*bt.get('top5_at_least_2_rate',0):.2f}%、前5至少3中比例 {100*bt.get('top5_at_least_3_rate',0):.2f}%、前9至少2中比例 {100*bt.get('top9_at_least_2_rate',0):.2f}%、前9至少3中比例 {100*bt.get('top9_at_least_3_rate',0):.2f}%。禁止用同期开奖结果改写同一期预测。</b></p></div>
   <div class='band'><h2>多模組校正對照</h2><div class='grid'><div class='card'><div class='label'>錨定候選組合數</div><div class='value'>{selection['diagnostic']['candidate_count']}</div></div><div class='card'><div class='label'>均衡候選數</div><div class='value'>{selection['diagnostic']['eligible_candidate_count']}</div></div><div class='card'><div class='label'>方向模型數</div><div class='value'>{bt.get('strategy_candidate_count',0)}</div></div><div class='card'><div class='label'>方向選擇窗</div><div class='value'>{bt.get('strategy_selection_window',0)}期</div></div><div class='card'><div class='label'>採用原則</div><div class='value'>全歷史特徵、分散錨定、方向競賽、逐期隔離</div></div></div></div>
-<div class='band' id='gate'><h2>鐵律守門</h2><table><thead><tr><th>項目</th><th>結果</th><th>說明</th></tr></thead><tbody><tr><td>重新運算</td><td>已完成</td><td>依最新資料從模型分數直接重排，不做補位</td></tr><tr><td>資料完整性</td><td>通過</td><td>去重、日期排序、號碼1至39、每期5個不重複</td></tr><tr><td>每期命中檢討</td><td>{'通過' if settlements and settlements[-1].get('review_status')=='completed_from_pre_draw_seal' else '等待首筆封存結算'}</td><td>只採開獎前封存排名與模組貢獻，逐期回灌重算</td></tr><tr><td>前9邊界偏移</td><td>{'通過' if bt.get('boundary_control_valid') else '未通過'}</td><td>以每個排名位置命中率比較前9與第10至15名</td></tr><tr><td>全歷史掃描</td><td>診斷</td><td>事後全史只供檢查，不再冒充隔離驗證</td></tr><tr><td>未來資料隔離</td><td>通過</td><td>三十組方向模型每期只用前九十期已開獎成績挑選下一期</td></tr><tr><td>連莊資格</td><td>通過</td><td>相對指數、轉移貢獻、正貢獻模組三重驗算</td></tr><tr><td>上一期號碼檢查</td><td>通過</td><td>前5符合資格並列入{previous_overlap5}顆、前9符合資格並列入{previous_overlap9}顆</td></tr><tr><td>前5／前9目標</td><td>{'達標' if bt.get('top5_at_least_2_rate')==1 and bt.get('top9_at_least_2_rate')==1 else '歷史未全數達標'}</td><td>低於2中一律記為失敗並觸發次期方向重選</td></tr><tr><td>高低分方向</td><td>{rank_status}</td><td>同時計算前1／5／9、第10至15名與後1／5／9</td></tr><tr><td>主選產出</td><td>通過</td><td>每期固定產出最強獨隻並公開，不得缺號或事後換號</td></tr></tbody></table></div>
+<div class='band' id='gate'><h2>鐵律守門</h2><table><thead><tr><th>項目</th><th>結果</th><th>說明</th></tr></thead><tbody><tr><td>重新運算</td><td>已完成</td><td>依最新資料從模型分數直接重排，不做補位</td></tr><tr><td>資料完整性</td><td>通過</td><td>去重、日期排序、號碼1至39、每期5個不重複</td></tr><tr><td>每期命中檢討</td><td>{'通過' if settlements and settlements[-1].get('review_status')=='completed_from_pre_draw_seal' else '等待首筆封存結算'}</td><td>只採開獎前封存排名與模組貢獻，逐期回灌重算</td></tr><tr><td>前9邊界偏移</td><td>{'通過' if bt.get('boundary_control_valid') else '未通過'}</td><td>以每個排名位置命中率比較前9與第10至15名</td></tr><tr><td>全歷史掃描</td><td>診斷</td><td>事後全史只供檢查，不再冒充隔離驗證</td></tr><tr><td>未来资料隔离</td><td>通过</td><td>三十组方向模型每期只用前三百六十期已开奖成绩选出五组权重共识</td></tr><tr><td>連莊資格</td><td>通過</td><td>相對指數、轉移貢獻、正貢獻模組三重驗算</td></tr><tr><td>上一期號碼檢查</td><td>通過</td><td>前5符合資格並列入{previous_overlap5}顆、前9符合資格並列入{previous_overlap9}顆</td></tr><tr><td>前5／前9目標</td><td>{'達標' if bt.get('top5_at_least_2_rate')==1 and bt.get('top9_at_least_2_rate')==1 else '歷史未全數達標'}</td><td>低於2中一律記為失敗並觸發次期方向重選</td></tr><tr><td>高低分方向</td><td>{rank_status}</td><td>同時計算前1／5／9、第10至15名與後1／5／9</td></tr><tr><td>主選產出</td><td>通過</td><td>每期固定產出最強獨隻並公開，不得缺號或事後換號</td></tr></tbody></table></div>
 <div class='band warn'><h2>模型健康與公開狀態</h2><table><thead><tr><th>項目</th><th>高分結果</th><th>對照</th><th>判定</th></tr></thead><tbody><tr><td>第1名隔離命中</td><td>{bt.get('single_hits',0)}/{bt['samples']}（{100*bt.get('single_rate',0):.2f}%）</td><td>最低分第1名 {bt.get('bottom1_hits',0)}/{bt['samples']}</td><td>{rank_status}</td></tr><tr><td>前5隔離平均</td><td>{bt.get('top5_avg_hits',0)}</td><td>後5 {bt.get('bottom5_avg_hits',0)}</td><td>{rank_status}</td></tr><tr><td>前9隔離平均</td><td>{bt.get('top9_avg_hits',0)}</td><td>第10至15名 {bt.get('rank10_15_avg_hits',0)}／後9 {bt.get('bottom9_avg_hits',0)}</td><td>{rank_status}</td></tr><tr><td>前9邊界占比</td><td>{100*bt.get('top9_capture_rate',0):.2f}%</td><td>前15命中中落入前9比例</td><td>{'通過' if bt.get('boundary_control_valid') else '未通過'}</td></tr><tr><td>1中1主選</td><td>已公開</td><td>不宣稱必中</td><td>{single_status}</td></tr></tbody></table></div>
 <div class='band warn'><h2>實戰門檻與風險聲明</h2><p>今彩539為隨機遊戲，每組合法號碼理論機率相同；本戰報只供統計研究，不保證中獎或獲利。請設定固定娛樂預算。</p></div></main></html>"""
 
@@ -1556,7 +1615,8 @@ def main() -> None:
     bt["anchor_stability"] = anchor_stability
     bt["core_three_model_diagnostic"] = core_bt
     # 下一期是否啟動災難失準保護，以已公開且開獎後封存的實戰檢討為最高優先。
-    guard_trigger=bool(bt.get("catastrophic_guard_current_trigger_reconstructed"));guard_source="逐期隔離重演"
+    guard_condition=bool(bt.get("catastrophic_guard_current_condition_reconstructed"))
+    guard_source="逐期隔離重演"
     settlement_file=OUT/"published-settlements.jsonl"
     if settlement_file.exists():
         locked=[]
@@ -1567,9 +1627,10 @@ def main() -> None:
                   and item.get("review_status")=="completed_from_pre_draw_seal"]
         if matching:
             latest_review=matching[-1]
-            guard_trigger=(len(latest_review.get("top9_hits") or [])<=CATASTROPHIC_TOP9_HIT_LIMIT
-                           and float(latest_review.get("average_actual_rank") or 0)>=CATASTROPHIC_AVG_RANK_FLOOR)
+            guard_condition=(len(latest_review.get("top9_hits") or [])<=CATASTROPHIC_TOP9_HIT_LIMIT
+                            and float(latest_review.get("average_actual_rank") or 0)>=CATASTROPHIC_AVG_RANK_FLOOR)
             guard_source="開獎前封存實戰檢討"
+    guard_trigger=guard_condition and bool(bt.get("catastrophic_guard_policy_recommends"))
     unguarded_next=list(bt["next_unguarded_ranked"])
     guarded_next=(apply_catastrophic_guard(unguarded_next,draws[-1]["nums"])
                   if guard_trigger else unguarded_next)
@@ -1577,6 +1638,7 @@ def main() -> None:
     bt["next_ranked"]=guarded_next
     bt["next_score"]={number:ordered_values[index] for index,number in enumerate(guarded_next)}
     bt["catastrophic_guard_current_trigger"]=guard_trigger
+    bt["catastrophic_guard_current_condition"]=guard_condition
     bt["catastrophic_guard_current_source"]=guard_source
     weights = dict(bt["next_signed_weights"])
     production_ensemble = []
@@ -1592,6 +1654,7 @@ def main() -> None:
         "method": bt["method"],
         "strategy_candidate_count": bt["strategy_candidate_count"],
         "selection_window": bt["strategy_selection_window"],
+        "consensus_member_count": bt["strategy_consensus_member_count"],
         "selected_next_strategy": bt["selected_next_strategy"],
         "selected_next_polarities": bt["selected_next_polarities"],
         "path_sha256": bt["rolling_path_sha256"],
@@ -1697,6 +1760,7 @@ def main() -> None:
             "method": bt["method"],
             "strategy_candidate_count": bt["strategy_candidate_count"],
             "strategy_selection_window": bt["strategy_selection_window"],
+            "strategy_consensus_member_count": bt["strategy_consensus_member_count"],
             "selected_next_strategy": bt["selected_next_strategy"],
             "selected_next_polarities": bt["selected_next_polarities"],
             "single_specialist_window": bt["single_specialist_window"],
@@ -1704,6 +1768,12 @@ def main() -> None:
             "selected_next_single_weights": bt["selected_next_single_weights"],
             "single_specialist_enabled": bt["single_specialist_enabled"],
             "catastrophic_guard_enabled": bt["catastrophic_guard_enabled"],
+            "catastrophic_guard_application_count": bt["catastrophic_guard_application_count"],
+            "catastrophic_guard_policy_window": bt["catastrophic_guard_policy_window"],
+            "catastrophic_guard_policy_min_trials": bt["catastrophic_guard_policy_min_trials"],
+            "catastrophic_guard_policy_trial_count": bt["catastrophic_guard_policy_trial_count"],
+            "catastrophic_guard_policy_recommends": bt["catastrophic_guard_policy_recommends"],
+            "catastrophic_guard_current_condition": bt["catastrophic_guard_current_condition"],
             "catastrophic_guard_current_trigger": bt["catastrophic_guard_current_trigger"],
             "catastrophic_guard_current_source": bt["catastrophic_guard_current_source"],
             "catastrophic_guard_top9_hit_limit": bt["catastrophic_guard_top9_hit_limit"],
