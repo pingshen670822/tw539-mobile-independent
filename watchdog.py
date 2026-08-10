@@ -10,6 +10,9 @@ REPORT_PAGES=('index.html','backtest.html','review.html','history.html','models.
 RESULT='https://pingshen670822.github.io/tw539-mobile-independent/latest-result.json'
 VERSION='https://pingshen670822.github.io/tw539-mobile-independent/version.json'
 SETTLEMENTS='https://pingshen670822.github.io/tw539-mobile-independent/published-settlements.jsonl'
+MANIFEST='https://pingshen670822.github.io/tw539-mobile-independent/manifest.webmanifest'
+WORKER='https://pingshen670822.github.io/tw539-mobile-independent/service-worker.js'
+SYNC='https://pingshen670822.github.io/tw539-mobile-independent/mobile-sync.js'
 official=fetch_latest()
 stamp=str(int(time.time()))
 headers={'User-Agent':'TW539-ironlaw-watchdog/1.0','Cache-Control':'no-cache'}
@@ -25,6 +28,16 @@ version_req=urllib.request.Request(VERSION+'?t='+stamp,headers=headers)
 with urllib.request.urlopen(version_req,timeout=40) as r: version=json.load(r)
 settlement_req=urllib.request.Request(SETTLEMENTS+'?t='+stamp,headers=headers)
 with urllib.request.urlopen(settlement_req,timeout=40) as r: settlements=[json.loads(line) for line in r.read().decode('utf-8').splitlines() if line.strip()]
+manifest_req=urllib.request.Request(MANIFEST+'?t='+stamp,headers=headers)
+with urllib.request.urlopen(manifest_req,timeout=40) as r: manifest=json.load(r)
+worker_req=urllib.request.Request(WORKER+'?t='+stamp,headers=headers)
+with urllib.request.urlopen(worker_req,timeout=40) as r: worker=r.read().decode('utf-8')
+sync_req=urllib.request.Request(SYNC+'?t='+stamp,headers=headers)
+with urllib.request.urlopen(sync_req,timeout=40) as r: sync=r.read().decode('utf-8')
+public_icons={}
+for name in ('icon-180.png','icon-192.png','icon-512.png','maskable-512.png'):
+    icon_req=urllib.request.Request(REPORT_ROOT+'icons/'+name+'?t='+stamp,headers=headers)
+    with urllib.request.urlopen(icon_req,timeout=40) as r: public_icons[name]=(r.status,r.headers.get_content_type(),r.read(24))
 errors=[]
 warnings=[]
 now=datetime.now(TAIPEI)
@@ -130,6 +143,8 @@ for name,page in pages.items():
     if english: errors.append(f'{name} 可見文字含英文：'+','.join(english))
     links=set(re.findall(r"href=['\"]\./([^'\"]+\.html)['\"]",page))
     if links!=set(REPORT_PAGES): errors.append(f'{name} 分頁導覽不完整')
+    for term in ("rel='manifest'","rel='apple-touch-icon'","mobile-web-app-capable","apple-mobile-web-app-capable","id='install-app-button'",'安裝手機版','mobile-sync.js'):
+        if term not in page: errors.append(f'{name} 缺少手機安裝條件：{term}')
 home=visible_pages['index.html']; review_page=visible_pages['review.html']; backtest_page=visible_pages['backtest.html']; history_page=visible_pages['history.html']; models_page=visible_pages['models.html']; health_page=visible_pages['health.html']
 if '本期最強1顆' not in home or '1中1' not in home or (ranked and f'{int(ranked[0]):02}' not in home): errors.append('本期預測頁未顯示1中1主選')
 if any(term in home for term in ('最新一期命中結算','最後360期隔離回測','全歷史運算範圍','鐵律守門')): errors.append('本期預測頁混入其他分類資料')
@@ -141,5 +156,16 @@ if '鐵律守門' not in health_page or '五組權重共識' not in health_page 
 if any('低機率' in visible or '當期預測前九' in visible for visible in visible_pages.values()): errors.append('公開分頁仍含易誤解標示或事後回算內容')
 expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'
 if expected_direction not in backtest_page or expected_direction not in health_page: errors.append('回測或健康分頁未照實顯示排序方向')
+if manifest.get('id')!='./' or manifest.get('scope')!='./' or manifest.get('display')!='standalone' or not str(manifest.get('start_url','')).startswith('./index.html'):
+    errors.append('公開手機安裝清單缺少獨立應用設定')
+manifest_icons=manifest.get('icons') or []
+if not {'192x192','512x512'}.issubset({item.get('sizes') for item in manifest_icons if item.get('type')=='image/png'}) or not any('maskable' in item.get('purpose','') for item in manifest_icons):
+    errors.append('公開手機安裝清單缺少必要圖示')
+for name,(status,content_type,raw) in public_icons.items():
+    if status!=200 or content_type!='image/png' or raw[:8]!=b'\x89PNG\r\n\x1a\n': errors.append(f'公開手機安裝圖示無效：{name}')
+for term in ('tw539-mobile-ironlaw-v6','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
+    if term not in worker: errors.append(f'公開離線安裝快取缺少：{term}')
+for term in ('beforeinstallprompt','appinstalled','install-app-button','手機版已安裝'):
+    if term not in sync: errors.append(f'公開手機安裝流程缺少：{term}')
 if errors: raise SystemExit('鐵律看門狗失敗：'+'；'.join(errors))
-print(json.dumps({'看門狗':'通過','官方期別':official['period'],'公開期別':health['latest_period'],'全歷史':True,'命中檢討':'完成','滾動候選':286,'1中1主選':result['single_published'],'模型警報':warnings,'戰報可見英文':0},ensure_ascii=False))
+print(json.dumps({'看門狗':'通過','官方期別':official['period'],'公開期別':health['latest_period'],'全歷史':True,'命中檢討':'完成','滾動候選':286,'1中1主選':result['single_published'],'手機可安裝':True,'模型警報':warnings,'戰報可見英文':0},ensure_ascii=False))

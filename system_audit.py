@@ -64,6 +64,15 @@ def visible_text(path):
     page=re.sub(r'(?is)<(?:style|script)\b[^>]*>.*?</(?:style|script)>',' ',page)
     return html.unescape(re.sub(r'(?s)<[^>]+>',' ',page))
 
+def png_size(path):
+    try:
+        raw=path.read_bytes()
+        if raw[:8]!=b'\x89PNG\r\n\x1a\n' or raw[12:16]!=b'IHDR': return None
+        return int.from_bytes(raw[16:20],'big'),int.from_bytes(raw[20:24],'big')
+    except Exception as exc:
+        fail(f'{path.name} 無法讀取：{exc}')
+        return None
+
 draws=load_draws(CSV)
 with CSV.open('r',encoding='utf-8-sig',newline='') as stream:
     raw=list(csv.DictReader(stream))
@@ -321,6 +330,9 @@ for folder in (REPORTS,SITE):
         links=set(re.findall(r"href=['\"]\./([^'\"]+\.html)['\"]",page))
         if links!=nav_files: fail(f'{folder.name}/{filename} 分頁導覽不完整')
         if '低機率' in visible or '當期預測前九' in visible: fail(f'{folder.name}/{filename} 仍含易誤解標示或事後回算內容')
+        if folder==SITE:
+            for term in ("rel='manifest'","rel='apple-touch-icon'","mobile-web-app-capable","apple-mobile-web-app-capable","id='install-app-button'","安裝手機版","mobile-sync.js"):
+                if term not in page: fail(f'{folder.name}/{filename} 缺少手機安裝條件：{term}')
 legacy=visible_text(REPORTS/'最新539科學預測戰報.html')
 if legacy!=visible_text(REPORTS/'index.html'): fail('相容戰報入口與本期預測頁不同步')
 if ranked and f'{int(ranked[0]):02}' not in visible_text(SITE/'index.html'): fail('本期預測頁未顯示當期1中1主選')
@@ -334,6 +346,20 @@ service=(SITE/'service-worker.js').read_text(encoding='utf-8')
 sync=(SITE/'mobile-sync.js').read_text(encoding='utf-8')
 if "cache:'no-store'" not in service or 'system-health.json' not in service: fail('手機快取可能保留過期資料')
 if 'setTimeout(checkVersion,30000)' not in sync or 'setTimeout(checkVersion,5000)' not in sync or 'visibilitychange' not in sync or 'pageshow' not in sync: fail('手機開啟即同步或重試機制已損壞')
+manifest=read_json(SITE/'manifest.webmanifest')
+if manifest.get('id')!='./' or manifest.get('scope')!='./' or manifest.get('display')!='standalone' or not str(manifest.get('start_url','')).startswith('./index.html'):
+    fail('手機安裝清單缺少獨立應用啟動設定')
+icons=manifest.get('icons') or []
+icon_sizes={item.get('sizes') for item in icons if item.get('type')=='image/png'}
+if not {'192x192','512x512'}.issubset(icon_sizes) or not any('maskable' in item.get('purpose','') for item in icons):
+    fail('手機安裝清單缺少必要圖示或安全裁切圖示')
+for name,size in (('icon-180.png',(180,180)),('icon-192.png',(192,192)),('icon-512.png',(512,512)),('maskable-512.png',(512,512))):
+    path=SITE/'icons'/name
+    if not path.exists() or png_size(path)!=size: fail(f'手機安裝圖示不完整：{name}')
+for term in ('tw539-mobile-ironlaw-v6','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
+    if term not in service: fail(f'離線安裝快取缺少：{term}')
+for term in ('beforeinstallprompt','appinstalled','install-app-button','手機版已安裝'):
+    if term not in sync: fail(f'手機安裝流程缺少：{term}')
 
 history_file=REPORTS/'prediction-history.jsonl'
 try:

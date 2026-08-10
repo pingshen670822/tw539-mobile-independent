@@ -264,6 +264,25 @@ def refresh_report_pages(current):
         (REPORTS/filename).write_text(page,encoding='utf-8')
     REPORT.write_text(pages['index.html'],encoding='utf-8')
 
+def publish_report_pages(version_stamp):
+    """只發布既有正式結果的手機分頁；不得因此重算或換掉預測封存。"""
+    SITE.mkdir(exist_ok=True)
+    mobile_head=("<link rel='manifest' href='./manifest.webmanifest'>"
+                 "<link rel='apple-touch-icon' sizes='180x180' href='./icons/icon-180.png'>"
+                 "<link rel='icon' type='image/png' sizes='192x192' href='./icons/icon-192.png'>"
+                 "<meta name='theme-color' content='#8b0000'>"
+                 "<meta name='mobile-web-app-capable' content='yes'>"
+                 "<meta name='apple-mobile-web-app-capable' content='yes'>"
+                 "<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent'>"
+                 "<meta name='apple-mobile-web-app-title' content='539戰報'>"
+                 f"<meta name='tw539-version' content='{version_stamp}'>")
+    for name in REPORT_PAGE_FILES:
+        shutil.copy2(REPORTS/name,SITE/name)
+        path=SITE/name; page=path.read_text(encoding='utf-8')
+        page=page.replace("<title>",mobile_head+"<title>",1)
+        page=page.replace('</body>',"<script src='./mobile-sync.js'></script></body>")
+        path.write_text(page,encoding='utf-8')
+
 def build_site(latest, changed, previous=None):
     previous_health=read_json(REPORTS/'system-health.json') or {}
     repair_run=os.getenv('TW539_SELF_REPAIR','').lower() in ('1','true','yes')
@@ -366,19 +385,12 @@ def build_site(latest, changed, previous=None):
     health['history_database_sha256']=coverage.get('database_sha256')
     (REPORTS/'system-health.json').write_text(json.dumps(health,ensure_ascii=False,indent=2),encoding='utf-8')
     refresh_report_pages(current)
-    SITE.mkdir(exist_ok=True)
-    for name in REPORT_PAGE_FILES:
-        shutil.copy2(REPORTS/name,SITE/name)
+    version_stamp=datetime.now(TAIPEI).strftime('%Y%m%d%H%M%S')
+    publish_report_pages(version_stamp)
     shutil.copy2(REPORTS/'最新結果.json',SITE/'latest-result.json'); shutil.copy2(REPORTS/'system-health.json',SITE/'system-health.json')
     for name in ('prediction-history.jsonl','published-settlements.jsonl'):
         src=REPORTS/name
         if src.exists(): shutil.copy2(src,SITE/name)
-    version_stamp=datetime.now(TAIPEI).strftime('%Y%m%d%H%M%S')
-    for name in REPORT_PAGE_FILES:
-        path=SITE/name; page=path.read_text(encoding='utf-8')
-        page=page.replace("<title>",f"<link rel='manifest' href='./manifest.webmanifest'><meta name='theme-color' content='#8b0000'><meta name='tw539-version' content='{version_stamp}'><title>",1)
-        page=page.replace('</body>',"<script src='./mobile-sync.js'></script></body>")
-        path.write_text(page,encoding='utf-8')
     version={'version':version_stamp,'updated_at':datetime.now(TAIPEI).isoformat(timespec='seconds'),'latest_period':latest['period'],'latest_draw_date':latest['draw_date'],'data_changed':changed}
     (SITE/'version.json').write_text(json.dumps(version,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps(version,ensure_ascii=False))
@@ -421,6 +433,8 @@ def verify_publication(latest):
     for name in REPORT_PAGE_FILES:
         if not (REPORTS/name).exists() or not (SITE/name).exists():
             errors.append(f'分類分頁缺失：{name}')
+    for name in ('manifest.webmanifest','mobile-sync.js','service-worker.js','icons/icon-180.png','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
+        if not (SITE/name).exists(): errors.append(f'手機安裝檔缺失：{name}')
     if errors: raise SystemExit('鐵律發布驗證失敗：'+'；'.join(errors))
     print(json.dumps({'publication_ok':True,'latest_period':latest['period'],'single_published':result['single_published']},ensure_ascii=False))
 

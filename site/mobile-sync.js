@@ -1,4 +1,39 @@
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').then(r=>r.update());
+const installButton=document.getElementById('install-app-button');
+const installStatus=document.getElementById('install-app-status');
+const installHelp=document.getElementById('install-app-help');
+let installPrompt=null;
+const installedMode=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+function showInstallState(){
+  if(!installButton||!installStatus)return;
+  if(installedMode()){
+    installButton.hidden=true;installHelp.hidden=true;installStatus.hidden=false;installStatus.textContent='手機版已安裝';
+  }else{
+    installButton.hidden=false;installStatus.hidden=true;
+  }
+}
+addEventListener('beforeinstallprompt',event=>{
+  event.preventDefault();installPrompt=event;showInstallState();
+});
+addEventListener('appinstalled',()=>{
+  installPrompt=null;showInstallState();
+});
+if(installButton)installButton.addEventListener('click',async()=>{
+  if(installPrompt){
+    installPrompt.prompt();
+    const choice=await installPrompt.userChoice;
+    if(choice.outcome==='accepted'){
+      installStatus.hidden=false;installStatus.textContent='正在安裝手機版';installButton.hidden=true;installHelp.hidden=true;
+    }else{
+      installHelp.hidden=false;installButton.setAttribute('aria-expanded','true');
+    }
+    installPrompt=null;
+    return;
+  }
+  installHelp.hidden=!installHelp.hidden;
+  installButton.setAttribute('aria-expanded',String(!installHelp.hidden));
+});
+showInstallState();
 const pageVersion=(document.querySelector("meta[name='tw539-version']")||{}).content||'';
 let current=pageVersion;
 let timer=null;

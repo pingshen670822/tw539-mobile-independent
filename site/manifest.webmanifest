@@ -1,9 +1,50 @@
 {
-  "name": "台灣539 精算預測戰報",
+  "id": "./",
+  "name": "台灣539科學預測戰報",
   "short_name": "539戰報",
-  "start_url": "./",
+  "description": "台灣539本期預測、開獎檢討、回測驗證與系統健康手機獨立版。",
+  "start_url": "./index.html?source=installed",
+  "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
   "background_color": "#f3f4f6",
   "theme_color": "#8b0000",
-  "lang": "zh-Hant"
+  "lang": "zh-Hant-TW",
+  "categories": ["utilities"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "本期預測",
+      "short_name": "本期預測",
+      "url": "./index.html",
+      "icons": [{"src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
+    },
+    {
+      "name": "系統健康",
+      "short_name": "系統健康",
+      "url": "./health.html",
+      "icons": [{"src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
+    }
+  ]
 }
