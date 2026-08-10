@@ -231,6 +231,9 @@ POLARITY_FULL_HISTORY_BLENDS = (0.0,.10,.25,.50,.75)
 POLARITY_SELECTION_WINDOW = 360
 POLARITY_CONSENSUS_MEMBERS = 5
 POLARITY_WARMUP = 60
+DIRECT_HIT_WINDOW = 360
+DIRECT_HIT_RIDGE = 10.0
+DIRECT_HIT_FRONT5_BLEND = .15
 SINGLE_SPECIALIST_WINDOW = 30
 CATASTROPHIC_TOP9_HIT_LIMIT = 0
 CATASTROPHIC_AVG_RANK_FLOOR = 22.0
@@ -471,6 +474,77 @@ def apply_catastrophic_guard(ranked: list[int], previous_numbers: tuple[int, ...
     return front+[number for number in rotated if number not in front]
 
 
+def solve_linear_system(matrix: list[list[float]], vector: list[float]) -> list[float]:
+    """純標準函式庫高斯消去；正式雲端不依賴外部數值套件。"""
+    size=len(vector)
+    augmented=[list(matrix[row])+[float(vector[row])] for row in range(size)]
+    for column in range(size):
+        pivot=max(range(column,size),key=lambda row:abs(augmented[row][column]))
+        if abs(augmented[pivot][column])<1e-15:
+            return [0.0]*size
+        augmented[column],augmented[pivot]=augmented[pivot],augmented[column]
+        divisor=augmented[column][column]
+        augmented[column]=[value/divisor for value in augmented[column]]
+        for row in range(size):
+            if row==column:
+                continue
+            factor=augmented[row][column]
+            if abs(factor)<1e-18:
+                continue
+            augmented[row]=[augmented[row][item]-factor*augmented[column][item]
+                            for item in range(size+1)]
+    return [augmented[row][-1] for row in range(size)]
+
+
+def direct_hit_prefix(cases: list[dict]) -> tuple[list[list[list[float]]],list[list[float]]]:
+    """累積逐期命中迴歸統計；每個預測點只可取用該點以前的答案。"""
+    size=len(FORMAL_FEATURE_KEYS)
+    prefix_matrix=[[[0.0]*size for _ in range(size)]]
+    prefix_vector=[[0.0]*size]
+    baseline=5/39
+    for case in cases:
+        matrix=[[0.0]*size for _ in range(size)]
+        vector=[0.0]*size
+        actual=set(case["actual"])
+        for number in range(1,40):
+            row=[float(case["features"][key][number]) for key in FORMAL_FEATURE_KEYS]
+            target=float(number in actual)-baseline
+            for left in range(size):
+                vector[left]+=row[left]*target/39
+                for right in range(size):
+                    matrix[left][right]+=row[left]*row[right]/39
+        prefix_matrix.append([[prefix_matrix[-1][left][right]+matrix[left][right]
+                               for right in range(size)] for left in range(size)])
+        prefix_vector.append([prefix_vector[-1][left]+vector[left] for left in range(size)])
+    return prefix_matrix,prefix_vector
+
+
+def direct_hit_weights(prefix_matrix: list[list[list[float]]],
+                       prefix_vector: list[list[float]], offset: int,
+                       window: int = DIRECT_HIT_WINDOW,
+                       ridge: float = DIRECT_HIT_RIDGE) -> dict[str,float]:
+    """由前置視窗估計下一期直接命中權重，禁止讀取目前案例答案。"""
+    size=len(FORMAL_FEATURE_KEYS);start=max(0,offset-window);count=max(1,offset-start)
+    matrix=[[((prefix_matrix[offset][left][right]-prefix_matrix[start][left][right])/count)
+             + (ridge if left==right else 0.0)
+             for right in range(size)] for left in range(size)]
+    vector=[(prefix_vector[offset][left]-prefix_vector[start][left])/count for left in range(size)]
+    solved=solve_linear_system(matrix,vector)
+    scale=sum(abs(value) for value in solved) or 1.0
+    return {key:solved[index]/scale for index,key in enumerate(FORMAL_FEATURE_KEYS)}
+
+
+def reorder_front5_inside_top9(baseline: list[int], direct: list[int],
+                               blend: float = DIRECT_HIT_FRONT5_BLEND) -> list[int]:
+    """鎖定最強1顆與前9集合，只重新排列第2至第9名以改善前5。"""
+    first=baseline[0];base_position={number:index for index,number in enumerate(baseline)}
+    direct_position={number:index for index,number in enumerate(direct)}
+    reordered=sorted(baseline[1:9],key=lambda number:(
+        blend*direct_position[number]+(1-blend)*base_position[number],number))
+    front=[first]+reordered
+    return front+[number for number in baseline if number not in front]
+
+
 def anchor_challenger_wins(challenger: dict, champion: dict) -> bool:
     """新錨定必須在長短區間全面不差且至少三項明確改善，才准取代穩定冠軍。"""
     recent_new=challenger.get("recent_54") or {};recent_old=champion.get("recent_54") or {}
@@ -523,7 +597,7 @@ def adaptive_polarity_backtest(
     tests: int = ROLLING_HOLDOUT_DRAWS,
     selection_window: int = POLARITY_SELECTION_WINDOW,
 ) -> dict:
-    """三十組方向模型逐期競賽；用前360期选出五组并平均正式权重，禁止看答案。"""
+    """三十組方向模型逐期競賽，再以直接命中校準重排前9內部，禁止看答案。"""
     def direction_quality(metric: dict) -> float:
         n=metric["samples"]
         return ((metric["top9_avg_hits"]-metric["bottom9_avg_hits"])*n*7
@@ -536,6 +610,7 @@ def adaptive_polarity_backtest(
         return {key:value/scale for key,value in combined.items()}
     case_start=320
     cases=evaluation_cases(draws,case_start,len(draws))
+    direct_prefix_matrix,direct_prefix_vector=direct_hit_prefix(cases)
     strategies=[]
     for alpha in POLARITY_EWMA_ALPHAS:
         for full_blend in POLARITY_FULL_HISTORY_BLENDS:
@@ -569,8 +644,8 @@ def adaptive_polarity_backtest(
             })
     holdout_start=len(draws)-min(tests,ROLLING_HOLDOUT_DRAWS)
     start_offset=holdout_start-case_start
-    selected_metric=_empty_metric();unguarded_metric=_empty_metric()
-    top5_distribution=Counter();top9_distribution=Counter();selection_counts=Counter();single_selection_counts=Counter();path=[];selected_rows=[];unguarded_rows=[]
+    selected_metric=_empty_metric();unguarded_metric=_empty_metric();direct_baseline_metric=_empty_metric()
+    top5_distribution=Counter();top9_distribution=Counter();selection_counts=Counter();single_selection_counts=Counter();path=[];selected_rows=[];unguarded_rows=[];direct_baseline_rows=[]
     catastrophic_trigger_count=0;catastrophic_application_count=0
     catastrophic_trials=[];previous_base_ranked=None;previous_base_actual=None
     def guard_policy_recommends() -> bool:
@@ -589,10 +664,15 @@ def adaptive_polarity_backtest(
             return (direction_quality(metric),metric["single_hits"],-strategy["alpha"],-strategy["full_history_blend"])
         chosen_members=sorted(strategies,key=strategy_key,reverse=True)[:POLARITY_CONSENSUS_MEMBERS]
         signed_consensus=combined_weights([member["rows"][offset][2] for member in chosen_members])
-        unguarded_ranked=fast_case_ranking(cases[offset],signed_consensus)
+        direct_weights_now=direct_hit_weights(direct_prefix_matrix,direct_prefix_vector,offset)
+        baseline_ranked=fast_case_ranking(cases[offset],signed_consensus)
+        direct_ranked=fast_case_ranking(cases[offset],direct_weights_now)
+        unguarded_ranked=reorder_front5_inside_top9(baseline_ranked,direct_ranked)
         actual=set(cases[offset]["actual"])
         polarities={key:(1.0 if signed_consensus[key]>0 else (-1.0 if signed_consensus[key]<0 else 0.0))
                     for key in FORMAL_FEATURE_KEYS}
+        _add_ranking(direct_baseline_metric,baseline_ranked,actual)
+        direct_baseline_rows.append((baseline_ranked,actual,polarities))
         _add_ranking(unguarded_metric,unguarded_ranked,actual)
         unguarded_rows.append((unguarded_ranked,actual,polarities))
         catastrophic_condition=False
@@ -621,6 +701,7 @@ def adaptive_polarity_backtest(
         path.append({"period":draws[draw_index]["period"],"strategy_members":label,
                      "single_strategy":single_label,"single":single,"polarities":polarities,
                      "consensus_weights":signed_consensus,
+                     "direct_hit_weights":direct_weights_now,
                      "catastrophic_condition":catastrophic_condition,
                      "catastrophic_guard_applied":catastrophic_apply})
         if catastrophic_condition:
@@ -660,6 +741,24 @@ def adaptive_polarity_backtest(
     recent_result["ranking_direction_valid"]=recent_result["front_ranking_direction_valid"]
     recent_result["top9_hit_distribution"]={str(k):recent_top9_distribution[k] for k in range(6)}
     recent_result["top9_at_least_2_rate"]=round(sum(v for k,v in recent_top9_distribution.items() if k>=2)/54,4)
+    def summarize_recent(rows: list[tuple[list[int],set[int],dict[str,float]]], span: int) -> dict:
+        metric=_empty_metric()
+        for ranked,actual,_ in rows[-span:]:
+            _add_ranking(metric,ranked,actual)
+        summary=_finish_metric(metric)
+        summary["single_direction_valid"]=summary["single_hits"]>summary["bottom1_hits"]
+        summary["front_ranking_direction_valid"]=(
+            summary["top5_avg_hits"]>summary["bottom5_avg_hits"]
+            and summary["top9_avg_hits"]>summary["bottom9_avg_hits"]
+            and summary["boundary_control_valid"]
+            and summary["avg_actual_rank"]<20
+        )
+        summary["ranking_direction_valid"]=summary["front_ranking_direction_valid"]
+        return summary
+    recent_120_result=summarize_recent(selected_rows,120)
+    direct_baseline_result=_finish_metric(direct_baseline_metric)
+    direct_baseline_recent_54=summarize_recent(direct_baseline_rows,54)
+    direct_baseline_recent_120=summarize_recent(direct_baseline_rows,120)
     unguarded_recent_metric=_empty_metric()
     for unguarded_ranked,actual,_ in unguarded_rows[-54:]:
         _add_ranking(unguarded_recent_metric,unguarded_ranked,actual)
@@ -686,7 +785,16 @@ def adaptive_polarity_backtest(
     adjusted,repeat_audit=apply_repeat_qualification(
         raw,features,signed_weights,draws[-1]["nums"],draws[-1]["period"],
         state.repeat_exposure,state.repeat_hits)
-    base_next_ranked=rank_numbers(adjusted,draws[-1]["period"])
+    consensus_next_ranked=rank_numbers(adjusted,draws[-1]["period"])
+    final_direct_hit_weights=direct_hit_weights(
+        direct_prefix_matrix,direct_prefix_vector,len(cases))
+    direct_hit_raw=scores_from_features(features,final_direct_hit_weights)
+    direct_hit_adjusted,_=apply_repeat_qualification(
+        direct_hit_raw,features,final_direct_hit_weights,draws[-1]["nums"],draws[-1]["period"],
+        state.repeat_exposure,state.repeat_hits)
+    direct_hit_next_ranked=rank_numbers(direct_hit_adjusted,draws[-1]["period"])
+    base_next_ranked=reorder_front5_inside_top9(
+        consensus_next_ranked,direct_hit_next_ranked)
     reconstructed_guard_condition=False
     if previous_base_ranked is not None:
         previous_positions={number:index+1 for index,number in enumerate(previous_base_ranked)}
@@ -707,7 +815,7 @@ def adaptive_polarity_backtest(
     center=(phat+z*z/(2*n))/(1+z*z/n)
     margin=z*math.sqrt(phat*(1-phat)/n+z*z/(4*n*n))/(1+z*z/n)
     result.update({
-        "evaluation":"最後三百六十期逐期只用當時以前三百六十期挑选五组方向模型并平均正式权重",
+        "evaluation":"最後三百六十期逐期只用當時以前資料，五組方向共識鎖定單碼與前九，再以直接命中校準重排前五",
         "single_rate":round(phat,4),"single_random_baseline":round(p0,4),
         "single_wilson_lower95":round(center-margin,4),"single_release_allowed":center-margin>p0,
         "top5_hit_distribution":{str(k):top5_distribution[k] for k in range(6)},
@@ -719,6 +827,17 @@ def adaptive_polarity_backtest(
         "strategy_candidate_count":len(strategies),"strategy_selection_window":selection_window,
         "strategy_consensus_member_count":POLARITY_CONSENSUS_MEMBERS,
         "recent_54":recent_result,
+        "recent_120":recent_120_result,
+        "direct_hit_calibration_enabled":True,
+        "direct_hit_window":DIRECT_HIT_WINDOW,
+        "direct_hit_ridge":DIRECT_HIT_RIDGE,
+        "direct_hit_front5_blend":DIRECT_HIT_FRONT5_BLEND,
+        "direct_hit_weights":final_direct_hit_weights,
+        "direct_hit_baseline":direct_baseline_result,
+        "direct_hit_baseline_recent_54":direct_baseline_recent_54,
+        "direct_hit_baseline_recent_120":direct_baseline_recent_120,
+        "direct_hit_consensus_next_ranked":consensus_next_ranked,
+        "direct_hit_next_ranked":direct_hit_next_ranked,
         "strategy_selection_counts":dict(selection_counts),
         "single_specialist_selection_counts":dict(single_selection_counts),
         "single_specialist_window":SINGLE_SPECIALIST_WINDOW,
@@ -754,7 +873,7 @@ def adaptive_polarity_backtest(
         "catastrophic_guard_unguarded_recent_54":unguarded_recent_result,
         "rolling_update_count":n,"rolling_learning_rate":0.0,"rolling_boundary_blend":0.0,
         "rolling_path_sha256":hashlib.sha256(json.dumps(path,ensure_ascii=False,sort_keys=True,separators=(",", ":")).encode()).hexdigest(),
-        "method":"thirty_polarity_models_360_draw_five_member_weight_consensus",
+        "method":"five_member_consensus_with_direct_hit_front5_reorder",
     })
     return result
 
@@ -1761,6 +1880,11 @@ def main() -> None:
             "strategy_candidate_count": bt["strategy_candidate_count"],
             "strategy_selection_window": bt["strategy_selection_window"],
             "strategy_consensus_member_count": bt["strategy_consensus_member_count"],
+            "direct_hit_calibration_enabled": bt["direct_hit_calibration_enabled"],
+            "direct_hit_window": bt["direct_hit_window"],
+            "direct_hit_ridge": bt["direct_hit_ridge"],
+            "direct_hit_front5_blend": bt["direct_hit_front5_blend"],
+            "direct_hit_weights": bt["direct_hit_weights"],
             "selected_next_strategy": bt["selected_next_strategy"],
             "selected_next_polarities": bt["selected_next_polarities"],
             "single_specialist_window": bt["single_specialist_window"],

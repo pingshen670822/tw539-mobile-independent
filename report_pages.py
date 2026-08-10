@@ -153,6 +153,10 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
 
 def _backtest_page(bt, full_scan):
     recent = bt.get("recent_54") or {}
+    recent120 = bt.get("recent_120") or {}
+    direct_baseline = bt.get("direct_hit_baseline") or {}
+    direct_baseline54 = bt.get("direct_hit_baseline_recent_54") or {}
+    direct_baseline120 = bt.get("direct_hit_baseline_recent_120") or {}
     distribution = "".join(
         f"<tr><td>{key}中</td><td>{value}期</td></tr>"
         for key, value in (bt.get("top9_hit_distribution") or {}).items()
@@ -169,6 +173,7 @@ def _backtest_page(bt, full_scan):
     recent_rows = "".join(
         f"<tr><td>{label}</td><td>{value}</td></tr>" for label, value in (
             ("正式第1名命中", f"{recent.get('single_hits',0)}/{recent.get('samples',0)}"),
+            ("前5平均命中", recent.get("top5_avg_hits", 0)),
             ("前9平均命中", recent.get("top9_avg_hits", 0)),
             ("後9平均命中", recent.get("bottom9_avg_hits", 0)),
             ("前9零中期數", (recent.get("top9_hit_distribution") or {}).get("0", 0)),
@@ -196,6 +201,7 @@ def _backtest_page(bt, full_scan):
 <div class='card'><div class='label'>前9至少2中比例</div><div class='value'>{100*bt.get('top9_at_least_2_rate',0):.2f}%</div></div>
 <div class='card'><div class='label'>前5至少2中比例</div><div class='value'>{100*bt.get('top5_at_least_2_rate',0):.2f}%</div></div>
 </div><h3>前後段方向對照</h3><div class='table-wrap'><table><thead><tr><th>項目</th><th>前段</th><th>對照</th><th>判定</th></tr></thead><tbody>{rows}</tbody></table></div><h3>前9逐期命中分布</h3><div class='table-wrap'><table><thead><tr><th>命中數</th><th>期數</th></tr></thead><tbody>{distribution}</tbody></table></div></div>
+<div class='band strong'><h2>直接命中前5校準</h2><p><b>最強1顆與前9集合完全鎖定，只重排第2至第9名；任何主要區間前5降低即禁止上線。</b></p><div class='grid'><div class='card'><div class='label'>最後360期</div><div class='value'>{direct_baseline.get('top5_avg_hits',0)} → {bt.get('top5_avg_hits',0)}</div></div><div class='card'><div class='label'>最近120期</div><div class='value'>{direct_baseline120.get('top5_avg_hits',0)} → {recent120.get('top5_avg_hits',0)}</div></div><div class='card'><div class='label'>最近54期</div><div class='value'>{direct_baseline54.get('top5_avg_hits',0)} → {recent.get('top5_avg_hits',0)}</div></div><div class='card'><div class='label'>前9集合</div><div class='value'>完全不變</div></div><div class='card'><div class='label'>最強1顆</div><div class='value'>完全不變</div></div><div class='card'><div class='label'>校準權重</div><div class='value'>{100*bt.get('direct_hit_front5_blend',0):.0f}%</div></div></div></div>
 <div class='band'><h2>最近54期獨立觀察</h2><div class='table-wrap'><table><thead><tr><th>項目</th><th>結果</th></tr></thead><tbody>{recent_rows}</tbody></table></div></div>
 <div class='band'><h2>全歷史逐期一致性掃描</h2><p class='note'>從第321期起逐期重算；此區只做方向診斷，不冒充隔離驗證。</p><div class='table-wrap'><table><thead><tr><th>項目</th><th>結果</th></tr></thead><tbody>{full_rows}</tbody></table></div></div>
 <div class='band warning'><h2>回測規則</h2><p>每一測試期只讀取該期以前已知資料；禁止用同一期開獎結果改寫同一期預測。</p></div>"""
@@ -269,6 +275,9 @@ def _history_page(settlements):
 def _models_page(draws, weights, bt, selection, repeat_audit, feature_labels):
     diagnostic = selection.get("diagnostic") or {}
     long_window = diagnostic.get("long_history_selection_window") or {}
+    direct_baseline = bt.get("direct_hit_baseline") or {}
+    direct_baseline54 = bt.get("direct_hit_baseline_recent_54") or {}
+    direct_baseline120 = bt.get("direct_hit_baseline_recent_120") or {}
     stability=bt.get("anchor_stability") or selection.get("anchor_stability") or {}
     champion=stability.get("champion_metrics") or {}
     challenger=stability.get("challenger_metrics") or {}
@@ -291,8 +300,8 @@ def _models_page(draws, weights, bt, selection, repeat_audit, feature_labels):
 <div class='card'><div class='label'>全歷史核心占比</div><div class='value'>100%</div></div>
 <div class='card'><div class='label'>短期正式權重</div><div class='value'>0%</div></div>
 </div></div>
-<div class='band'><h2>正式方向模型</h2><p>每次預測與每一期回測都使用當時以前的全部歷史資料。先搜尋 {diagnostic.get('candidate_count',0)} 組錨定權重，保留 {diagnostic.get('eligible_candidate_count',0)} 組均衡候選，再建立 {bt.get('strategy_candidate_count',0)} 組模組正反方向模型；每一期只用此前 {bt.get('strategy_selection_window',0)} 期已開獎成績選出 {bt.get('strategy_consensus_member_count',0)} 組，平均成可完整驗算的正式權重。短窗單碼專模已停用；失準保護永久保留原始第1名。</p><div class='table-wrap'><table><thead><tr><th>正式模組</th><th>資料來源</th><th>目前權重</th><th>方向</th></tr></thead><tbody>{formula_rows}</tbody></table></div></div>
-<div class='band warning'><h2>全系統重組</h2><p><b>舊版單一方向模型硬選已停用，改為五組正式權重共識。</b>研究時將最後17筆正式實戰完全保留為盲測；相較舊架構，前5平均由0.4706提高到0.7059，前9平均由1.1765提高到1.2353，單碼維持2次，沒有以犧牲單碼換取前段數據。</p></div>
+<div class='band'><h2>正式方向模型</h2><p>每次預測與每一期回測都使用當時以前的全部歷史資料。先搜尋 {diagnostic.get('candidate_count',0)} 組錨定權重，保留 {diagnostic.get('eligible_candidate_count',0)} 組均衡候選，再建立 {bt.get('strategy_candidate_count',0)} 組模組正反方向模型；每一期只用此前 {bt.get('strategy_selection_window',0)} 期已開獎成績選出 {bt.get('strategy_consensus_member_count',0)} 組，平均成可完整驗算的正式權重。五組正式權重共識鎖定最強1顆與前9集合，再由直接命中校準重排第2至第9名。</p><div class='table-wrap'><table><thead><tr><th>正式模組</th><th>資料來源</th><th>目前權重</th><th>方向</th></tr></thead><tbody>{formula_rows}</tbody></table></div></div>
+<div class='band warning'><h2>全系統重組</h2><p><b>新版採用「五組方向共識＋直接命中前5校準」雙層架構。</b>最強1顆與前9集合不得變動，校準只處理前9內部順序。最近54期前5由 {direct_baseline54.get('top5_avg_hits',0)} 提高到 {(bt.get('recent_54') or {}).get('top5_avg_hits',0)}，最近120期由 {direct_baseline120.get('top5_avg_hits',0)} 提高到 {(bt.get('recent_120') or {}).get('top5_avg_hits',0)}，最後360期由 {direct_baseline.get('top5_avg_hits',0)} 提高到 {bt.get('top5_avg_hits',0)}；單碼與前9命中完全保留。</p></div>
 <div class='band'><h2>穩定冠軍與每日挑戰模型</h2><p><b>本期採用：{stability.get('selected','－')}。</b>每日新模型只有在長期與近期六項指標全部不差、至少三項改善，而且兩個區間排序方向都通過，才准取代穩定冠軍。</p><div class='table-wrap'><table><thead><tr><th>驗證項目</th><th>穩定冠軍</th><th>每日挑戰模型</th></tr></thead><tbody>{stability_rows}</tbody></table></div></div>
 <div class='band'><h2>多模組校正規格</h2><div class='grid'>
 <div class='card'><div class='label'>錨定候選</div><div class='value'>{diagnostic.get('candidate_count',0)}組</div></div>
@@ -302,6 +311,8 @@ def _models_page(draws, weights, bt, selection, repeat_audit, feature_labels):
 <div class='card'><div class='label'>方向模型</div><div class='value'>{bt.get('strategy_candidate_count',0)}組</div></div>
 <div class='card'><div class='label'>方向選擇窗</div><div class='value'>{bt.get('strategy_selection_window',0)}期</div></div>
 <div class='card'><div class='label'>權重共識</div><div class='value'>{bt.get('strategy_consensus_member_count',0)}組</div></div>
+<div class='card'><div class='label'>直接命中校準窗</div><div class='value'>{bt.get('direct_hit_window',0)}期</div></div>
+<div class='card'><div class='label'>前5校準占比</div><div class='value'>{100*bt.get('direct_hit_front5_blend',0):.0f}%</div></div>
 </div></div>
 <div class='band'><h2>連莊資格驗算規格</h2><p>上一期號碼必須同時符合：相對指數至少75、全歷史轉移貢獻為正、至少兩個正式模組正貢獻、全歷史連莊率不低於12.82%，且個別回測通過；不做補位。</p><div class='table-wrap'><table><thead><tr><th>上一期號碼</th><th>相對指數</th><th>轉移貢獻</th><th>正貢獻模組</th><th>全歷史連莊率</th><th>個別回測</th></tr></thead><tbody>{rule_rows}</tbody></table></div></div>"""
     return _page_shell("models.html", "模型說明", "只顯示資料範圍、公式與校正規格", content)
@@ -322,6 +333,7 @@ def _health_page(draws, bt, full_scan, generated_at, settlements, health):
         ("正式排序保護", "通過" if not bt.get("catastrophic_guard_execution_enabled") and bt.get("catastrophic_guard_application_count")==0 else "未通過", "失準監測不得改動任何正式名次"),
         ("穩定模型守門", (bt.get("anchor_stability") or {}).get("selected","－"), "每日挑戰模型須長短期六項全部不退步才可升級"),
         ("五組權重共識", "通過" if bt.get("strategy_consensus_member_count")==5 else "未通過", "三十組中以前三百六十期成績選出五組並平均正式權重"),
+        ("直接命中前5校準", "通過" if bt.get("direct_hit_calibration_enabled") and bt.get("top5_avg_hits",0)>=(bt.get("direct_hit_baseline") or {}).get("top5_avg_hits",0) else "未通過", "鎖定最強1顆與前9集合，只重排第2至第9名"),
         ("短窗單碼重排", "已停用", "跨校正區與隔離區不穩定，不得改動正式第1名"),
         ("手機同步", "通過", "開啟、回到前景與重新連網時立即核對；同步後每30秒巡檢"),
         ("兩小時自修", "通過" if health.get("two_hour_deadline_met",True) else "逾時自修", "超過期限即重跑資料、模型、分頁、部署與公開驗收"),
@@ -350,6 +362,7 @@ def _health_page(draws, bt, full_scan, generated_at, settlements, health):
 <div class='card'><div class='label'>排序方向判定</div><div class='value'>排序方向{direction}</div></div>
 <div class='card'><div class='label'>方向模型數</div><div class='value'>{bt.get('strategy_candidate_count',0)}組</div></div>
 <div class='card'><div class='label'>權重共識組數</div><div class='value'>{bt.get('strategy_consensus_member_count',0)}組</div></div>
+<div class='card'><div class='label'>直接命中校準</div><div class='value'>{'通過' if bt.get('direct_hit_calibration_enabled') else '未通過'}</div></div>
 <div class='card'><div class='label'>隔離回測期數</div><div class='value'>{bt.get('samples',0)}期</div></div>
 <div class='card'><div class='label'>全歷史診斷期數</div><div class='value'>{full_scan.get('samples',0)}期</div></div>
 </div></div>"""

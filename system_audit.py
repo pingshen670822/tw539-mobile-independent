@@ -16,6 +16,7 @@ from tw539_ultra import (FORMAL_FEATURE_KEYS, GLOBAL_HISTORY_BLEND, MAX_ANCHOR_M
                          ROLLING_BOUNDARY_BLEND_CANDIDATES, ROLLING_LEARNING_RATE_CANDIDATES,
                          MIN_ENSEMBLE_WEIGHT_DISTANCE, POLARITY_SELECTION_WINDOW,
                          POLARITY_CONSENSUS_MEMBERS,
+                         DIRECT_HIT_WINDOW, DIRECT_HIT_RIDGE, DIRECT_HIT_FRONT5_BLEND,
                          CATASTROPHIC_TOP9_HIT_LIMIT, CATASTROPHIC_AVG_RANK_FLOOR,
                          STABILITY_CHAMPION_ANCHOR, anchor_challenger_wins,
                          adaptive_polarity_backtest,
@@ -122,8 +123,11 @@ else:
     challenger_anchor=average_weights(anchor_ensemble)
     if rolling_adjustment.get('candidate_anchor_weights')!=challenger_anchor or rolling_adjustment.get('anchor_ensemble_weights')!=anchor_ensemble: fail('每日挑戰模型與三模型錨定搜尋未銜接')
     if rolling_adjustment.get('production_weights')!=weights or rolling_adjustment.get('production_ensemble_weights')!=ensemble_weights: fail('三模型終點權重與正式主選未銜接')
-    if rolling_adjustment.get('updates')!=360 or rolling_adjustment.get('method')!='thirty_polarity_models_360_draw_five_member_weight_consensus': fail('最新開獎錯誤沒有觸發三十組方向模型五組權重共識')
+    if rolling_adjustment.get('updates')!=360 or rolling_adjustment.get('method')!='five_member_consensus_with_direct_hit_front5_reorder': fail('最新開獎錯誤沒有觸發五組方向共識與直接命中前五校準')
     if rolling_adjustment.get('strategy_candidate_count')!=30 or rolling_adjustment.get('strategy_selection_window')!=POLARITY_SELECTION_WINDOW or rolling_adjustment.get('strategy_consensus_member_count')!=POLARITY_CONSENSUS_MEMBERS: fail('方向模型數、三百六十期選擇窗或五組共識錯誤')
+    if (not rolling_adjustment.get('direct_hit_calibration_enabled')
+            or rolling_adjustment.get('direct_hit_window')!=DIRECT_HIT_WINDOW
+            or rolling_adjustment.get('direct_hit_front5_blend')!=DIRECT_HIT_FRONT5_BLEND): fail('滾動修正未同步直接命中前五校準')
     if validation.get('samples')!=360: fail('前段滾動校正不是三百六十期')
     if selected.get('method')!='balanced_three_model_consensus_all_history_286_grid': fail('正式權重不是均衡三模型共識與長歷史複驗')
     calibration=selected.get('calibration_window') or {}; holdout_window=selected.get('holdout_window') or {}
@@ -236,7 +240,23 @@ if not calculated_direction: warn('校正後正式模型的最後三百六十期
 if backtest.get('next_signed_weights')!=weights or backtest.get('rolling_update_count')!=360: fail('隔離回測終點方向與正式主選不同步')
 if backtest.get('catastrophic_guard_execution_enabled') or backtest.get('catastrophic_guard_application_count')!=0:
     fail('失準旋轉必須保持只監測且不得改動正式排序')
-for key in ('samples','single_hits','bottom1_hits','top5_avg_hits','bottom5_avg_hits','top9_hits','rank10_15_hits','top15_hits','top9_avg_hits','rank10_15_avg_hits','top15_avg_hits','top9_capture_rate','top9_slot_hit_rate','rank10_15_slot_hit_rate','boundary_control_valid','bottom9_avg_hits','avg_actual_rank','ranking_direction_valid','top5_at_least_2_rate','top9_at_least_2_rate','single_specialist_window','single_specialist_baseline_hits','single_specialist_hits','single_specialist_lift','single_specialist_enabled','strategy_consensus_member_count','next_signed_weights','rolling_update_count','rolling_path_sha256','method','catastrophic_guard_enabled','catastrophic_guard_top9_hit_limit','catastrophic_guard_avg_rank_floor','catastrophic_guard_rotation','catastrophic_guard_trigger_count','catastrophic_guard_application_count','catastrophic_guard_policy_window','catastrophic_guard_policy_min_trials','catastrophic_guard_policy_trial_count','catastrophic_guard_policy_recommends','catastrophic_guard_counterfactual_preference','catastrophic_guard_execution_enabled','catastrophic_guard_current_condition_reconstructed','catastrophic_guard_unguarded','catastrophic_guard_unguarded_recent_54'):
+direct_baseline=backtest.get('direct_hit_baseline') or {}
+if (not backtest.get('direct_hit_calibration_enabled')
+        or backtest.get('direct_hit_window')!=DIRECT_HIT_WINDOW
+        or backtest.get('direct_hit_ridge')!=DIRECT_HIT_RIDGE
+        or backtest.get('direct_hit_front5_blend')!=DIRECT_HIT_FRONT5_BLEND):
+    fail('直接命中前五校準參數錯誤')
+if backtest.get('single_hits')!=direct_baseline.get('single_hits') or backtest.get('top9_avg_hits')!=direct_baseline.get('top9_avg_hits'):
+    fail('直接命中校準改動了最強單碼或前九集合')
+for current_key,baseline_key,label in (
+        ('top5_avg_hits','top5_avg_hits','三百六十期'),):
+    if backtest.get(current_key,0)<direct_baseline.get(baseline_key,0): fail(f'直接命中校準拖累{label}前五')
+for current_key,baseline_key,label in (
+        ('recent_54','direct_hit_baseline_recent_54','最近五十四期'),
+        ('recent_120','direct_hit_baseline_recent_120','最近一百二十期')):
+    if (backtest.get(current_key) or {}).get('top5_avg_hits',0)<(backtest.get(baseline_key) or {}).get('top5_avg_hits',0):
+        fail(f'直接命中校準拖累{label}前五')
+for key in ('samples','single_hits','bottom1_hits','top5_avg_hits','bottom5_avg_hits','top9_hits','rank10_15_hits','top15_hits','top9_avg_hits','rank10_15_avg_hits','top15_avg_hits','top9_capture_rate','top9_slot_hit_rate','rank10_15_slot_hit_rate','boundary_control_valid','bottom9_avg_hits','avg_actual_rank','ranking_direction_valid','top5_at_least_2_rate','top9_at_least_2_rate','recent_54','recent_120','direct_hit_calibration_enabled','direct_hit_window','direct_hit_ridge','direct_hit_front5_blend','direct_hit_weights','direct_hit_baseline','direct_hit_baseline_recent_54','direct_hit_baseline_recent_120','direct_hit_consensus_next_ranked','direct_hit_next_ranked','single_specialist_window','single_specialist_baseline_hits','single_specialist_hits','single_specialist_lift','single_specialist_enabled','strategy_consensus_member_count','next_signed_weights','rolling_update_count','rolling_path_sha256','method','catastrophic_guard_enabled','catastrophic_guard_top9_hit_limit','catastrophic_guard_avg_rank_floor','catastrophic_guard_rotation','catastrophic_guard_trigger_count','catastrophic_guard_application_count','catastrophic_guard_policy_window','catastrophic_guard_policy_min_trials','catastrophic_guard_policy_trial_count','catastrophic_guard_policy_recommends','catastrophic_guard_counterfactual_preference','catastrophic_guard_execution_enabled','catastrophic_guard_current_condition_reconstructed','catastrophic_guard_unguarded','catastrophic_guard_unguarded_recent_54'):
     if not equivalent(recalculated_holdout.get(key),backtest.get(key)): fail(f'最後三百六十期方向模型獨立重算不符：{key}')
 full_scan=result.get('full_history_scan') or {}
 recalculated_full=ranking_direction_metrics(draws,weights,320,len(draws))
@@ -257,6 +277,9 @@ for label,item in (('戰報健康檔',health),('手機健康檔',site_health)):
     if not item.get('catastrophic_guard_enabled') or bool(item.get('catastrophic_guard_current_trigger'))!=bool(backtest.get('catastrophic_guard_current_trigger')): fail(f'{label}未同步災難失準保護狀態')
     if item.get('production_anchor_weights')!=result.get('production_anchor_weights') or item.get('anchor_stability')!=backtest.get('anchor_stability'): fail(f'{label}未同步穩定模型守門狀態')
     if item.get('polarity_selection_window')!=POLARITY_SELECTION_WINDOW or item.get('polarity_consensus_member_count')!=POLARITY_CONSENSUS_MEMBERS: fail(f'{label}未同步三百六十期五組權重共識')
+    if (not item.get('direct_hit_calibration_enabled') or item.get('direct_hit_window')!=DIRECT_HIT_WINDOW
+            or item.get('direct_hit_ridge')!=DIRECT_HIT_RIDGE
+            or item.get('direct_hit_front5_blend')!=DIRECT_HIT_FRONT5_BLEND): fail(f'{label}未同步直接命中前五校準')
     if item.get('single_specialist_enabled'): fail(f'{label}仍啟用已證明拖累的短窗單碼重排')
 if version.get('latest_period')!=latest['period'] or version.get('latest_draw_date')!=latest['date']: fail('手機版本檔期別日期錯誤')
 
@@ -265,7 +288,7 @@ page_rules={
         'required':('本期最強1顆','最強號碼多邏輯總結','強烈推薦守門','失準事件監測','本期分級主選','1中1','2中1～2','3中1～3','5中2～3','9中3～5','本期前15名單一明細','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不做補位'),
         'forbidden':('最新一期命中結算','最後360期隔離回測','全歷史運算範圍','鐵律守門')},
     'backtest.html':{
-        'required':('最後360期隔離回測','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),
+        'required':('最後360期隔離回測','直接命中前5校準','前9集合','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),
         'forbidden':('本期正式預測','最新一期命中結算','開獎前封存實戰紀錄','正式方向模型')},
     'review.html':{
         'required':('最新一期命中結算','開獎前前5正式預測','前5命中資料','本期重大瑕疵結論','實際開獎號碼原始排名','錯誤模組與前9邊界逐項檢討','第10至15名命中','開獎後滾動權重重算','禁止開獎後換號或補號'),
@@ -274,10 +297,10 @@ page_rules={
         'required':('開獎前封存實戰紀錄','開獎前1中1','開獎前前5','前5命中資料','開獎前前9','主選結果','第10至15名命中'),
         'forbidden':('本期正式預測','錯誤模組與前9邊界逐項檢討','最後360期隔離回測','正式方向模型')},
     'models.html':{
-        'required':('全歷史運算範圍','全歷史核心占比','正式方向模型','全系統重組','五組正式權重共識','多模組校正規格','權重共識','連莊資格驗算規格','相對指數至少75','全歷史連莊率不低於12.82%','不做補位'),
+        'required':('全歷史運算範圍','全歷史核心占比','正式方向模型','全系統重組','五組正式權重共識','直接命中前5校準','多模組校正規格','權重共識','連莊資格驗算規格','相對指數至少75','全歷史連莊率不低於12.82%','不做補位'),
         'forbidden':('本期正式預測','最新一期命中結算','最後360期隔離回測','開獎前封存實戰紀錄')},
     'health.html':{
-        'required':('目前資料狀態','開獎後更新與自主修復','兩小時修復期限','自主修復狀態','鐵律守門','五組權重共識','模型健康與公開狀態','自動重新運算','手機同步'),
+        'required':('目前資料狀態','開獎後更新與自主修復','兩小時修復期限','自主修復狀態','鐵律守門','五組權重共識','直接命中前5校準','模型健康與公開狀態','自動重新運算','手機同步'),
         'forbidden':('本期正式預測','最新一期命中結算','最後360期隔離回測','正式方向模型')},
 }
 nav_files=set(page_rules)
