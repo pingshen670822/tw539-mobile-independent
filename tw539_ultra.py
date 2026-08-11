@@ -233,7 +233,7 @@ POLARITY_CONSENSUS_MEMBERS = 5
 POLARITY_WARMUP = 60
 DIRECT_HIT_WINDOW = 360
 DIRECT_HIT_RIDGE = 10.0
-DIRECT_HIT_FRONT5_BLEND = .15
+DIRECT_HIT_FULL_RANK_BLEND = .15
 SINGLE_SPECIALIST_WINDOW = 30
 CATASTROPHIC_TOP9_HIT_LIMIT = 0
 CATASTROPHIC_AVG_RANK_FLOOR = 22.0
@@ -534,15 +534,16 @@ def direct_hit_weights(prefix_matrix: list[list[list[float]]],
     return {key:solved[index]/scale for index,key in enumerate(FORMAL_FEATURE_KEYS)}
 
 
-def reorder_front5_inside_top9(baseline: list[int], direct: list[int],
-                               blend: float = DIRECT_HIT_FRONT5_BLEND) -> list[int]:
-    """鎖定最強1顆與前9集合，只重新排列第2至第9名以改善前5。"""
-    first=baseline[0];base_position={number:index for index,number in enumerate(baseline)}
+def blend_direct_full_ranking(baseline: list[int], direct: list[int], seed: str,
+                              blend: float = DIRECT_HIT_FULL_RANK_BLEND) -> list[int]:
+    """固定最強1顆，其餘38碼融合方向共識與直接命中名次，允許修正錯誤前9集合。"""
+    first=baseline[0]
+    base_position={number:index for index,number in enumerate(baseline)}
     direct_position={number:index for index,number in enumerate(direct)}
-    reordered=sorted(baseline[1:9],key=lambda number:(
-        blend*direct_position[number]+(1-blend)*base_position[number],number))
-    front=[first]+reordered
-    return front+[number for number in baseline if number not in front]
+    score={number:-(blend*direct_position[number]+(1-blend)*base_position[number])
+           for number in range(1,40)}
+    mixed=rank_numbers(score,seed)
+    return [first]+[number for number in mixed if number!=first]
 
 
 def anchor_challenger_wins(challenger: dict, champion: dict) -> bool:
@@ -597,7 +598,7 @@ def adaptive_polarity_backtest(
     tests: int = ROLLING_HOLDOUT_DRAWS,
     selection_window: int = POLARITY_SELECTION_WINDOW,
 ) -> dict:
-    """三十組方向模型逐期競賽，再以直接命中校準重排前9內部，禁止看答案。"""
+    """三十組方向模型逐期競賽，再以直接命中校準融合完整排序，禁止看答案。"""
     def direction_quality(metric: dict) -> float:
         n=metric["samples"]
         return ((metric["top9_avg_hits"]-metric["bottom9_avg_hits"])*n*7
@@ -667,7 +668,8 @@ def adaptive_polarity_backtest(
         direct_weights_now=direct_hit_weights(direct_prefix_matrix,direct_prefix_vector,offset)
         baseline_ranked=fast_case_ranking(cases[offset],signed_consensus)
         direct_ranked=fast_case_ranking(cases[offset],direct_weights_now)
-        unguarded_ranked=reorder_front5_inside_top9(baseline_ranked,direct_ranked)
+        unguarded_ranked=blend_direct_full_ranking(
+            baseline_ranked,direct_ranked,cases[offset]["seed"])
         actual=set(cases[offset]["actual"])
         polarities={key:(1.0 if signed_consensus[key]>0 else (-1.0 if signed_consensus[key]<0 else 0.0))
                     for key in FORMAL_FEATURE_KEYS}
@@ -793,8 +795,8 @@ def adaptive_polarity_backtest(
         direct_hit_raw,features,final_direct_hit_weights,draws[-1]["nums"],draws[-1]["period"],
         state.repeat_exposure,state.repeat_hits)
     direct_hit_next_ranked=rank_numbers(direct_hit_adjusted,draws[-1]["period"])
-    base_next_ranked=reorder_front5_inside_top9(
-        consensus_next_ranked,direct_hit_next_ranked)
+    base_next_ranked=blend_direct_full_ranking(
+        consensus_next_ranked,direct_hit_next_ranked,draws[-1]["period"])
     reconstructed_guard_condition=False
     if previous_base_ranked is not None:
         previous_positions={number:index+1 for index,number in enumerate(previous_base_ranked)}
@@ -815,7 +817,7 @@ def adaptive_polarity_backtest(
     center=(phat+z*z/(2*n))/(1+z*z/n)
     margin=z*math.sqrt(phat*(1-phat)/n+z*z/(4*n*n))/(1+z*z/n)
     result.update({
-        "evaluation":"最後三百六十期逐期只用當時以前資料，五組方向共識鎖定單碼與前九，再以直接命中校準重排前五",
+        "evaluation":"最後三百六十期逐期只用當時以前資料；固定五組方向共識最強單碼，其餘三十八碼以百分之十五直接命中模型融合完整排序",
         "single_rate":round(phat,4),"single_random_baseline":round(p0,4),
         "single_wilson_lower95":round(center-margin,4),"single_release_allowed":center-margin>p0,
         "top5_hit_distribution":{str(k):top5_distribution[k] for k in range(6)},
@@ -831,7 +833,15 @@ def adaptive_polarity_backtest(
         "direct_hit_calibration_enabled":True,
         "direct_hit_window":DIRECT_HIT_WINDOW,
         "direct_hit_ridge":DIRECT_HIT_RIDGE,
-        "direct_hit_front5_blend":DIRECT_HIT_FRONT5_BLEND,
+        "direct_hit_full_rank_blend":DIRECT_HIT_FULL_RANK_BLEND,
+        "direct_hit_full_rank_gate":all((
+            result["top5_avg_hits"]>=direct_baseline_result["top5_avg_hits"],
+            result["top9_avg_hits"]>=direct_baseline_result["top9_avg_hits"],
+            recent_result["top5_avg_hits"]>=direct_baseline_recent_54["top5_avg_hits"],
+            recent_result["top9_avg_hits"]>=direct_baseline_recent_54["top9_avg_hits"],
+            recent_120_result["top5_avg_hits"]>=direct_baseline_recent_120["top5_avg_hits"],
+            recent_120_result["top9_avg_hits"]>=direct_baseline_recent_120["top9_avg_hits"],
+        )),
         "direct_hit_weights":final_direct_hit_weights,
         "direct_hit_baseline":direct_baseline_result,
         "direct_hit_baseline_recent_54":direct_baseline_recent_54,
@@ -873,7 +883,7 @@ def adaptive_polarity_backtest(
         "catastrophic_guard_unguarded_recent_54":unguarded_recent_result,
         "rolling_update_count":n,"rolling_learning_rate":0.0,"rolling_boundary_blend":0.0,
         "rolling_path_sha256":hashlib.sha256(json.dumps(path,ensure_ascii=False,sort_keys=True,separators=(",", ":")).encode()).hexdigest(),
-        "method":"five_member_consensus_with_direct_hit_front5_reorder",
+        "method":"five_member_consensus_with_direct_hit_full_rank_blend",
     })
     return result
 
@@ -1883,7 +1893,8 @@ def main() -> None:
             "direct_hit_calibration_enabled": bt["direct_hit_calibration_enabled"],
             "direct_hit_window": bt["direct_hit_window"],
             "direct_hit_ridge": bt["direct_hit_ridge"],
-            "direct_hit_front5_blend": bt["direct_hit_front5_blend"],
+            "direct_hit_full_rank_blend": bt["direct_hit_full_rank_blend"],
+            "direct_hit_full_rank_gate": bt["direct_hit_full_rank_gate"],
             "direct_hit_weights": bt["direct_hit_weights"],
             "selected_next_strategy": bt["selected_next_strategy"],
             "selected_next_polarities": bt["selected_next_polarities"],
