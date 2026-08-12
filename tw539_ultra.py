@@ -23,6 +23,21 @@ OUT = ROOT / "reports"
 TAIPEI = timezone(timedelta(hours=8))
 
 
+def stable_payload_sha256(value) -> str:
+    """跨作業系統穩定指紋；排除浮點末位實作差異，但保留所有模型決策。"""
+    def canonical(item):
+        if isinstance(item, float):
+            rounded = round(item, 10)
+            return 0.0 if rounded == 0 else rounded
+        if isinstance(item, dict):
+            return {key: canonical(child) for key, child in item.items()}
+        if isinstance(item, (list, tuple)):
+            return [canonical(child) for child in item]
+        return item
+    payload = json.dumps(canonical(value), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
 def load_draws(path: Path) -> list[dict]:
     rows = []
     with path.open("r", encoding="utf-8-sig", newline="") as f:
@@ -234,6 +249,10 @@ POLARITY_WARMUP = 60
 DIRECT_HIT_WINDOW = 360
 DIRECT_HIT_RIDGE = 10.0
 DIRECT_HIT_FULL_RANK_BLEND = .15
+DATA_CHANGE_WINDOW = 720
+DATA_CHANGE_RIDGE = 1.0
+DATA_CHANGE_RANK_BLEND = .50
+DATA_CHANGE_PRESERVE_FRONT = 5
 SINGLE_REPEAT_BREAK_COOLDOWN = 1
 SINGLE_SPECIALIST_WINDOW = 30
 CATASTROPHIC_TOP9_HIT_LIMIT = 0
@@ -547,6 +566,78 @@ def blend_direct_full_ranking(baseline: list[int], direct: list[int], seed: str,
     return [first]+[number for number in mixed if number!=first]
 
 
+def data_change_cases(cases: list[dict]) -> list[dict]:
+    """逐期比較新增開獎前後的四項全歷史特徵；每列答案僅供下一期以後訓練。"""
+    rows=[];previous=None
+    for case in cases:
+        values={}
+        for number in range(1,40):
+            current=[float(case["features"][key][number]) for key in FORMAL_FEATURE_KEYS]
+            delta=([0.0]*len(FORMAL_FEATURE_KEYS) if previous is None else
+                   [float(case["features"][key][number])-float(previous[key][number])
+                    for key in FORMAL_FEATURE_KEYS])
+            values[number]=current+delta
+        rows.append({"values":values,"actual":tuple(case["actual"]),"seed":case["seed"]})
+        previous=case["features"]
+    return rows
+
+
+def data_change_prefix(rows: list[dict]) -> tuple[list[list[list[float]]],list[list[float]]]:
+    size=len(FORMAL_FEATURE_KEYS)*2
+    matrices=[[[0.0]*size for _ in range(size)]];vectors=[[0.0]*size];baseline=5/39
+    for item in rows:
+        matrix=[[0.0]*size for _ in range(size)];vector=[0.0]*size;actual=set(item["actual"])
+        for number,feature in item["values"].items():
+            target=float(number in actual)-baseline
+            for left in range(size):
+                vector[left]+=feature[left]*target/39
+                for right in range(size):
+                    matrix[left][right]+=feature[left]*feature[right]/39
+        matrices.append([[matrices[-1][left][right]+matrix[left][right]
+                          for right in range(size)] for left in range(size)])
+        vectors.append([vectors[-1][left]+vector[left] for left in range(size)])
+    return matrices,vectors
+
+
+def data_change_weights(matrices: list[list[list[float]]], vectors: list[list[float]],
+                        offset: int, window: int = DATA_CHANGE_WINDOW,
+                        ridge: float = DATA_CHANGE_RIDGE) -> list[float]:
+    size=len(FORMAL_FEATURE_KEYS)*2;start=max(0,offset-window);count=max(1,offset-start)
+    matrix=[[((matrices[offset][left][right]-matrices[start][left][right])/count)
+             +(ridge if left==right else 0.0) for right in range(size)] for left in range(size)]
+    vector=[(vectors[offset][left]-vectors[start][left])/count for left in range(size)]
+    solved=solve_linear_system(matrix,vector);scale=sum(abs(value) for value in solved) or 1.0
+    return [value/scale for value in solved]
+
+
+def data_change_ranking(item: dict, weights: list[float]) -> list[int]:
+    score={number:sum(weights[index]*value for index,value in enumerate(feature))
+           for number,feature in item["values"].items()}
+    return rank_numbers(score,item["seed"])
+
+
+def current_data_change_case(features: dict[str,dict[int,float]], previous: dict[str,dict[int,float]],
+                             seed: str) -> dict:
+    values={}
+    for number in range(1,40):
+        current=[float(features[key][number]) for key in FORMAL_FEATURE_KEYS]
+        delta=[float(features[key][number])-float(previous[key][number]) for key in FORMAL_FEATURE_KEYS]
+        values[number]=current+delta
+    return {"values":values,"actual":(),"seed":seed}
+
+
+def blend_data_change_ranking(baseline: list[int], change: list[int], seed: str,
+                              blend: float = DATA_CHANGE_RANK_BLEND,
+                              preserve_front: int = DATA_CHANGE_PRESERVE_FRONT) -> list[int]:
+    """固定保留正式前五，只用資料增量校正第六名以後，避免犧牲1中1與前五。"""
+    base_position={number:index for index,number in enumerate(baseline)}
+    change_position={number:index for index,number in enumerate(change)}
+    score={number:-((1-blend)*base_position[number]+blend*change_position[number])
+           for number in range(1,40)}
+    mixed=rank_numbers(score,seed);fixed=list(baseline[:preserve_front])
+    return fixed+[number for number in mixed if number not in fixed]
+
+
 def apply_single_repeat_break(ranked: list[int], consensus_ranked: list[int],
                               previous_single: int | None,
                               previous_break_applied: bool) -> tuple[list[int],bool,int,int]:
@@ -624,6 +715,8 @@ def adaptive_polarity_backtest(
     case_start=320
     cases=evaluation_cases(draws,case_start,len(draws))
     direct_prefix_matrix,direct_prefix_vector=direct_hit_prefix(cases)
+    change_cases=data_change_cases(cases)
+    change_prefix_matrix,change_prefix_vector=data_change_prefix(change_cases)
     strategies=[]
     for alpha in POLARITY_EWMA_ALPHAS:
         for full_blend in POLARITY_FULL_HISTORY_BLENDS:
@@ -658,7 +751,8 @@ def adaptive_polarity_backtest(
     holdout_start=len(draws)-min(tests,ROLLING_HOLDOUT_DRAWS)
     start_offset=holdout_start-case_start
     selected_metric=_empty_metric();unguarded_metric=_empty_metric();direct_baseline_metric=_empty_metric()
-    top5_distribution=Counter();top9_distribution=Counter();selection_counts=Counter();single_selection_counts=Counter();path=[];selected_rows=[];unguarded_rows=[];direct_baseline_rows=[]
+    data_change_baseline_metric=_empty_metric()
+    top5_distribution=Counter();top9_distribution=Counter();selection_counts=Counter();single_selection_counts=Counter();path=[];selected_rows=[];unguarded_rows=[];direct_baseline_rows=[];data_change_baseline_rows=[]
     catastrophic_trigger_count=0;catastrophic_application_count=0
     catastrophic_trials=[];previous_base_ranked=None;previous_base_actual=None
     previous_published_single=None;previous_single_break_applied=False;single_repeat_break_count=0
@@ -681,6 +775,8 @@ def adaptive_polarity_backtest(
         direct_weights_now=direct_hit_weights(direct_prefix_matrix,direct_prefix_vector,offset)
         baseline_ranked=fast_case_ranking(cases[offset],signed_consensus)
         direct_ranked=fast_case_ranking(cases[offset],direct_weights_now)
+        change_weights_now=data_change_weights(change_prefix_matrix,change_prefix_vector,offset)
+        change_ranked=data_change_ranking(change_cases[offset],change_weights_now)
         unguarded_ranked=blend_direct_full_ranking(
             baseline_ranked,direct_ranked,cases[offset]["seed"])
         actual=set(cases[offset]["actual"])
@@ -692,6 +788,10 @@ def adaptive_polarity_backtest(
         unguarded_rows.append((unguarded_ranked,actual,polarities))
         single_adjusted_ranked,single_break_applied,original_single,replacement_single=apply_single_repeat_break(
             unguarded_ranked,baseline_ranked,previous_published_single,previous_single_break_applied)
+        _add_ranking(data_change_baseline_metric,single_adjusted_ranked,actual)
+        data_change_baseline_rows.append((single_adjusted_ranked,actual,polarities))
+        data_change_adjusted_ranked=blend_data_change_ranking(
+            single_adjusted_ranked,change_ranked,cases[offset]["seed"])
         catastrophic_condition=False
         if previous_base_ranked is not None:
             previous_positions={number:index+1 for index,number in enumerate(previous_base_ranked)}
@@ -699,11 +799,11 @@ def adaptive_polarity_backtest(
             previous_avg_rank=sum(previous_positions[number] for number in previous_base_actual)/5
             catastrophic_condition=(previous_top9_hits<=CATASTROPHIC_TOP9_HIT_LIMIT
                                     and previous_avg_rank>=CATASTROPHIC_AVG_RANK_FLOOR)
-        guarded_candidate=(apply_catastrophic_guard(single_adjusted_ranked,cases[offset]["previous_numbers"])
-                           if catastrophic_condition else list(single_adjusted_ranked))
+        guarded_candidate=(apply_catastrophic_guard(data_change_adjusted_ranked,cases[offset]["previous_numbers"])
+                           if catastrophic_condition else list(data_change_adjusted_ranked))
         catastrophic_apply=(CATASTROPHIC_GUARD_EXECUTION_ENABLED
                             and catastrophic_condition and guard_policy_recommends())
-        ranked=list(guarded_candidate if catastrophic_apply else single_adjusted_ranked)
+        ranked=list(guarded_candidate if catastrophic_apply else data_change_adjusted_ranked)
         catastrophic_trigger_count+=int(catastrophic_condition)
         catastrophic_application_count+=int(catastrophic_apply)
         single=ranked[0]
@@ -720,6 +820,7 @@ def adaptive_polarity_backtest(
                      "single_strategy":single_label,"single":single,"polarities":polarities,
                       "consensus_weights":signed_consensus,
                       "direct_hit_weights":direct_weights_now,
+                      "data_change_weights":change_weights_now,
                       "single_repeat_break_applied":single_break_applied,
                       "single_original":original_single,
                       "single_replacement":replacement_single,
@@ -783,6 +884,9 @@ def adaptive_polarity_backtest(
     direct_baseline_result=_finish_metric(direct_baseline_metric)
     direct_baseline_recent_54=summarize_recent(direct_baseline_rows,54)
     direct_baseline_recent_120=summarize_recent(direct_baseline_rows,120)
+    data_change_baseline_result=_finish_metric(data_change_baseline_metric)
+    data_change_baseline_recent_54=summarize_recent(data_change_baseline_rows,54)
+    data_change_baseline_recent_120=summarize_recent(data_change_baseline_rows,120)
     unguarded_recent_metric=_empty_metric()
     for unguarded_ranked,actual,_ in unguarded_rows[-54:]:
         _add_ranking(unguarded_recent_metric,unguarded_ranked,actual)
@@ -822,6 +926,12 @@ def adaptive_polarity_backtest(
         consensus_next_ranked,direct_hit_next_ranked,draws[-1]["period"])
     simulated_next_ranked,simulated_break_applied,simulated_original,simulated_replacement=apply_single_repeat_break(
         base_next_ranked,consensus_next_ranked,previous_published_single,previous_single_break_applied)
+    final_change_weights=data_change_weights(
+        change_prefix_matrix,change_prefix_vector,len(cases))
+    next_change_case=current_data_change_case(features,cases[-1]["features"],draws[-1]["period"])
+    data_change_next_ranked=data_change_ranking(next_change_case,final_change_weights)
+    change_adjusted_next_ranked=blend_data_change_ranking(
+        simulated_next_ranked,data_change_next_ranked,draws[-1]["period"])
     reconstructed_guard_condition=False
     if previous_base_ranked is not None:
         previous_positions={number:index+1 for index,number in enumerate(previous_base_ranked)}
@@ -833,8 +943,8 @@ def adaptive_polarity_backtest(
     reconstructed_guard_recommended=(CATASTROPHIC_GUARD_EXECUTION_ENABLED
                                      and counterfactual_guard_preference)
     reconstructed_guard=reconstructed_guard_condition and reconstructed_guard_recommended
-    next_ranked=(apply_catastrophic_guard(simulated_next_ranked,draws[-1]["nums"])
-                 if reconstructed_guard else list(simulated_next_ranked))
+    next_ranked=(apply_catastrophic_guard(change_adjusted_next_ranked,draws[-1]["nums"])
+                 if reconstructed_guard else list(change_adjusted_next_ranked))
     ordered_values=sorted(adjusted.values(),reverse=True)
     adjusted={number:ordered_values[index] for index,number in enumerate(next_ranked)}
     single_hits=int(selected_metric["single_hits"])
@@ -842,7 +952,7 @@ def adaptive_polarity_backtest(
     center=(phat+z*z/(2*n))/(1+z*z/n)
     margin=z*math.sqrt(phat*(1-phat)/n+z*z/(4*n*n))/(1+z*z/n)
     result.update({
-        "evaluation":"最後三百六十期逐期只用當時以前資料；其餘三十八碼以百分之十五直接命中模型融合完整排序，重複單碼依隔離回測冷卻並改採共識次選",
+        "evaluation":"最後三百六十期逐期只用當時以前資料；直接命中校準完整排序，重複單碼依隔離回測冷卻，資料增量模型固定前五後校正前九邊界",
         "single_rate":round(phat,4),"single_random_baseline":round(p0,4),
         "single_wilson_lower95":round(center-margin,4),"single_release_allowed":center-margin>p0,
         "top5_hit_distribution":{str(k):top5_distribution[k] for k in range(6)},
@@ -873,6 +983,29 @@ def adaptive_polarity_backtest(
         "direct_hit_baseline_recent_120":direct_baseline_recent_120,
         "direct_hit_consensus_next_ranked":consensus_next_ranked,
         "direct_hit_next_ranked":direct_hit_next_ranked,
+        "data_change_enabled":True,
+        "data_change_window":DATA_CHANGE_WINDOW,
+        "data_change_ridge":DATA_CHANGE_RIDGE,
+        "data_change_rank_blend":DATA_CHANGE_RANK_BLEND,
+        "data_change_preserve_front":DATA_CHANGE_PRESERVE_FRONT,
+        "data_change_features":[f"current_{key}" for key in FORMAL_FEATURE_KEYS]
+                              +[f"delta_{key}" for key in FORMAL_FEATURE_KEYS],
+        "data_change_weights":final_change_weights,
+        "data_change_baseline":data_change_baseline_result,
+        "data_change_baseline_recent_54":data_change_baseline_recent_54,
+        "data_change_baseline_recent_120":data_change_baseline_recent_120,
+        "data_change_gate":all((
+            result["single_hits"]==data_change_baseline_result["single_hits"],
+            result["top5_avg_hits"]==data_change_baseline_result["top5_avg_hits"],
+            result["top9_avg_hits"]>data_change_baseline_result["top9_avg_hits"],
+            recent_result["single_hits"]==data_change_baseline_recent_54["single_hits"],
+            recent_result["top5_avg_hits"]==data_change_baseline_recent_54["top5_avg_hits"],
+            recent_result["top9_avg_hits"]>data_change_baseline_recent_54["top9_avg_hits"],
+            recent_120_result["single_hits"]==data_change_baseline_recent_120["single_hits"],
+            recent_120_result["top5_avg_hits"]==data_change_baseline_recent_120["top5_avg_hits"],
+            recent_120_result["top9_avg_hits"]>data_change_baseline_recent_120["top9_avg_hits"],
+        )),
+        "data_change_next_ranked":data_change_next_ranked,
         "strategy_selection_counts":dict(selection_counts),
         "single_specialist_selection_counts":dict(single_selection_counts),
         "single_specialist_window":SINGLE_SPECIALIST_WINDOW,
@@ -905,7 +1038,8 @@ def adaptive_polarity_backtest(
         "selected_next_polarities":final_polarities,"next_signed_weights":signed_weights,
         "next_ranked":next_ranked,"next_score":adjusted,"next_raw_score":raw,"next_repeat_audit":repeat_audit,
         "next_pre_single_break_ranked":base_next_ranked,
-        "next_unguarded_ranked":simulated_next_ranked,
+        "next_after_single_before_data_change":simulated_next_ranked,
+        "next_unguarded_ranked":change_adjusted_next_ranked,
         "single_repeat_break_current":{"applied":simulated_break_applied,
                                        "original":simulated_original,
                                        "replacement":simulated_replacement,
@@ -927,8 +1061,8 @@ def adaptive_polarity_backtest(
         "catastrophic_guard_unguarded":unguarded_result,
         "catastrophic_guard_unguarded_recent_54":unguarded_recent_result,
         "rolling_update_count":n,"rolling_learning_rate":0.0,"rolling_boundary_blend":0.0,
-        "rolling_path_sha256":hashlib.sha256(json.dumps(path,ensure_ascii=False,sort_keys=True,separators=(",", ":")).encode()).hexdigest(),
-        "method":"five_member_consensus_with_direct_hit_full_rank_and_single_repeat_break",
+        "rolling_path_sha256":stable_payload_sha256(path),
+        "method":"five_member_consensus_with_direct_hit_single_repeat_and_data_change_front9",
     })
     return result
 
@@ -1317,7 +1451,7 @@ def rolling_direction_metrics(draws: list[dict], anchor_weights: dict[str,float]
         "rolling_update_count":len(path),
         "rolling_learning_rate":learning_rate,
         "rolling_boundary_blend":boundary_blend,
-        "rolling_path_sha256":hashlib.sha256(json.dumps(path,ensure_ascii=False,sort_keys=True,separators=(",", ":")).encode()).hexdigest(),
+        "rolling_path_sha256":stable_payload_sha256(path),
         "method":"pre_draw_prediction_then_post_draw_top9_boundary_update",
     })
     if fold_count:
@@ -1387,14 +1521,7 @@ def rolling_ensemble_direction_metrics(
             "rolling_update_count": len(path),
             "rolling_learning_rate": learning_rate,
             "rolling_boundary_blend": boundary_blend,
-            "rolling_path_sha256": hashlib.sha256(
-                json.dumps(
-                    path,
-                    ensure_ascii=False,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ).encode()
-            ).hexdigest(),
+            "rolling_path_sha256": stable_payload_sha256(path),
             "method": "three_balanced_models_borda_then_post_draw_top9_boundary_update",
         }
     )
@@ -1591,7 +1718,7 @@ def backtest(draws: list[dict], weights: dict[str, float] | list[dict[str, float
         "rolling_update_count": len(path),
         "rolling_learning_rate": learning_rate,
         "rolling_boundary_blend": boundary_blend,
-        "rolling_path_sha256": hashlib.sha256(json.dumps(path,ensure_ascii=False,sort_keys=True,separators=(",", ":")).encode()).hexdigest(),
+        "rolling_path_sha256": stable_payload_sha256(path),
         "method": "three_balanced_models_borda_then_post_draw_top9_boundary_update" if ensemble_mode else "pre_draw_prediction_then_post_draw_top9_boundary_update",
     }
 
@@ -1825,11 +1952,13 @@ def main() -> None:
             live_pre_break,bt["direct_hit_consensus_next_ranked"],live_previous_single,live_previous_applied)
         live_source="開獎前逐日封存預測"
     else:
-        live_ranked=list(bt["next_unguarded_ranked"])
+        live_ranked=list(bt.get("next_after_single_before_data_change") or bt["next_unguarded_ranked"])
         simulated=bt.get("single_repeat_break_current") or {}
         live_applied=bool(simulated.get("applied"));live_original=int(simulated.get("original") or live_ranked[0])
         live_replacement=int(simulated.get("replacement") or live_ranked[0]);live_previous_single=None
         live_previous_applied=False;live_source="逐期隔離重演"
+    live_ranked=blend_data_change_ranking(
+        live_ranked,bt["data_change_next_ranked"],draws[-1]["period"])
     bt["next_unguarded_ranked"]=live_ranked
     bt["single_repeat_break_current"]={
         "applied":live_applied,"original":live_original,"replacement":live_replacement,
@@ -1976,6 +2105,13 @@ def main() -> None:
             "direct_hit_full_rank_blend": bt["direct_hit_full_rank_blend"],
             "direct_hit_full_rank_gate": bt["direct_hit_full_rank_gate"],
             "direct_hit_weights": bt["direct_hit_weights"],
+            "data_change_enabled": bt["data_change_enabled"],
+            "data_change_window": bt["data_change_window"],
+            "data_change_ridge": bt["data_change_ridge"],
+            "data_change_rank_blend": bt["data_change_rank_blend"],
+            "data_change_preserve_front": bt["data_change_preserve_front"],
+            "data_change_gate": bt["data_change_gate"],
+            "data_change_weights": bt["data_change_weights"],
             "selected_next_strategy": bt["selected_next_strategy"],
             "selected_next_polarities": bt["selected_next_polarities"],
             "single_specialist_window": bt["single_specialist_window"],
