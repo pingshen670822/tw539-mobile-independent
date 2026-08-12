@@ -23,12 +23,14 @@ checks[ROOT/'tw539_ultra.py'].remove('thirty_polarity_models_360_draw_five_membe
 checks[ROOT/'tw539_ultra.py'].extend(['DIRECT_HIT_WINDOW = 360','DIRECT_HIT_RIDGE = 10.0',
                                      'DIRECT_HIT_FULL_RANK_BLEND = .15','direct_hit_prefix',
                                      'blend_direct_full_ranking','direct_hit_full_rank_gate',
-                                     'five_member_consensus_with_direct_hit_full_rank_blend'])
-checks[ROOT/'report_pages.py'].extend(['直接命中全排序校準','前9集合允許修正'])
+                                     'SINGLE_REPEAT_BREAK_COOLDOWN = 1','apply_single_repeat_break',
+                                     'single_repeat_break_gate',
+                                     'five_member_consensus_with_direct_hit_full_rank_and_single_repeat_break'])
+checks[ROOT/'report_pages.py'].extend(['直接命中全排序校準','前9集合允許修正','單碼重複冷卻'])
 checks[ROOT/'system_audit.py'].remove('最新開獎錯誤沒有觸發三十組方向模型五組權重共識')
-checks[ROOT/'system_audit.py'].append('最新開獎錯誤沒有觸發五組方向共識與直接命中全排序校準')
+checks[ROOT/'system_audit.py'].append('最新開獎錯誤沒有觸發五組方向共識、直接命中全排序與單碼重複冷卻')
 checks[ROOT/'watchdog.py'].remove('三十組方向模型、三百六十期選擇窗與五組權重共識')
-checks[ROOT/'watchdog.py'].extend(['五組方向共識與直接命中全排序校準','直接命中全排序校準'])
+checks[ROOT/'watchdog.py'].extend(['五組方向共識、直接命中全排序與單碼重複冷卻','直接命中全排序校準','單碼重複冷卻'])
 parser=argparse.ArgumentParser()
 parser.add_argument('--structure-only',action='store_true')
 args=parser.parse_args()

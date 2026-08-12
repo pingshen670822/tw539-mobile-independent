@@ -234,6 +234,7 @@ POLARITY_WARMUP = 60
 DIRECT_HIT_WINDOW = 360
 DIRECT_HIT_RIDGE = 10.0
 DIRECT_HIT_FULL_RANK_BLEND = .15
+SINGLE_REPEAT_BREAK_COOLDOWN = 1
 SINGLE_SPECIALIST_WINDOW = 30
 CATASTROPHIC_TOP9_HIT_LIMIT = 0
 CATASTROPHIC_AVG_RANK_FLOOR = 22.0
@@ -546,6 +547,17 @@ def blend_direct_full_ranking(baseline: list[int], direct: list[int], seed: str,
     return [first]+[number for number in mixed if number!=first]
 
 
+def apply_single_repeat_break(ranked: list[int], consensus_ranked: list[int],
+                              previous_single: int | None,
+                              previous_break_applied: bool) -> tuple[list[int],bool,int,int]:
+    """第一名與上一期相同且上一期未曾切換時，改採共識次選；只讀取開獎前狀態。"""
+    original=ranked[0]
+    if previous_single is None or original!=previous_single or previous_break_applied:
+        return list(ranked),False,original,original
+    replacement=next(number for number in consensus_ranked if number!=original)
+    return [replacement]+[number for number in ranked if number!=replacement],True,original,replacement
+
+
 def anchor_challenger_wins(challenger: dict, champion: dict) -> bool:
     """新錨定必須在長短區間全面不差且至少三項明確改善，才准取代穩定冠軍。"""
     recent_new=challenger.get("recent_54") or {};recent_old=champion.get("recent_54") or {}
@@ -649,6 +661,7 @@ def adaptive_polarity_backtest(
     top5_distribution=Counter();top9_distribution=Counter();selection_counts=Counter();single_selection_counts=Counter();path=[];selected_rows=[];unguarded_rows=[];direct_baseline_rows=[]
     catastrophic_trigger_count=0;catastrophic_application_count=0
     catastrophic_trials=[];previous_base_ranked=None;previous_base_actual=None
+    previous_published_single=None;previous_single_break_applied=False;single_repeat_break_count=0
     def guard_policy_recommends() -> bool:
         recent=catastrophic_trials[-CATASTROPHIC_POLICY_WINDOW:]
         if len(recent)<CATASTROPHIC_POLICY_MIN_TRIALS:
@@ -677,6 +690,8 @@ def adaptive_polarity_backtest(
         direct_baseline_rows.append((baseline_ranked,actual,polarities))
         _add_ranking(unguarded_metric,unguarded_ranked,actual)
         unguarded_rows.append((unguarded_ranked,actual,polarities))
+        single_adjusted_ranked,single_break_applied,original_single,replacement_single=apply_single_repeat_break(
+            unguarded_ranked,baseline_ranked,previous_published_single,previous_single_break_applied)
         catastrophic_condition=False
         if previous_base_ranked is not None:
             previous_positions={number:index+1 for index,number in enumerate(previous_base_ranked)}
@@ -684,11 +699,11 @@ def adaptive_polarity_backtest(
             previous_avg_rank=sum(previous_positions[number] for number in previous_base_actual)/5
             catastrophic_condition=(previous_top9_hits<=CATASTROPHIC_TOP9_HIT_LIMIT
                                     and previous_avg_rank>=CATASTROPHIC_AVG_RANK_FLOOR)
-        guarded_candidate=(apply_catastrophic_guard(unguarded_ranked,cases[offset]["previous_numbers"])
-                           if catastrophic_condition else list(unguarded_ranked))
+        guarded_candidate=(apply_catastrophic_guard(single_adjusted_ranked,cases[offset]["previous_numbers"])
+                           if catastrophic_condition else list(single_adjusted_ranked))
         catastrophic_apply=(CATASTROPHIC_GUARD_EXECUTION_ENABLED
                             and catastrophic_condition and guard_policy_recommends())
-        ranked=list(guarded_candidate if catastrophic_apply else unguarded_ranked)
+        ranked=list(guarded_candidate if catastrophic_apply else single_adjusted_ranked)
         catastrophic_trigger_count+=int(catastrophic_condition)
         catastrophic_application_count+=int(catastrophic_apply)
         single=ranked[0]
@@ -698,14 +713,18 @@ def adaptive_polarity_backtest(
         top9_distribution[len(actual.intersection(ranked[:9]))]+=1
         label="+".join(f"{member['alpha']:.3f}/{member['full_history_blend']:.2f}" for member in chosen_members)
         selection_counts[label]+=1
-        single_label="穩定守門：不啟用短窗重排"
+        single_label=("重複單碼冷卻：改採共識次選" if single_break_applied
+                      else "五組方向共識第一名")
         single_selection_counts[single_label]+=1
         path.append({"period":draws[draw_index]["period"],"strategy_members":label,
                      "single_strategy":single_label,"single":single,"polarities":polarities,
-                     "consensus_weights":signed_consensus,
-                     "direct_hit_weights":direct_weights_now,
-                     "catastrophic_condition":catastrophic_condition,
-                     "catastrophic_guard_applied":catastrophic_apply})
+                      "consensus_weights":signed_consensus,
+                      "direct_hit_weights":direct_weights_now,
+                      "single_repeat_break_applied":single_break_applied,
+                      "single_original":original_single,
+                      "single_replacement":replacement_single,
+                      "catastrophic_condition":catastrophic_condition,
+                      "catastrophic_guard_applied":catastrophic_apply})
         if catastrophic_condition:
             base_positions={number:index+1 for index,number in enumerate(unguarded_ranked)}
             guard_positions={number:index+1 for index,number in enumerate(guarded_candidate)}
@@ -718,6 +737,9 @@ def adaptive_polarity_backtest(
                 "guard_rank_sum":sum(guard_positions[number] for number in actual),
             })
         previous_base_ranked=list(unguarded_ranked);previous_base_actual=set(actual)
+        previous_published_single=ranked[0]
+        previous_single_break_applied=single_break_applied
+        single_repeat_break_count+=int(single_break_applied)
     result=_finish_metric(selected_metric)
     result["single_direction_valid"]=result["single_hits"]>result["bottom1_hits"]
     result["front_ranking_direction_valid"]=(
@@ -766,6 +788,7 @@ def adaptive_polarity_backtest(
         _add_ranking(unguarded_recent_metric,unguarded_ranked,actual)
     unguarded_recent_result=_finish_metric(unguarded_recent_metric)
     unguarded_result=_finish_metric(unguarded_metric)
+    unguarded_recent_120_result=summarize_recent(unguarded_rows,120)
     final_offset=len(cases)
     final_window_start=max(0,final_offset-selection_window)
     def final_strategy_key(strategy):
@@ -797,6 +820,8 @@ def adaptive_polarity_backtest(
     direct_hit_next_ranked=rank_numbers(direct_hit_adjusted,draws[-1]["period"])
     base_next_ranked=blend_direct_full_ranking(
         consensus_next_ranked,direct_hit_next_ranked,draws[-1]["period"])
+    simulated_next_ranked,simulated_break_applied,simulated_original,simulated_replacement=apply_single_repeat_break(
+        base_next_ranked,consensus_next_ranked,previous_published_single,previous_single_break_applied)
     reconstructed_guard_condition=False
     if previous_base_ranked is not None:
         previous_positions={number:index+1 for index,number in enumerate(previous_base_ranked)}
@@ -808,8 +833,8 @@ def adaptive_polarity_backtest(
     reconstructed_guard_recommended=(CATASTROPHIC_GUARD_EXECUTION_ENABLED
                                      and counterfactual_guard_preference)
     reconstructed_guard=reconstructed_guard_condition and reconstructed_guard_recommended
-    next_ranked=(apply_catastrophic_guard(base_next_ranked,draws[-1]["nums"])
-                 if reconstructed_guard else list(base_next_ranked))
+    next_ranked=(apply_catastrophic_guard(simulated_next_ranked,draws[-1]["nums"])
+                 if reconstructed_guard else list(simulated_next_ranked))
     ordered_values=sorted(adjusted.values(),reverse=True)
     adjusted={number:ordered_values[index] for index,number in enumerate(next_ranked)}
     single_hits=int(selected_metric["single_hits"])
@@ -817,7 +842,7 @@ def adaptive_polarity_backtest(
     center=(phat+z*z/(2*n))/(1+z*z/n)
     margin=z*math.sqrt(phat*(1-phat)/n+z*z/(4*n*n))/(1+z*z/n)
     result.update({
-        "evaluation":"最後三百六十期逐期只用當時以前資料；固定五組方向共識最強單碼，其餘三十八碼以百分之十五直接命中模型融合完整排序",
+        "evaluation":"最後三百六十期逐期只用當時以前資料；其餘三十八碼以百分之十五直接命中模型融合完整排序，重複單碼依隔離回測冷卻並改採共識次選",
         "single_rate":round(phat,4),"single_random_baseline":round(p0,4),
         "single_wilson_lower95":round(center-margin,4),"single_release_allowed":center-margin>p0,
         "top5_hit_distribution":{str(k):top5_distribution[k] for k in range(6)},
@@ -851,20 +876,40 @@ def adaptive_polarity_backtest(
         "strategy_selection_counts":dict(selection_counts),
         "single_specialist_selection_counts":dict(single_selection_counts),
         "single_specialist_window":SINGLE_SPECIALIST_WINDOW,
-        "single_specialist_baseline_hits":single_hits,
+        "single_specialist_baseline_hits":int(unguarded_result["single_hits"]),
         "single_specialist_hits":single_hits,
-        "single_specialist_lift":0,
+        "single_specialist_lift":single_hits-int(unguarded_result["single_hits"]),
         "single_specialist_enabled":False,
         "single_specialist_method":"disabled_by_cross_window_stability_gate",
+        "single_repeat_break_enabled":True,
+        "single_repeat_break_cooldown":SINGLE_REPEAT_BREAK_COOLDOWN,
+        "single_repeat_break_method":"repeat_once_then_consensus_second_with_one_draw_cooldown",
+        "single_repeat_break_application_count":single_repeat_break_count,
+        "single_repeat_break_baseline_hits":int(unguarded_result["single_hits"]),
+        "single_repeat_break_hits":single_hits,
+        "single_repeat_break_recent_54_baseline_hits":int(unguarded_recent_result["single_hits"]),
+        "single_repeat_break_recent_54_hits":int(recent_result["single_hits"]),
+        "single_repeat_break_recent_120_baseline_hits":int(unguarded_recent_120_result["single_hits"]),
+        "single_repeat_break_recent_120_hits":int(recent_120_result["single_hits"]),
+        "single_repeat_break_gate":all((
+            single_hits>=unguarded_result["single_hits"],
+            recent_result["single_hits"]>=unguarded_recent_result["single_hits"],
+            recent_120_result["single_hits"]>=unguarded_recent_120_result["single_hits"],
+        )),
         "selected_next_strategy":{"method":"five_member_signed_weight_consensus",
                                   "members":[{"ewma_alpha":member["alpha"],"full_history_blend":member["full_history_blend"]}
                                              for member in chosen_members]},
-        "selected_next_single_strategy":{"mode":"same_as_guarded_main_ranking"},
+        "selected_next_single_strategy":{"mode":"repeat_break_with_consensus_second","cooldown":SINGLE_REPEAT_BREAK_COOLDOWN},
         "selected_next_single_polarities":final_polarities,
         "selected_next_single_weights":signed_weights,
         "selected_next_polarities":final_polarities,"next_signed_weights":signed_weights,
         "next_ranked":next_ranked,"next_score":adjusted,"next_raw_score":raw,"next_repeat_audit":repeat_audit,
-        "next_unguarded_ranked":base_next_ranked,
+        "next_pre_single_break_ranked":base_next_ranked,
+        "next_unguarded_ranked":simulated_next_ranked,
+        "single_repeat_break_current":{"applied":simulated_break_applied,
+                                       "original":simulated_original,
+                                       "replacement":simulated_replacement,
+                                       "source":"逐期隔離重演"},
         "catastrophic_guard_enabled":True,
         "catastrophic_guard_top9_hit_limit":CATASTROPHIC_TOP9_HIT_LIMIT,
         "catastrophic_guard_avg_rank_floor":CATASTROPHIC_AVG_RANK_FLOOR,
@@ -883,7 +928,7 @@ def adaptive_polarity_backtest(
         "catastrophic_guard_unguarded_recent_54":unguarded_recent_result,
         "rolling_update_count":n,"rolling_learning_rate":0.0,"rolling_boundary_blend":0.0,
         "rolling_path_sha256":hashlib.sha256(json.dumps(path,ensure_ascii=False,sort_keys=True,separators=(",", ":")).encode()).hexdigest(),
-        "method":"five_member_consensus_with_direct_hit_full_rank_blend",
+        "method":"five_member_consensus_with_direct_hit_full_rank_and_single_repeat_break",
     })
     return result
 
@@ -1746,6 +1791,7 @@ def main() -> None:
     # 下一期是否啟動災難失準保護，以已公開且開獎後封存的實戰檢討為最高優先。
     guard_condition=bool(bt.get("catastrophic_guard_current_condition_reconstructed"))
     guard_source="逐期隔離重演"
+    latest_review=None
     settlement_file=OUT/"published-settlements.jsonl"
     if settlement_file.exists():
         locked=[]
@@ -1759,6 +1805,42 @@ def main() -> None:
             guard_condition=(len(latest_review.get("top9_hits") or [])<=CATASTROPHIC_TOP9_HIT_LIMIT
                             and float(latest_review.get("average_actual_rank") or 0)>=CATASTROPHIC_AVG_RANK_FLOOR)
             guard_source="開獎前封存實戰檢討"
+    target = datetime.strptime(draws[-1]["date"], "%Y-%m-%d").date() + timedelta(days=1)
+    while target.weekday() == 6: target += timedelta(days=1)
+    history_file=OUT/"prediction-history.jsonl"
+    previous_prediction=None
+    if history_file.exists():
+        history=[]
+        for line in history_file.read_text(encoding="utf-8").splitlines():
+            try: history.append(json.loads(line))
+            except json.JSONDecodeError: continue
+        prior=[item for item in history if str(item.get("target_draw_date") or "")<target.isoformat()
+               and item.get("single_published") is not None]
+        if prior: previous_prediction=sorted(prior,key=lambda item:item.get("target_draw_date") or "")[-1]
+    if previous_prediction:
+        live_previous_single=int(previous_prediction["single_published"])
+        live_previous_applied=bool((previous_prediction.get("single_repeat_break") or {}).get("applied"))
+        live_pre_break=list(bt.get("next_pre_single_break_ranked") or bt["next_unguarded_ranked"])
+        live_ranked,live_applied,live_original,live_replacement=apply_single_repeat_break(
+            live_pre_break,bt["direct_hit_consensus_next_ranked"],live_previous_single,live_previous_applied)
+        live_source="開獎前逐日封存預測"
+    else:
+        live_ranked=list(bt["next_unguarded_ranked"])
+        simulated=bt.get("single_repeat_break_current") or {}
+        live_applied=bool(simulated.get("applied"));live_original=int(simulated.get("original") or live_ranked[0])
+        live_replacement=int(simulated.get("replacement") or live_ranked[0]);live_previous_single=None
+        live_previous_applied=False;live_source="逐期隔離重演"
+    bt["next_unguarded_ranked"]=live_ranked
+    bt["single_repeat_break_current"]={
+        "applied":live_applied,"original":live_original,"replacement":live_replacement,
+        "previous_single":live_previous_single,"previous_break_applied":live_previous_applied,
+        "previous_single_missed":bool(latest_review is not None and latest_review.get("single_hit") is False),
+        "rolling_review_consumed":bool(latest_review is not None),"source":live_source,
+    }
+    bt["selected_next_single_strategy"]={
+        "mode":"repeat_break_with_consensus_second","cooldown":SINGLE_REPEAT_BREAK_COOLDOWN,
+        "live_state_source":live_source,"applied":live_applied,
+    }
     guard_trigger=guard_condition and bool(bt.get("catastrophic_guard_policy_recommends"))
     unguarded_next=list(bt["next_unguarded_ranked"])
     guarded_next=(apply_catastrophic_guard(unguarded_next,draws[-1]["nums"])
@@ -1809,7 +1891,7 @@ def main() -> None:
         })
     consensus_votes=sum(item["supports"] for item in module_consensus)
     strong_conditions={
-        "單碼短窗重排未造成拖累":bt.get("single_specialist_hits",0)>=bt.get("single_specialist_baseline_hits",0),
+        "重複單碼冷卻回測未造成拖累":bool(bt.get("single_repeat_break_gate")),
         "正式排序方向通過":bool(bt.get("ranking_direction_valid")),
         "最近五十四期方向通過":bool((bt.get("recent_54") or {}).get("ranking_direction_valid")),
         "前九邊界通過":bool(bt.get("boundary_control_valid")),
@@ -1825,8 +1907,6 @@ def main() -> None:
     number_diagnostics = build_number_diagnostics(ranked, sc, raw_sc, current_features, weights)
     tickets = make_tickets(sc, max(1, min(a.tickets, 30)), draws[-1]["period"], set(ranked[-15:]))
     OUT.mkdir(parents=True, exist_ok=True)
-    target = datetime.strptime(draws[-1]["date"], "%Y-%m-%d").date() + timedelta(days=1)
-    while target.weekday() == 6: target += timedelta(days=1)
     history_payload="|".join(f"{x['period']}:{x['date']}:{','.join(map(str,x['nums']))}" for x in draws)
     history_hash=hashlib.sha256(history_payload.encode()).hexdigest()
     seal_payload = prediction_seal_payload(
@@ -1902,6 +1982,11 @@ def main() -> None:
             "selected_next_single_strategy": bt["selected_next_single_strategy"],
             "selected_next_single_weights": bt["selected_next_single_weights"],
             "single_specialist_enabled": bt["single_specialist_enabled"],
+            "single_repeat_break_enabled": bt["single_repeat_break_enabled"],
+            "single_repeat_break_gate": bt["single_repeat_break_gate"],
+            "single_repeat_break_method": bt["single_repeat_break_method"],
+            "single_repeat_break_application_count": bt["single_repeat_break_application_count"],
+            "single_repeat_break_current": bt["single_repeat_break_current"],
             "catastrophic_guard_enabled": bt["catastrophic_guard_enabled"],
             "catastrophic_guard_application_count": bt["catastrophic_guard_application_count"],
             "catastrophic_guard_policy_window": bt["catastrophic_guard_policy_window"],
@@ -1933,6 +2018,7 @@ def main() -> None:
         "repeat_qualification": repeat_audit,
         "single_candidate": ranked[0],
         "single_published": ranked[0],
+        "single_repeat_break": bt["single_repeat_break_current"],
         "single_selection_evidence": number_diagnostics[0],
         "single_recommendation": {
             "label": bt["single_confidence_label"],

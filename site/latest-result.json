@@ -1,20 +1,20 @@
 {
-  "generated_at": "2026-08-12T00:12:52+08:00",
+  "generated_at": "2026-08-12T09:40:27+08:00",
   "based_on_period": "115000194",
   "target_draw_date": "2026-08-12",
-  "recalculation_fingerprint": "9caf121b7235ee28",
+  "recalculation_fingerprint": "7a1d1fc081ff8d71",
   "pre_draw_seal": {
     "algorithm": "sha256",
-    "sha256": "9caf121b7235ee28dbdeb32b46dd6fdcac1a6e6a2b821b957567dd73616726a5",
+    "sha256": "7a1d1fc081ff8d710c4e9b8a575da58f484235036ff9a6a64854414930676b51",
     "sealed_payload": {
       "based_on_period": "115000194",
       "target_draw_date": "2026-08-12",
       "history_database_sha256": "caeb5470c999822f0afc367c53a42eaea2be55d86589458b005b9616be09a8d0",
       "ranked_all": [
+        27,
         15,
         14,
         34,
-        27,
         38,
         10,
         20,
@@ -53,11 +53,31 @@
       ],
       "number_diagnostics": [
         {
-          "number": 15,
+          "number": 27,
           "rank": 1,
           "final_score": 1.358976769632,
-          "raw_score": 1.358976769632,
+          "raw_score": 0.965870941597,
           "relative_index": 100.0,
+          "feature_values": {
+            "full_frequency_balance": -0.381117722,
+            "full_transition_correction": -1.725399917,
+            "full_signature_correction": -0.068066596,
+            "full_overdue_correction": -1.504861938
+          },
+          "weighted_contributions": {
+            "full_frequency_balance": -0.008661766,
+            "full_transition_correction": 0.313709076,
+            "full_signature_correction": -0.023204521,
+            "full_overdue_correction": 0.684028154
+          },
+          "contribution_total": 0.965870943
+        },
+        {
+          "number": 15,
+          "rank": 2,
+          "final_score": 0.965870941595,
+          "raw_score": 1.358976769632,
+          "relative_index": 81.534766,
           "feature_values": {
             "full_frequency_balance": 0.45517482,
             "full_transition_correction": 0.17973643,
@@ -74,10 +94,10 @@
         },
         {
           "number": 14,
-          "rank": 2,
-          "final_score": 0.965870941595,
+          "rank": 3,
+          "final_score": 0.940957175256,
           "raw_score": 0.709592018555,
-          "relative_index": 81.534766,
+          "relative_index": 80.364499,
           "feature_values": {
             "full_frequency_balance": 0.963847603,
             "full_transition_correction": 0.445107465,
@@ -94,10 +114,10 @@
         },
         {
           "number": 34,
-          "rank": 3,
-          "final_score": 0.940957175256,
+          "rank": 4,
+          "final_score": 0.866302786785,
           "raw_score": 0.94095717526,
-          "relative_index": 80.364499,
+          "relative_index": 76.857783,
           "feature_values": {
             "full_frequency_balance": -0.919103852,
             "full_transition_correction": 0.736324957,
@@ -111,26 +131,6 @@
             "full_overdue_correction": 0.937932418
           },
           "contribution_total": 0.940957175
-        },
-        {
-          "number": 27,
-          "rank": 4,
-          "final_score": 0.866302786785,
-          "raw_score": 0.965870941597,
-          "relative_index": 76.857783,
-          "feature_values": {
-            "full_frequency_balance": -0.381117722,
-            "full_transition_correction": -1.725399917,
-            "full_signature_correction": -0.068066596,
-            "full_overdue_correction": -1.504861938
-          },
-          "weighted_contributions": {
-            "full_frequency_balance": -0.008661766,
-            "full_transition_correction": 0.313709076,
-            "full_signature_correction": -0.023204521,
-            "full_overdue_correction": 0.684028154
-          },
-          "contribution_total": 0.965870943
         },
         {
           "number": 38,
@@ -881,7 +881,7 @@
         "samples": 360
       },
       "adaptive_polarity": {
-        "method": "five_member_consensus_with_direct_hit_full_rank_blend",
+        "method": "five_member_consensus_with_direct_hit_full_rank_and_single_repeat_break",
         "strategy_candidate_count": 30,
         "selection_window": 360,
         "consensus_member_count": 5,
@@ -916,7 +916,7 @@
           "full_signature_correction": 1.0,
           "full_overdue_correction": -1.0
         },
-        "path_sha256": "f296dd291d4499bf439fb5f0c3e9d220082bcaa0f5103dfef5b456ea33e06507",
+        "path_sha256": "c99763b7a0ac762dc3bdd5ab44ffbfc36f01bfa577ff6737fb5856fe4666a822",
         "anchor_stability": {
           "selected": "穩定冠軍",
           "challenger_allowed": false,
@@ -940,17 +940,17 @@
             "full_overdue_correction": 0.3333333333333333
           },
           "champion_metrics": {
-            "last360_single_hits": 57,
+            "last360_single_hits": 58,
             "last360_top5_avg_hits": 0.725,
             "last360_top9_avg_hits": 1.2028,
             "last360_direction_valid": true,
-            "recent54_single_hits": 9,
+            "recent54_single_hits": 10,
             "recent54_top5_avg_hits": 0.7778,
             "recent54_top9_avg_hits": 1.1852,
             "recent54_direction_valid": true
           },
           "challenger_metrics": {
-            "last360_single_hits": 47,
+            "last360_single_hits": 46,
             "last360_top5_avg_hits": 0.6528,
             "last360_top9_avg_hits": 1.1389,
             "last360_direction_valid": false,
@@ -7610,7 +7610,7 @@
     },
     "production_ensemble_after_rolling": [],
     "rolling_update_count": 360,
-    "rolling_path_sha256": "f296dd291d4499bf439fb5f0c3e9d220082bcaa0f5103dfef5b456ea33e06507",
+    "rolling_path_sha256": "c99763b7a0ac762dc3bdd5ab44ffbfc36f01bfa577ff6737fb5856fe4666a822",
     "learning_rate_selection": {
       "method": "pre_holdout_three_model_thirty_pair_three_fold_selection",
       "candidate_count": 30,
@@ -10442,17 +10442,17 @@
         "full_overdue_correction": 0.3333333333333333
       },
       "champion_metrics": {
-        "last360_single_hits": 57,
+        "last360_single_hits": 58,
         "last360_top5_avg_hits": 0.725,
         "last360_top9_avg_hits": 1.2028,
         "last360_direction_valid": true,
-        "recent54_single_hits": 9,
+        "recent54_single_hits": 10,
         "recent54_top5_avg_hits": 0.7778,
         "recent54_top9_avg_hits": 1.1852,
         "recent54_direction_valid": true
       },
       "challenger_metrics": {
-        "last360_single_hits": 47,
+        "last360_single_hits": 46,
         "last360_top5_avg_hits": 0.6528,
         "last360_top9_avg_hits": 1.1389,
         "last360_direction_valid": false,
@@ -10463,7 +10463,7 @@
       }
     },
     "adaptive_polarity": {
-      "method": "five_member_consensus_with_direct_hit_full_rank_blend",
+      "method": "five_member_consensus_with_direct_hit_full_rank_and_single_repeat_break",
       "strategy_candidate_count": 30,
       "selection_window": 360,
       "consensus_member_count": 5,
@@ -10498,7 +10498,7 @@
         "full_signature_correction": 1.0,
         "full_overdue_correction": -1.0
       },
-      "path_sha256": "f296dd291d4499bf439fb5f0c3e9d220082bcaa0f5103dfef5b456ea33e06507",
+      "path_sha256": "c99763b7a0ac762dc3bdd5ab44ffbfc36f01bfa577ff6737fb5856fe4666a822",
       "anchor_stability": {
         "selected": "穩定冠軍",
         "challenger_allowed": false,
@@ -10522,17 +10522,17 @@
           "full_overdue_correction": 0.3333333333333333
         },
         "champion_metrics": {
-          "last360_single_hits": 57,
+          "last360_single_hits": 58,
           "last360_top5_avg_hits": 0.725,
           "last360_top9_avg_hits": 1.2028,
           "last360_direction_valid": true,
-          "recent54_single_hits": 9,
+          "recent54_single_hits": 10,
           "recent54_top5_avg_hits": 0.7778,
           "recent54_top9_avg_hits": 1.1852,
           "recent54_direction_valid": true
         },
         "challenger_metrics": {
-          "last360_single_hits": 47,
+          "last360_single_hits": 46,
           "last360_top5_avg_hits": 0.6528,
           "last360_top9_avg_hits": 1.1389,
           "last360_direction_valid": false,
@@ -10600,17 +10600,17 @@
         "full_overdue_correction": 0.3333333333333333
       },
       "champion_metrics": {
-        "last360_single_hits": 57,
+        "last360_single_hits": 58,
         "last360_top5_avg_hits": 0.725,
         "last360_top9_avg_hits": 1.2028,
         "last360_direction_valid": true,
-        "recent54_single_hits": 9,
+        "recent54_single_hits": 10,
         "recent54_top5_avg_hits": 0.7778,
         "recent54_top9_avg_hits": 1.1852,
         "recent54_direction_valid": true
       },
       "challenger_metrics": {
-        "last360_single_hits": 47,
+        "last360_single_hits": 46,
         "last360_top5_avg_hits": 0.6528,
         "last360_top9_avg_hits": 1.1389,
         "last360_direction_valid": false,
@@ -13438,8 +13438,8 @@
       },
       "holdout_not_used": true
     },
-    "path_sha256": "f296dd291d4499bf439fb5f0c3e9d220082bcaa0f5103dfef5b456ea33e06507",
-    "method": "five_member_consensus_with_direct_hit_full_rank_blend",
+    "path_sha256": "c99763b7a0ac762dc3bdd5ab44ffbfc36f01bfa577ff6737fb5856fe4666a822",
+    "method": "five_member_consensus_with_direct_hit_full_rank_and_single_repeat_break",
     "strategy_candidate_count": 30,
     "strategy_selection_window": 360,
     "strategy_consensus_member_count": 5,
@@ -13449,10 +13449,10 @@
     "direct_hit_full_rank_blend": 0.15,
     "direct_hit_full_rank_gate": true,
     "direct_hit_weights": {
-      "full_frequency_balance": 0.47883566214145556,
-      "full_transition_correction": 0.400062287058899,
-      "full_signature_correction": 0.013183475955272986,
-      "full_overdue_correction": 0.1079185748443723
+      "full_frequency_balance": 0.4788356621414557,
+      "full_transition_correction": 0.4000622870588991,
+      "full_signature_correction": 0.01318347595527299,
+      "full_overdue_correction": 0.1079185748443721
     },
     "selected_next_strategy": {
       "method": "five_member_signed_weight_consensus",
@@ -13487,7 +13487,10 @@
     },
     "single_specialist_window": 30,
     "selected_next_single_strategy": {
-      "mode": "same_as_guarded_main_ranking"
+      "mode": "repeat_break_with_consensus_second",
+      "cooldown": 1,
+      "live_state_source": "開獎前逐日封存預測",
+      "applied": true
     },
     "selected_next_single_weights": {
       "full_frequency_balance": 0.022727272727272728,
@@ -13496,6 +13499,20 @@
       "full_overdue_correction": -0.4545454545454546
     },
     "single_specialist_enabled": false,
+    "single_repeat_break_enabled": true,
+    "single_repeat_break_gate": true,
+    "single_repeat_break_method": "repeat_once_then_consensus_second_with_one_draw_cooldown",
+    "single_repeat_break_application_count": 30,
+    "single_repeat_break_current": {
+      "applied": true,
+      "original": 15,
+      "replacement": 27,
+      "previous_single": 15,
+      "previous_break_applied": false,
+      "previous_single_missed": true,
+      "rolling_review_consumed": true,
+      "source": "開獎前逐日封存預測"
+    },
     "catastrophic_guard_enabled": true,
     "catastrophic_guard_application_count": 0,
     "catastrophic_guard_policy_window": 20,
@@ -13514,10 +13531,10 @@
     "date": "2025-06-20"
   },
   "ranked_all": [
+    27,
     15,
     14,
     34,
-    27,
     38,
     10,
     20,
@@ -13555,10 +13572,10 @@
     19
   ],
   "ranked_top15": [
+    27,
     15,
     14,
     34,
-    27,
     38,
     10,
     20,
@@ -13573,11 +13590,31 @@
   ],
   "number_diagnostics": [
     {
-      "number": 15,
+      "number": 27,
       "rank": 1,
       "final_score": 1.358976769632,
-      "raw_score": 1.358976769632,
+      "raw_score": 0.965870941597,
       "relative_index": 100.0,
+      "feature_values": {
+        "full_frequency_balance": -0.381117722,
+        "full_transition_correction": -1.725399917,
+        "full_signature_correction": -0.068066596,
+        "full_overdue_correction": -1.504861938
+      },
+      "weighted_contributions": {
+        "full_frequency_balance": -0.008661766,
+        "full_transition_correction": 0.313709076,
+        "full_signature_correction": -0.023204521,
+        "full_overdue_correction": 0.684028154
+      },
+      "contribution_total": 0.965870943
+    },
+    {
+      "number": 15,
+      "rank": 2,
+      "final_score": 0.965870941595,
+      "raw_score": 1.358976769632,
+      "relative_index": 81.534766,
       "feature_values": {
         "full_frequency_balance": 0.45517482,
         "full_transition_correction": 0.17973643,
@@ -13594,10 +13631,10 @@
     },
     {
       "number": 14,
-      "rank": 2,
-      "final_score": 0.965870941595,
+      "rank": 3,
+      "final_score": 0.940957175256,
       "raw_score": 0.709592018555,
-      "relative_index": 81.534766,
+      "relative_index": 80.364499,
       "feature_values": {
         "full_frequency_balance": 0.963847603,
         "full_transition_correction": 0.445107465,
@@ -13614,10 +13651,10 @@
     },
     {
       "number": 34,
-      "rank": 3,
-      "final_score": 0.940957175256,
+      "rank": 4,
+      "final_score": 0.866302786785,
       "raw_score": 0.94095717526,
-      "relative_index": 80.364499,
+      "relative_index": 76.857783,
       "feature_values": {
         "full_frequency_balance": -0.919103852,
         "full_transition_correction": 0.736324957,
@@ -13631,26 +13668,6 @@
         "full_overdue_correction": 0.937932418
       },
       "contribution_total": 0.940957175
-    },
-    {
-      "number": 27,
-      "rank": 4,
-      "final_score": 0.866302786785,
-      "raw_score": 0.965870941597,
-      "relative_index": 76.857783,
-      "feature_values": {
-        "full_frequency_balance": -0.381117722,
-        "full_transition_correction": -1.725399917,
-        "full_signature_correction": -0.068066596,
-        "full_overdue_correction": -1.504861938
-      },
-      "weighted_contributions": {
-        "full_frequency_balance": -0.008661766,
-        "full_transition_correction": 0.313709076,
-        "full_signature_correction": -0.023204521,
-        "full_overdue_correction": 0.684028154
-      },
-      "contribution_total": 0.965870943
     },
     {
       "number": 38,
@@ -14460,27 +14477,37 @@
       "listed_top9": false
     }
   ],
-  "single_candidate": 15,
-  "single_published": 15,
+  "single_candidate": 27,
+  "single_published": 27,
+  "single_repeat_break": {
+    "applied": true,
+    "original": 15,
+    "replacement": 27,
+    "previous_single": 15,
+    "previous_break_applied": false,
+    "previous_single_missed": true,
+    "rolling_review_consumed": true,
+    "source": "開獎前逐日封存預測"
+  },
   "single_selection_evidence": {
-    "number": 15,
+    "number": 27,
     "rank": 1,
     "final_score": 1.358976769632,
-    "raw_score": 1.358976769632,
+    "raw_score": 0.965870941597,
     "relative_index": 100.0,
     "feature_values": {
-      "full_frequency_balance": 0.45517482,
-      "full_transition_correction": 0.17973643,
-      "full_signature_correction": 0.993772305,
-      "full_overdue_correction": -2.293555495
+      "full_frequency_balance": -0.381117722,
+      "full_transition_correction": -1.725399917,
+      "full_signature_correction": -0.068066596,
+      "full_overdue_correction": -1.504861938
     },
     "weighted_contributions": {
-      "full_frequency_balance": 0.010344882,
-      "full_transition_correction": -0.032679351,
-      "full_signature_correction": 0.338786013,
-      "full_overdue_correction": 1.042525225
+      "full_frequency_balance": -0.008661766,
+      "full_transition_correction": 0.313709076,
+      "full_signature_correction": -0.023204521,
+      "full_overdue_correction": 0.684028154
     },
-    "contribution_total": 1.358976769
+    "contribution_total": 0.965870943
   },
   "single_recommendation": {
     "label": "本期綜合最強",
@@ -14488,7 +14515,7 @@
     "consensus_votes": 2,
     "module_count": 4,
     "conditions": {
-      "單碼短窗重排未造成拖累": true,
+      "重複單碼冷卻回測未造成拖累": true,
       "正式排序方向通過": true,
       "最近五十四期方向通過": true,
       "前九邊界通過": true,
@@ -14499,36 +14526,36 @@
       {
         "module": "full_frequency_balance",
         "label": "全歷史頻率平衡",
-        "rank": 17,
+        "rank": 28,
         "supports": false,
-        "contribution": 0.010344882
+        "contribution": -0.008661766
       },
       {
         "module": "full_transition_correction",
         "label": "全歷史轉移反向校正",
-        "rank": 19,
-        "supports": false,
-        "contribution": -0.032679351
+        "rank": 4,
+        "supports": true,
+        "contribution": 0.313709076
       },
       {
         "module": "full_signature_correction",
         "label": "全歷史同型反向校正",
-        "rank": 5,
-        "supports": true,
-        "contribution": 0.338786013
+        "rank": 24,
+        "supports": false,
+        "contribution": -0.023204521
       },
       {
         "module": "full_overdue_correction",
         "label": "全歷史遺漏反向校正",
-        "rank": 1,
+        "rank": 5,
         "supports": true,
-        "contribution": 1.042525225
+        "contribution": 0.684028154
       }
     ],
-    "isolated_hits": 57,
+    "isolated_hits": 58,
     "isolated_samples": 360,
     "baseline_hits_before_specialist": 57,
-    "recent_54_hits": 9
+    "recent_54_hits": 10
   },
   "release_policy": {
     "official_release_allowed": true,
@@ -14548,7 +14575,7 @@
     [
       14,
       15,
-      18,
+      20,
       27,
       34
     ],
@@ -14560,39 +14587,39 @@
       38
     ],
     [
+      10,
+      15,
+      18,
+      27,
+      34
+    ],
+    [
+      8,
       9,
       14,
+      27,
+      34
+    ],
+    [
+      9,
+      20,
       27,
       34,
       38
     ],
     [
-      9,
-      15,
-      20,
-      27,
-      34
-    ],
-    [
       5,
       10,
-      15,
+      14,
       27,
       34
-    ],
-    [
-      9,
-      15,
-      18,
-      27,
-      38
     ],
     [
       5,
-      14,
+      8,
       20,
       27,
-      34
+      38
     ]
   ],
   "full_history_scan": {
@@ -14620,7 +14647,7 @@
   },
   "backtest": {
     "samples": 360,
-    "single_hits": 57,
+    "single_hits": 58,
     "bottom1_hits": 44,
     "top9_hits": 433,
     "rank10_15_hits": 266,
@@ -14635,15 +14662,15 @@
     "rank10_15_slot_hit_rate": 0.123148,
     "boundary_expected_capture_rate": 0.6,
     "bottom9_avg_hits": 1.1472,
-    "avg_actual_rank": 19.8567,
+    "avg_actual_rank": 19.8572,
     "boundary_control_valid": true,
     "ranking_direction_valid": true,
     "single_direction_valid": true,
     "front_ranking_direction_valid": true,
-    "evaluation": "最後三百六十期逐期只用當時以前資料；固定五組方向共識最強單碼，其餘三十八碼以百分之十五直接命中模型融合完整排序",
-    "single_rate": 0.1583,
+    "evaluation": "最後三百六十期逐期只用當時以前資料；其餘三十八碼以百分之十五直接命中模型融合完整排序，重複單碼依隔離回測冷卻並改採共識次選",
+    "single_rate": 0.1611,
     "single_random_baseline": 0.1282,
-    "single_wilson_lower95": 0.1243,
+    "single_wilson_lower95": 0.1267,
     "single_release_allowed": false,
     "top5_hit_distribution": {
       "0": 167,
@@ -14670,7 +14697,7 @@
     "strategy_consensus_member_count": 5,
     "recent_54": {
       "samples": 54,
-      "single_hits": 9,
+      "single_hits": 10,
       "bottom1_hits": 3,
       "top9_hits": 64,
       "rank10_15_hits": 36,
@@ -14685,7 +14712,7 @@
       "rank10_15_slot_hit_rate": 0.111111,
       "boundary_expected_capture_rate": 0.6,
       "bottom9_avg_hits": 1.037,
-      "avg_actual_rank": 19.6519,
+      "avg_actual_rank": 19.6444,
       "boundary_control_valid": true,
       "ranking_direction_valid": true,
       "single_direction_valid": true,
@@ -14702,7 +14729,7 @@
     },
     "recent_120": {
       "samples": 120,
-      "single_hits": 18,
+      "single_hits": 19,
       "bottom1_hits": 11,
       "top9_hits": 138,
       "rank10_15_hits": 87,
@@ -14717,7 +14744,7 @@
       "rank10_15_slot_hit_rate": 0.120833,
       "boundary_expected_capture_rate": 0.6,
       "bottom9_avg_hits": 1.15,
-      "avg_actual_rank": 19.8383,
+      "avg_actual_rank": 19.8367,
       "boundary_control_valid": true,
       "ranking_direction_valid": false,
       "single_direction_valid": true,
@@ -14729,10 +14756,10 @@
     "direct_hit_full_rank_blend": 0.15,
     "direct_hit_full_rank_gate": true,
     "direct_hit_weights": {
-      "full_frequency_balance": 0.47883566214145556,
-      "full_transition_correction": 0.400062287058899,
-      "full_signature_correction": 0.013183475955272986,
-      "full_overdue_correction": 0.1079185748443723
+      "full_frequency_balance": 0.4788356621414557,
+      "full_transition_correction": 0.4000622870588991,
+      "full_signature_correction": 0.01318347595527299,
+      "full_overdue_correction": 0.1079185748443721
     },
     "direct_hit_baseline": {
       "samples": 360,
@@ -14981,14 +15008,26 @@
       "0.900/0.00+0.900/0.10+0.900/0.25+0.900/0.50+0.995/0.50": 4
     },
     "single_specialist_selection_counts": {
-      "穩定守門：不啟用短窗重排": 360
+      "五組方向共識第一名": 330,
+      "重複單碼冷卻：改採共識次選": 30
     },
     "single_specialist_window": 30,
     "single_specialist_baseline_hits": 57,
-    "single_specialist_hits": 57,
-    "single_specialist_lift": 0,
+    "single_specialist_hits": 58,
+    "single_specialist_lift": 1,
     "single_specialist_enabled": false,
     "single_specialist_method": "disabled_by_cross_window_stability_gate",
+    "single_repeat_break_enabled": true,
+    "single_repeat_break_cooldown": 1,
+    "single_repeat_break_method": "repeat_once_then_consensus_second_with_one_draw_cooldown",
+    "single_repeat_break_application_count": 30,
+    "single_repeat_break_baseline_hits": 57,
+    "single_repeat_break_hits": 58,
+    "single_repeat_break_recent_54_baseline_hits": 9,
+    "single_repeat_break_recent_54_hits": 10,
+    "single_repeat_break_recent_120_baseline_hits": 18,
+    "single_repeat_break_recent_120_hits": 19,
+    "single_repeat_break_gate": true,
     "selected_next_strategy": {
       "method": "five_member_signed_weight_consensus",
       "members": [
@@ -15015,7 +15054,10 @@
       ]
     },
     "selected_next_single_strategy": {
-      "mode": "same_as_guarded_main_ranking"
+      "mode": "repeat_break_with_consensus_second",
+      "cooldown": 1,
+      "live_state_source": "開獎前逐日封存預測",
+      "applied": true
     },
     "selected_next_single_polarities": {
       "full_frequency_balance": 1.0,
@@ -15042,10 +15084,10 @@
       "full_overdue_correction": -0.4545454545454546
     },
     "next_ranked": [
+      27,
       15,
       14,
       34,
-      27,
       38,
       10,
       20,
@@ -15083,35 +15125,35 @@
       19
     ],
     "next_score": {
-      "15": 1.3589767696323152,
-      "14": 0.9658709415945856,
-      "34": 0.9409571752558494,
-      "27": 0.8663027867851268,
+      "27": 1.3589767696323154,
+      "15": 0.9658709415945856,
+      "14": 0.9409571752558494,
+      "34": 0.866302786785127,
       "38": 0.7095920185464455,
       "10": 0.6778609736361813,
       "20": 0.6085027479136844,
       "18": 0.4307518610704908,
       "5": 0.3291250501827337,
-      "8": 0.21806653800057754,
+      "8": 0.21806653800057743,
       "9": 0.2006175488404695,
-      "39": 0.08806323181444414,
+      "39": 0.088063231814444,
       "36": 0.08754949937014897,
       "12": 0.0432769582426776,
-      "37": 0.015571030917983121,
+      "37": 0.015571030917983066,
       "3": 0.011554182627345411,
       "22": -0.012970597793262931,
       "35": -0.024841959419797194,
-      "29": -0.032549791445082195,
+      "29": -0.032549791445082334,
       "1": -0.03256241016724382,
       "7": -0.10960566805646366,
       "2": -0.14065038212788264,
       "13": -0.17215704789750685,
       "33": -0.19860765501344366,
       "26": -0.24656076895924048,
-      "25": -0.252351108313231,
+      "25": -0.2523511083132309,
       "24": -0.26635069855669335,
-      "31": -0.29054322146084244,
-      "21": -0.3219644751672411,
+      "31": -0.29054322146084255,
+      "21": -0.321964475167241,
       "11": -0.38759790670377237,
       "32": -0.4211174970739961,
       "6": -0.460317058516821,
@@ -15119,7 +15161,7 @@
       "4": -0.4811841311580397,
       "23": -0.5518047839828351,
       "17": -0.5780429467535255,
-      "30": -0.6334919617464185,
+      "30": -0.6334919617464186,
       "28": -0.6877645876136418,
       "19": -0.7699202876285168
     },
@@ -15129,16 +15171,16 @@
       "3": -0.012970597759200578,
       "4": -0.4211174970101292,
       "5": 0.6778609736468257,
-      "6": -0.6334919616697783,
+      "6": -0.6334919616697784,
       "7": -0.17215704785067112,
       "8": 0.08754949939569573,
       "9": 0.04327695827035326,
       "10": 0.6085027479264578,
       "11": -0.38759790664203436,
-      "12": 0.01557103094778768,
+      "12": 0.015571030947787624,
       "13": -0.1406503820831758,
       "14": 0.7095920185549611,
-      "15": 1.3589767696323152,
+      "15": 1.3589767696323154,
       "16": -0.5518047839104525,
       "17": -0.4811841310877861,
       "18": 0.32912505019976485,
@@ -15147,21 +15189,21 @@
       "21": -0.266350698501342,
       "22": 0.011554182659278867,
       "23": -0.47968237038495276,
-      "24": -0.2905432214033622,
-      "25": -0.25235110826000856,
+      "24": -0.2905432214033623,
+      "25": -0.25235110826000845,
       "26": -0.24656076890814696,
       "27": 0.9658709415967145,
       "28": -0.7699202875476188,
-      "29": -0.03254979140676205,
+      "29": -0.03254979140676219,
       "30": -0.5780429466790141,
-      "31": -0.321964475107632,
+      "31": -0.32196447510763193,
       "32": -0.46031705845082516,
       "33": -0.10960566801388572,
       "34": 0.9409571752601072,
       "35": -0.032562410126794776,
-      "36": 0.2180665380197376,
-      "37": 0.08806323183786201,
-      "38": 0.8663027867915135,
+      "36": 0.2180665380197375,
+      "37": 0.08806323183786187,
+      "38": 0.8663027867915136,
       "39": 0.20061754886175848
     },
     "next_repeat_audit": [
@@ -15241,7 +15283,7 @@
         "listed_top9": false
       }
     ],
-    "next_unguarded_ranked": [
+    "next_pre_single_break_ranked": [
       15,
       14,
       34,
@@ -15282,6 +15324,57 @@
       28,
       19
     ],
+    "next_unguarded_ranked": [
+      27,
+      15,
+      14,
+      34,
+      38,
+      10,
+      20,
+      18,
+      5,
+      8,
+      9,
+      39,
+      36,
+      12,
+      37,
+      3,
+      22,
+      35,
+      29,
+      1,
+      7,
+      2,
+      13,
+      33,
+      26,
+      25,
+      24,
+      31,
+      21,
+      11,
+      32,
+      6,
+      16,
+      4,
+      23,
+      17,
+      30,
+      28,
+      19
+    ],
+    "single_repeat_break_current": {
+      "applied": true,
+      "original": 15,
+      "replacement": 27,
+      "previous_single": 15,
+      "previous_break_applied": false,
+      "previous_single_missed": true,
+      "rolling_review_consumed": true,
+      "source": "開獎前逐日封存預測"
+    },
     "catastrophic_guard_enabled": true,
     "catastrophic_guard_top9_hit_limit": 0,
     "catastrophic_guard_avg_rank_floor": 22.0,
@@ -15341,8 +15434,8 @@
     "rolling_update_count": 360,
     "rolling_learning_rate": 0.0,
     "rolling_boundary_blend": 0.0,
-    "rolling_path_sha256": "f296dd291d4499bf439fb5f0c3e9d220082bcaa0f5103dfef5b456ea33e06507",
-    "method": "five_member_consensus_with_direct_hit_full_rank_blend",
+    "rolling_path_sha256": "c99763b7a0ac762dc3bdd5ab44ffbfc36f01bfa577ff6737fb5856fe4666a822",
+    "method": "five_member_consensus_with_direct_hit_full_rank_and_single_repeat_break",
     "anchor_stability": {
       "selected": "穩定冠軍",
       "challenger_allowed": false,
@@ -15366,17 +15459,17 @@
         "full_overdue_correction": 0.3333333333333333
       },
       "champion_metrics": {
-        "last360_single_hits": 57,
+        "last360_single_hits": 58,
         "last360_top5_avg_hits": 0.725,
         "last360_top9_avg_hits": 1.2028,
         "last360_direction_valid": true,
-        "recent54_single_hits": 9,
+        "recent54_single_hits": 10,
         "recent54_top5_avg_hits": 0.7778,
         "recent54_top9_avg_hits": 1.1852,
         "recent54_direction_valid": true
       },
       "challenger_metrics": {
-        "last360_single_hits": 47,
+        "last360_single_hits": 46,
         "last360_top5_avg_hits": 0.6528,
         "last360_top9_avg_hits": 1.1389,
         "last360_direction_valid": false,
@@ -15503,35 +15596,35 @@
       {
         "module": "full_frequency_balance",
         "label": "全歷史頻率平衡",
-        "rank": 17,
+        "rank": 28,
         "supports": false,
-        "contribution": 0.010344882
+        "contribution": -0.008661766
       },
       {
         "module": "full_transition_correction",
         "label": "全歷史轉移反向校正",
-        "rank": 19,
-        "supports": false,
-        "contribution": -0.032679351
+        "rank": 4,
+        "supports": true,
+        "contribution": 0.313709076
       },
       {
         "module": "full_signature_correction",
         "label": "全歷史同型反向校正",
-        "rank": 5,
-        "supports": true,
-        "contribution": 0.338786013
+        "rank": 24,
+        "supports": false,
+        "contribution": -0.023204521
       },
       {
         "module": "full_overdue_correction",
         "label": "全歷史遺漏反向校正",
-        "rank": 1,
+        "rank": 5,
         "supports": true,
-        "contribution": 1.042525225
+        "contribution": 0.684028154
       }
     ],
     "single_consensus_votes": 2,
     "single_strong_conditions": {
-      "單碼短窗重排未造成拖累": true,
+      "重複單碼冷卻回測未造成拖累": true,
       "正式排序方向通過": true,
       "最近五十四期方向通過": true,
       "前九邊界通過": true,
