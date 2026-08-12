@@ -13,14 +13,14 @@
 <nav aria-label='戰報分類'><a href='./index.html'>本期預測</a><a href='./backtest.html'>回測驗證</a><a href='./review.html'>開獎檢討</a><a href='./history.html'>歷史封存</a><a href='./models.html' class="active" aria-current="page">模型說明</a><a href='./health.html'>系統健康</a></nav>
 
 <div class='band'><h2>全歷史運算範圍</h2><div class='grid'>
-<div class='card'><div class='label'>資料範圍</div><div class='value'>2007-01-01～2026-08-11</div></div>
-<div class='card'><div class='label'>全歷史期數</div><div class='value'>5,938期</div></div>
+<div class='card'><div class='label'>資料範圍</div><div class='value'>2007-01-01～2026-08-12</div></div>
+<div class='card'><div class='label'>全歷史期數</div><div class='value'>5,939期</div></div>
 <div class='card'><div class='label'>全歷史核心占比</div><div class='value'>100%</div></div>
 <div class='card'><div class='label'>短期正式權重</div><div class='value'>0%</div></div>
 </div></div>
-<div class='band'><h2>正式方向模型</h2><p>每次預測與每一期回測都使用當時以前的全部歷史資料。先搜尋 286 組錨定權重，保留 146 組均衡候選，再建立 30 組模組正反方向模型；每一期只用此前 360 期已開獎成績選出 5 組，平均成可完整驗算的五組正式權重共識。其餘38顆再用直接命中全排序校準；第一名另經單碼重複冷卻守門；最後比較每期資料變化並固定前5後校正前9邊界。</p><div class='table-wrap'><table><thead><tr><th>正式模組</th><th>資料來源</th><th>目前權重</th><th>方向</th></tr></thead><tbody><tr><td>全歷史頻率平衡</td><td>逐期擴展全歷史資料庫</td><td>+0.023</td><td>正向</td></tr><tr><td>全歷史轉移反向校正</td><td>逐期擴展全歷史資料庫</td><td>-0.182</td><td>反向</td></tr><tr><td>全歷史同型反向校正</td><td>逐期擴展全歷史資料庫</td><td>+0.341</td><td>正向</td></tr><tr><td>全歷史遺漏反向校正</td><td>逐期擴展全歷史資料庫</td><td>-0.455</td><td>反向</td></tr></tbody></table></div></div>
-<div class='band warning'><h2>全系統重組</h2><p><b>新版採用「五組方向共識＋直接命中全排序校準＋單碼重複冷卻＋每期資料變化校正」四層架構。</b>修正舊版前9集合及第一名鎖死兩項缺陷。最近54期單碼由 9 中提高到 10 中，最近120期由 18 中提高到 19 中，最後360期由 57 中提高到 58 中。</p></div>
-<div class='band'><h2>穩定冠軍與每日挑戰模型</h2><p><b>本期採用：穩定冠軍。</b>每日新模型只有在長期與近期六項指標全部不差、至少三項改善，而且兩個區間排序方向都通過，才准取代穩定冠軍。</p><div class='table-wrap'><table><thead><tr><th>驗證項目</th><th>穩定冠軍</th><th>每日挑戰模型</th></tr></thead><tbody><tr><td>最後360期第1名命中</td><td>58</td><td>46</td></tr><tr><td>最後360期前5平均</td><td>0.725</td><td>0.6528</td></tr><tr><td>最後360期前9平均</td><td>1.3028</td><td>1.2278</td></tr><tr><td>最近54期第1名命中</td><td>10</td><td>3</td></tr><tr><td>最近54期前5平均</td><td>0.7778</td><td>0.4815</td></tr><tr><td>最近54期前9平均</td><td>1.3148</td><td>1.0556</td></tr></tbody></table></div></div>
+<div class='band'><h2>正式方向模型</h2><p>每次預測與每一期回測都使用當時以前的全部歷史資料。先搜尋 286 組錨定權重，保留 146 組均衡候選，再建立 30 組模組正反方向模型；每一期只用此前 360 期已開獎成績選出 5 組，平均成可完整驗算的五組正式權重共識。其餘38顆再用直接命中全排序校準；第一名另經單碼重複冷卻守門；最後比較每期資料變化並固定前5後校正前9邊界。</p><div class='table-wrap'><table><thead><tr><th>正式模組</th><th>資料來源</th><th>目前權重</th><th>方向</th></tr></thead><tbody><tr><td>全歷史頻率平衡</td><td>逐期擴展全歷史資料庫</td><td>+0.028</td><td>正向</td></tr><tr><td>全歷史轉移反向校正</td><td>逐期擴展全歷史資料庫</td><td>-0.222</td><td>反向</td></tr><tr><td>全歷史同型反向校正</td><td>逐期擴展全歷史資料庫</td><td>+0.417</td><td>正向</td></tr><tr><td>全歷史遺漏反向校正</td><td>逐期擴展全歷史資料庫</td><td>-0.333</td><td>反向</td></tr></tbody></table></div></div>
+<div class='band warning'><h2>全系統重組</h2><p><b>新版採用「五組方向共識＋直接命中全排序校準＋單碼重複冷卻＋每期資料變化校正」四層架構。</b>修正舊版前9集合及第一名鎖死兩項缺陷。最近54期單碼由 8 中提高到 9 中，最近120期由 17 中提高到 18 中，最後360期由 57 中提高到 58 中。</p></div>
+<div class='band'><h2>穩定冠軍與每日挑戰模型</h2><p><b>本期採用：穩定冠軍。</b>每日新模型只有在長期與近期六項指標全部不差、至少三項改善，而且兩個區間排序方向都通過，才准取代穩定冠軍。</p><div class='table-wrap'><table><thead><tr><th>驗證項目</th><th>穩定冠軍</th><th>每日挑戰模型</th></tr></thead><tbody><tr><td>最後360期第1名命中</td><td>58</td><td>47</td></tr><tr><td>最後360期前5平均</td><td>0.725</td><td>0.6861</td></tr><tr><td>最後360期前9平均</td><td>1.3</td><td>1.2056</td></tr><tr><td>最近54期第1名命中</td><td>9</td><td>7</td></tr><tr><td>最近54期前5平均</td><td>0.7407</td><td>0.7037</td></tr><tr><td>最近54期前9平均</td><td>1.2963</td><td>1.2407</td></tr></tbody></table></div></div>
 <div class='band'><h2>多模組校正規格</h2><div class='grid'>
 <div class='card'><div class='label'>錨定候選</div><div class='value'>286組</div></div>
 <div class='card'><div class='label'>均衡候選</div><div class='value'>146組</div></div>
@@ -33,6 +33,6 @@
 <div class='card'><div class='label'>全排序融合占比</div><div class='value'>15%</div></div>
 <div class='card'><div class='label'>資料變化比較窗</div><div class='value'>720期</div></div>
 </div></div>
-<div class='band'><h2>連莊資格驗算規格</h2><p>上一期號碼必須同時符合：相對指數至少75、全歷史轉移貢獻為正、至少兩個正式模組正貢獻、全歷史連莊率不低於12.82%，且個別回測通過；不做補位。</p><div class='table-wrap'><table><thead><tr><th>上一期號碼</th><th>相對指數</th><th>轉移貢獻</th><th>正貢獻模組</th><th>全歷史連莊率</th><th>個別回測</th></tr></thead><tbody><tr><td>07</td><td>28.1</td><td>+0.060</td><td>3</td><td>12.93%</td><td>通過</td></tr><tr><td>17</td><td>13.6</td><td>+0.158</td><td>1</td><td>14.30%</td><td>通過</td></tr><tr><td>19</td><td>3.9</td><td>+0.118</td><td>2</td><td>16.08%</td><td>通過</td></tr><tr><td>23</td><td>13.6</td><td>+0.145</td><td>1</td><td>13.23%</td><td>通過</td></tr><tr><td>30</td><td>9.0</td><td>-0.082</td><td>1</td><td>12.96%</td><td>通過</td></tr></tbody></table></div></div>
+<div class='band'><h2>連莊資格驗算規格</h2><p>上一期號碼必須同時符合：相對指數至少75、全歷史轉移貢獻為正、至少兩個正式模組正貢獻、全歷史連莊率不低於12.82%，且個別回測通過；不做補位。</p><div class='table-wrap'><table><thead><tr><th>上一期號碼</th><th>相對指數</th><th>轉移貢獻</th><th>正貢獻模組</th><th>全歷史連莊率</th><th>個別回測</th></tr></thead><tbody><tr><td>07</td><td>37.9</td><td>+0.162</td><td>3</td><td>13.04%</td><td>通過</td></tr><tr><td>12</td><td>10.5</td><td>+0.027</td><td>2</td><td>12.00%</td><td>未通過</td></tr><tr><td>17</td><td>33.7</td><td>+0.518</td><td>1</td><td>14.41%</td><td>通過</td></tr><tr><td>20</td><td>0.0</td><td>+0.150</td><td>2</td><td>13.56%</td><td>通過</td></tr><tr><td>32</td><td>30.6</td><td>-0.107</td><td>1</td><td>12.52%</td><td>未通過</td></tr></tbody></table></div></div>
 <footer>各頁只顯示所屬分類；資料由同一次正式運算產生並同步更新。</footer>
 </main></body></html>
