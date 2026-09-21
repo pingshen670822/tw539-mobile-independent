@@ -56,7 +56,7 @@ if str(data_latest.get('period'))!=str(official['period']) or data_latest.get('d
 ranked=result.get('ranked_top15') or []
 if not ranked or result.get('single_candidate')!=ranked[0] or result.get('single_published')!=ranked[0]: errors.append('公開結果的1中1主選缺失')
 single_break=result.get('single_repeat_break') or {}
-if not single_break or not single_break.get('rolling_review_consumed'): errors.append('公開結果缺少每期未中檢討與單碼重複冷卻狀態')
+if not single_break or 'rolling_review_consumed' not in single_break: errors.append('公開結果缺少每期未中檢討與單碼重複冷卻狀態')
 if single_break.get('applied') and (result.get('single_published')!=single_break.get('replacement') or single_break.get('original')==single_break.get('replacement')): errors.append('單碼重複冷卻替代號與公開主選不同步')
 if not single_break.get('applied') and result.get('single_published')!=single_break.get('original'): errors.append('未啟動單碼冷卻時公開主選被改動')
 ranked_all=result.get('ranked_all') or []
@@ -123,6 +123,7 @@ else:
     review=settlements[-1]
     if review.get('target_draw_date')!=official['draw_date'] or str(review.get('official_period'))!=str(official['period']): errors.append('最新命中檢討未對應官方最新期別')
     if review.get('review_status')=='completed_from_pre_draw_seal':
+        if not single_break.get('rolling_review_consumed'): errors.append('已有開獎前封存檢討，但單碼重複冷卻未讀取該檢討')
         if len(review.get('actual_rankings') or [])!=5 or len(review.get('module_review') or [])!=len(result.get('production_weights') or {}): errors.append('最新命中檢討缺少實際排名或錯誤模組分析')
         expected_top5_hits=sorted(set(review.get('actual_numbers') or []).intersection(review.get('top5_published') or []))
         if len(review.get('top5_published') or [])!=5 or sorted(review.get('top5_hits') or [])!=expected_top5_hits: errors.append('最新命中檢討缺少或算錯前5命中資料')
@@ -137,6 +138,7 @@ else:
         if bool(backtest.get('catastrophic_guard_current_trigger'))!=expected_guard or bool(health.get('catastrophic_guard_current_trigger'))!=expected_guard: errors.append('災難失準保護沒有依最新封存檢討同步啟動')
     elif review.get('review_status')=='recovery_no_pre_draw_seal':
         integrity=review.get('data_integrity') or {}
+        if single_break.get('rolling_review_consumed'): errors.append('停擺缺口沒有開獎前封存資料，單碼重複冷卻不得偽稱已讀取命中檢討')
         if review.get('single_published') is not None or not review.get('review_accounted') or not integrity.get('no_fabricated_prediction'): errors.append('停擺缺口含事後補造預測或未完整登錄')
     else:
         errors.append('最新開獎未完成檢討或停擺缺口登錄')
