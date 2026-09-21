@@ -222,6 +222,21 @@ def _review_page(settlements, weights, selection, feature_labels):
     if not settlements:
         return _page_shell("review.html", "開獎檢討", "只顯示最新一期開獎後檢討", "<div class='band empty'>等待第一筆開獎前封存完成結算</div>")
     item = settlements[-1]
+    if item.get("review_status") == "recovery_no_pre_draw_seal":
+        diagnostic = selection.get("diagnostic") or {}
+        content = f"""
+<div class='band warning'><h2>最新一期命中結算</h2><div class='grid'>
+<div class='card'><div class='label'>檢討開獎日</div><div class='value'>{item.get('target_draw_date','－')}</div></div>
+<div class='card'><div class='label'>實際開獎</div><div class='value number-line'>{_fmt(item.get('actual_numbers') or [])}</div></div>
+<div class='card'><div class='label'>開獎前前5正式預測</div><div class='value'>停擺期無封存，不補造</div></div>
+<div class='card'><div class='label'>前5命中資料</div><div class='value'>無開獎前封存，禁止事後計算</div></div>
+<div class='card'><div class='label'>第10至15名命中</div><div class='value'>無開獎前封存，禁止事後計算</div></div>
+</div></div>
+<div class='band warning'><h2>本期重大瑕疵結論</h2><p><b>系統停擺造成此期沒有可驗證的開獎前正式封存；只登錄官方開獎事實，禁止開獎後換號或補號，也不偽造命中率。</b></p></div>
+<div class='band'><h2>實際開獎號碼原始排名</h2><p>沒有開獎前封存，無法誠實還原當時排名；本區明確標記缺失，不以事後資料回算。</p></div>
+<div class='band'><h2>錯誤模組與前9邊界逐項檢討</h2><p>沒有開獎前逐號模組證據，因此不製造假檢討；更新鏈已恢復，後續每期均由開獎前封存自動結算。</p></div>
+<div class='band strong'><h2>開獎後滾動權重重算</h2><p>已使用補齊後的全歷史資料重新搜尋全部 {diagnostic.get('candidate_count',0)} 組權重，正式預測已恢復產出。</p></div>"""
+        return _page_shell("review.html", "開獎檢討", "停擺缺口已誠實登錄，預測持續更新", content)
     actual_rows = "".join(
         f"<tr><td>{row.get('number',0):02}</td><td>{row.get('rank','－')}</td><td>{row.get('relative_index',0):.2f}</td><td>{'前9' if row.get('rank',99)<=9 else ('第10至15名' if row.get('rank',99)<=15 else '第16名以後')}</td></tr>"
         for row in item.get("actual_rankings", [])
@@ -271,10 +286,13 @@ def _review_page(settlements, weights, selection, feature_labels):
 
 
 def _history_page(settlements):
-    rows = "".join(
-        f"<tr><td>{item.get('target_draw_date','－')}</td><td>{int(item.get('single_published',0)):02}</td><td>{_fmt(item.get('top5_published') or [])}</td><td>{_fmt(item.get('top5_hits') or []) or '未命中'}・{len(item.get('top5_hits') or [])}顆</td><td>{_fmt(item.get('top9_published') or [])}</td><td>{_fmt(item.get('actual_numbers') or [])}</td><td>{'命中' if item.get('single_hit') else '未中'}</td><td>{_fmt(item.get('top9_hits') or []) or '0顆'}</td><td>{_fmt(item.get('rank10_15_hits') or []) or '0顆'}</td></tr>"
-        for item in reversed(settlements)
-    )
+    rows_list=[]
+    for item in reversed(settlements):
+        if item.get("review_status") == "recovery_no_pre_draw_seal":
+            rows_list.append(f"<tr><td>{item.get('target_draw_date','－')}</td><td>無封存</td><td>禁止補算</td><td>禁止補算</td><td>禁止補算</td><td>{_fmt(item.get('actual_numbers') or [])}</td><td>停擺缺口</td><td>禁止補算</td><td>禁止補算</td></tr>")
+        else:
+            rows_list.append(f"<tr><td>{item.get('target_draw_date','－')}</td><td>{int(item.get('single_published',0)):02}</td><td>{_fmt(item.get('top5_published') or [])}</td><td>{_fmt(item.get('top5_hits') or []) or '未命中'}・{len(item.get('top5_hits') or [])}顆</td><td>{_fmt(item.get('top9_published') or [])}</td><td>{_fmt(item.get('actual_numbers') or [])}</td><td>{'命中' if item.get('single_hit') else '未中'}</td><td>{_fmt(item.get('top9_hits') or []) or '0顆'}</td><td>{_fmt(item.get('rank10_15_hits') or []) or '0顆'}</td></tr>")
+    rows = "".join(rows_list)
     if not rows:
         rows = "<tr><td colspan='9'>尚無已結算封存紀錄</td></tr>"
     content = f"""
@@ -332,7 +350,7 @@ def _models_page(draws, weights, bt, selection, repeat_audit, feature_labels):
 def _health_page(draws, bt, full_scan, generated_at, settlements, health):
     latest = draws[-1]
     direction = "通過" if bt.get("ranking_direction_valid") else "未通過"
-    settled = bool(settlements and settlements[-1].get("review_status") == "completed_from_pre_draw_seal")
+    settled = bool(settlements and settlements[-1].get("review_status") in ("completed_from_pre_draw_seal","recovery_no_pre_draw_seal"))
     checks = (
         ("資料完整性", "通過", "期別與日期去重；每期5個不重複號碼"),
         ("全歷史模式", "通過", f"正式運算使用全部 {len(draws):,} 期"),

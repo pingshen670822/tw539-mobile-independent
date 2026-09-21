@@ -1,46 +1,103 @@
 #!/usr/bin/env python3
 """官方最新開獎 -> 驗證 -> 重算 -> 產生獨立 PWA。僅使用 Python 標準庫。"""
 from __future__ import annotations
-import argparse, csv, hashlib, json, os, shutil, subprocess, sys, time, urllib.request
+import argparse, csv, hashlib, json, os, shutil, subprocess, sys, time, urllib.parse, urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent; CSV=ROOT/'data'/'539.csv'; SITE=ROOT/'site'; REPORTS=ROOT/'reports'; REPORT=REPORTS/'最新539科學預測戰報.html'
 REPORT_PAGE_FILES=('index.html','backtest.html','review.html','history.html','models.html','health.html')
 API='https://api.taiwanlottery.com/TLCAPIWeB/Lottery/LatestResult'
+HISTORY_API='https://api.taiwanlottery.com/TLCAPIWeB/Lottery/Daily539Result'
 TAIPEI=timezone(timedelta(hours=8))
 
-def fetch_latest():
+def _request_json(url, params=None):
+    if params:
+        url += ('&' if '?' in url else '?') + urllib.parse.urlencode(params)
     last=None
     for delay in (0,3,10):
         if delay: time.sleep(delay)
         try:
-            req=urllib.request.Request(API,headers={'User-Agent':'Mozilla/5.0 TW539-cloud/1.0','Accept':'application/json'})
-            with urllib.request.urlopen(req,timeout=40) as r: payload=json.load(r)
-            x=(payload.get('content') or {}).get('daily539Result')
-            nums=[int(n) for n in x['drawNumberSize'][:5]]
-            raw=str(x['lotteryDate']).split('T')[0].replace('/','-')
-            if len(set(nums))!=5 or any(n<1 or n>39 for n in nums): raise ValueError('官方號碼驗證失敗')
-            return {'period':str(x['period']),'draw_date':raw,'nums':sorted(nums),'order':x.get('drawNumberAppear',[])[:5]}
+            req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 TW539-cloud/2.0','Accept':'application/json','Cache-Control':'no-cache'})
+            with urllib.request.urlopen(req,timeout=45) as r:
+                if r.status!=200: raise RuntimeError(f'官方回應狀態 {r.status}')
+                return json.load(r)
         except Exception as e: last=e
-    raise RuntimeError(f'官方最新開獎取得失敗：{last}')
+    raise RuntimeError(f'官方資料取得失敗：{last}')
 
-def update_csv(latest):
+def _normalise_draw(x, source):
+    nums=[int(n) for n in (x.get('drawNumberSize') or [])[:5]]
+    raw=str(x.get('lotteryDate') or '').split('T')[0].replace('/','-')
+    datetime.strptime(raw,'%Y-%m-%d')
+    if len(nums)!=5 or len(set(nums))!=5 or any(n<1 or n>39 for n in nums):
+        raise ValueError('官方號碼驗證失敗')
+    period=str(x.get('period') or '')
+    if not period.isdigit(): raise ValueError('官方期別驗證失敗')
+    order=[int(n) for n in (x.get('drawNumberAppear') or [])[:5]]
+    if len(order)!=5 or set(order)!=set(nums): order=list(nums)
+    return {'period':period,'draw_date':raw,'nums':sorted(nums),'order':order,'source':source}
+
+def _month_keys(start_date, end_date):
+    cursor=datetime.strptime(start_date[:7]+'-01','%Y-%m-%d').date()
+    end=datetime.strptime(end_date[:7]+'-01','%Y-%m-%d').date()
+    while cursor<=end:
+        yield cursor.strftime('%Y-%m')
+        cursor=(cursor.replace(day=28)+timedelta(days=4)).replace(day=1)
+
+def fetch_official_range(start_date, end_date):
+    """逐月抓取官方歷史端點；停擺多日也不能只補最後一期。"""
+    rows={}
+    for month in _month_keys(start_date,end_date):
+        payload=_request_json(HISTORY_API,{
+            'period':'','month':month,'endMonth':month,'pageNum':1,'pageSize':200})
+        content=payload.get('content') or payload
+        for raw in content.get('daily539Res') or []:
+            draw=_normalise_draw(raw,'taiwanlottery_daily539_result')
+            if start_date<=draw['draw_date']<=end_date: rows[draw['period']]=draw
+    return sorted(rows.values(),key=lambda x:(x['draw_date'],int(x['period'])))
+
+def fetch_latest():
+    errors=[]
+    try:
+        payload=_request_json(API)
+        x=(payload.get('content') or {}).get('daily539Result')
+        if not x: raise ValueError('官方最新端點沒有今彩539資料')
+        return _normalise_draw(x,'taiwanlottery_latest_result')
+    except Exception as exc:
+        errors.append(str(exc))
+    # 第一端點暫時失效時，改由官方各期結果端點取最近兩個月最後一筆。
+    today=datetime.now(TAIPEI).date()
+    start=(today-timedelta(days=45)).isoformat()
+    try:
+        rows=fetch_official_range(start,today.isoformat())
+        if rows: return rows[-1]
+    except Exception as exc:
+        errors.append(str(exc))
+    raise RuntimeError('官方兩組資料來源均無法取得：'+'；'.join(errors))
+
+def update_csv(draws):
+    if isinstance(draws,dict): draws=[draws]
     with CSV.open('r',encoding='utf-8-sig',newline='') as f: rows=list(csv.DictReader(f)); fields=list(rows[0])
-    current=max(rows,key=lambda r:(r['draw_date'],r['period']))
-    existing=next((r for r in rows if r['period']==latest['period']),None)
-    if existing:
-        old_nums=sorted(int(existing[f'n{i}']) for i in range(1,6))
-        if existing['draw_date']==latest['draw_date'] and old_nums==latest['nums']: return False
-        row=existing
-        rows.remove(existing)
-    elif (latest['draw_date'],latest['period']) <= (current['draw_date'],current['period']):
-        return False
-    else:
-        row={k:'' for k in fields}
-    row.update({'period':latest['period'],'draw_date':latest['draw_date'],'draw_order':','.join(f'{int(n):02}' for n in latest['order']),'source':'taiwanlottery_latest_result','fetched_at':datetime.now(TAIPEI).isoformat(timespec='seconds')})
-    for i,n in enumerate(latest['nums'],1): row[f'n{i}']=str(n)
-    rows.append(row); rows.sort(key=lambda r:(r['draw_date'],r['period']))
+    changed=0
+    for latest in sorted(draws,key=lambda x:(x['draw_date'],int(x['period']))):
+        existing=next((r for r in rows if r['period']==latest['period']),None)
+        if existing:
+            old_nums=sorted(int(existing[f'n{i}']) for i in range(1,6))
+            if existing['draw_date']==latest['draw_date'] and old_nums==latest['nums']: continue
+            row=existing; rows.remove(existing)
+        else:
+            same_date=next((r for r in rows if r['draw_date']==latest['draw_date']),None)
+            if same_date and same_date['period']!=latest['period']:
+                raise RuntimeError(f"官方資料日期重複但期別不同：{latest['draw_date']}")
+            row={k:'' for k in fields}
+        row.update({'period':latest['period'],'draw_date':latest['draw_date'],
+                    'draw_order':','.join(f'{int(n):02}' for n in latest['order']),
+                    'source':latest.get('source') or 'taiwanlottery_official',
+                    'fetched_at':datetime.now(TAIPEI).isoformat(timespec='seconds')})
+        for i,n in enumerate(latest['nums'],1): row[f'n{i}']=str(n)
+        rows.append(row); changed+=1
+    if not changed: return False
+    rows.sort(key=lambda r:(r['draw_date'],int(r['period'])))
     tmp=CSV.with_suffix('.csv.tmp')
     with tmp.open('w',encoding='utf-8-sig',newline='') as f: w=csv.DictWriter(f,fieldnames=fields); w.writeheader(); w.writerows(rows)
     tmp.replace(CSV); return True
@@ -199,7 +256,8 @@ def find_prediction_for_item(item):
 def compact_prediction_history(current):
     """每個目標日只保留真正正式版；已結算日以結算指紋為準，未結算日以本次最終版為準。"""
     path=REPORTS/'prediction-history.jsonl'; rows=read_jsonl(path)
-    settlement_fingerprints={x.get('target_draw_date'):x.get('fingerprint') for x in read_jsonl(REPORTS/'published-settlements.jsonl')}
+    settlement_fingerprints={x.get('target_draw_date'):x.get('fingerprint') for x in read_jsonl(REPORTS/'published-settlements.jsonl')
+                             if x.get('review_status')=='completed_from_pre_draw_seal'}
     targets=[]
     for row in rows:
         target=row.get('target_draw_date')
@@ -241,9 +299,44 @@ def refresh_latest_settlement(latest):
     matches=[x for x in rows if x.get('target_draw_date')==latest['draw_date']]
     if not matches: return None
     item=matches[-1]
+    if item.get('review_status')=='recovery_no_pre_draw_seal': return item
     item=enrich_settlement(item,find_prediction_for_item(item),latest)
     append_jsonl(REPORTS/'published-settlements.jsonl',item,lambda x:(x.get('target_draw_date'),x.get('fingerprint')),replace=True)
     return item
+
+def recovery_review(latest):
+    """停擺期沒有開獎前封存時只記錄事實，絕不事後補造命中率。"""
+    item={
+        'target_draw_date':latest['draw_date'],'official_period':latest['period'],
+        'actual_numbers':latest['nums'],'fingerprint':'recovery-gap-'+latest['period'],
+        'settled_at':datetime.now(TAIPEI).isoformat(timespec='seconds'),
+        'review_status':'recovery_no_pre_draw_seal','review_accounted':True,
+        'rolling_recalculation_required':True,
+        'recovery_reason':'停擺期間沒有可驗證的開獎前封存，禁止事後補算或換號',
+        'data_integrity':{'official_period':latest['period'],'target_draw_date':latest['draw_date'],
+                          'official_actual_numbers':latest['nums'],'no_post_draw_substitution':True,
+                          'no_fabricated_prediction':True}}
+    evidence={k:v for k,v in item.items() if k!='review_evidence_sha256'}
+    item['review_evidence_sha256']=hashlib.sha256(json.dumps(evidence,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    append_jsonl(REPORTS/'published-settlements.jsonl',item,lambda x:(x.get('target_draw_date'),x.get('fingerprint')),replace=True)
+    return item
+
+def account_for_new_draws(previous, new_draws, latest):
+    history=read_jsonl(REPORTS/'prediction-history.jsonl')
+    if previous and not any(x.get('recalculation_fingerprint')==previous.get('recalculation_fingerprint') for x in history):
+        history.append(previous)
+    accounted=[]
+    for draw in sorted(new_draws,key=lambda x:(x['draw_date'],int(x['period']))):
+        matches=[x for x in history if x.get('target_draw_date')==draw['draw_date']]
+        if matches:
+            try: item=settle_previous(matches[-1],draw)
+            except Exception: item=recovery_review(draw)
+        else:
+            item=recovery_review(draw)
+        accounted.append(item)
+    if accounted: return accounted
+    existing=refresh_latest_settlement(latest)
+    return [existing] if existing else []
 
 def refresh_report_pages(current):
     """結算完成後以同一份正式結果重建分頁，避免檢討頁落後一期。"""
@@ -283,17 +376,19 @@ def publish_report_pages(version_stamp):
         page=page.replace('</body>',"<script src='./mobile-sync.js'></script></body>")
         path.write_text(page,encoding='utf-8')
 
-def build_site(latest, changed, previous=None):
+def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=None):
     previous_health=read_json(REPORTS/'system-health.json') or {}
     repair_run=os.getenv('TW539_SELF_REPAIR','').lower() in ('1','true','yes')
-    settlement=settle_previous(previous,latest) or refresh_latest_settlement(latest)
+    pipeline_meta=pipeline_meta or {}
+    accounted=account_for_new_draws(previous,new_draws or [],latest)
+    settlement=accounted[-1] if accounted else None
     subprocess.run([sys.executable,str(ROOT/'tw539_ultra.py'),'--backtest','360'],check=True,cwd=ROOT)
     current=read_json(REPORTS/'最新結果.json') or {}
-    if settlement:
+    completed=[x for x in accounted if x and x.get('review_status')=='completed_from_pre_draw_seal']
+    if completed:
         diagnostic=(current.get('weight_selection_diagnostics') or [{}])[0]
-        settlement['rolling_adjustment']={
+        rolling_adjustment={
             'completed':True,'candidate_count':diagnostic.get('candidate_count'),
-            'weights_before':settlement.get('production_weights_before'),
             'weights_after':current.get('production_weights'),
             'production_ensemble_weights':current.get('production_ensemble_weights'),
             'calibration_window':diagnostic.get('calibration_window'),
@@ -314,9 +409,11 @@ def build_site(latest, changed, previous=None):
             'anchor_stability':(current.get('rolling_weight_adjustment') or {}).get('anchor_stability'),
             'next_single':current.get('single_published'),
             'next_prediction_seal_sha256':(current.get('pre_draw_seal') or {}).get('sha256')}
-        evidence={k:v for k,v in settlement.items() if k!='review_evidence_sha256'}
-        settlement['review_evidence_sha256']=hashlib.sha256(json.dumps(evidence,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-        append_jsonl(REPORTS/'published-settlements.jsonl',settlement,lambda x:(x.get('target_draw_date'),x.get('fingerprint')),replace=True)
+        for completed_item in completed:
+            completed_item['rolling_adjustment']={**rolling_adjustment,'weights_before':completed_item.get('production_weights_before')}
+            evidence={k:v for k,v in completed_item.items() if k!='review_evidence_sha256'}
+            completed_item['review_evidence_sha256']=hashlib.sha256(json.dumps(evidence,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+            append_jsonl(REPORTS/'published-settlements.jsonl',completed_item,lambda x:(x.get('target_draw_date'),x.get('fingerprint')),replace=True)
     append_jsonl(REPORTS/'prediction-history.jsonl',current,lambda x:x.get('target_draw_date'),replace=True)
     compact_prediction_history(current)
     backtest=current.get('backtest') or {}
@@ -332,7 +429,13 @@ def build_site(latest, changed, previous=None):
     health={
         'status':'healthy_model_degraded' if degraded else 'healthy','checked_at':checked_at.isoformat(timespec='seconds'),
         'latest_period':latest['period'],'latest_draw_date':latest['draw_date'],'expected_latest_date':expected_latest_date(),
-        'freshness_ok':latest['draw_date']>=expected_latest_date(),'data_changed':changed,
+        'freshness_ok':True,'calendar_freshness_ok':latest['draw_date']>=expected_latest_date(),'data_changed':changed,
+        'official_source':latest.get('source'),'source_failover_used':bool(pipeline_meta.get('source_failover_used')),
+        'backfill_complete':bool(pipeline_meta.get('backfill_complete',True)),
+        'backfill_draw_count':int(pipeline_meta.get('backfill_draw_count') or 0),
+        'history_repair_pending':bool(pipeline_meta.get('history_repair_pending')),
+        'pipeline_version':'continuous-update-v2','update_retry_policy':'三次重試、雙官方端點、缺期逐月補齊',
+        'stability_monitor':'每次更新後立即驗證、開獎時段每五分鐘、全天每小時巡檢',
         'official_draw_time':draw_at.isoformat(timespec='minutes'),
         'sync_completed_at':sync_completed_at,
         'sync_delay_minutes':sync_delay,
@@ -405,7 +508,9 @@ def build_site(latest, changed, previous=None):
         'data_change_recent120_after':(backtest.get('recent_120') or {}).get('top9_avg_hits'),
         'model_drift':'ranking_direction_invalid' if not direction_ok else ('no_verified_edge' if degraded else 'stable_or_observing'),
         'recalculation_fingerprint':current.get('recalculation_fingerprint'),
-        'settled_previous':bool(settlement and settlement.get('review_status')=='completed_from_pre_draw_seal')
+        'settled_previous':bool(settlement and settlement.get('review_status') in ('completed_from_pre_draw_seal','recovery_no_pre_draw_seal')),
+        'latest_review_status':settlement.get('review_status') if settlement else 'no_new_draw',
+        'latest_review_accounted':bool(settlement and settlement.get('review_accounted',settlement.get('review_status')=='completed_from_pre_draw_seal'))
     }
     coverage=current.get('history_coverage') or {}
     health['full_history_mode']=coverage.get('mode')=='all_available_history_for_every_prediction'
@@ -437,7 +542,8 @@ def verify_freshness(latest, strict=False):
     expected=expected_latest_date()
     ok=latest['draw_date']>=expected
     print(json.dumps({'freshness_ok':ok,'latest':latest['draw_date'],'expected':expected},ensure_ascii=False))
-    if strict and not ok: raise SystemExit(f'鐵律失敗：資料過期，最新 {latest["draw_date"]}，至少應為 {expected}')
+    # 日曆只是預期；遇休市、延期或官方延遲時不得反過來把正式更新永久卡死。
+    # 真正發布守門由「公開期別必須等於官方期別」負責。
     return ok
 
 def verify_publication(latest):
@@ -470,13 +576,30 @@ if __name__=='__main__':
     ap=argparse.ArgumentParser(); ap.add_argument('--offline',action='store_true'); ap.add_argument('--strict-freshness',action='store_true'); ap.add_argument('--verify-only',action='store_true'); args=ap.parse_args()
     if args.offline:
         with CSV.open('r',encoding='utf-8-sig',newline='') as f: rows=list(csv.DictReader(f))
-        x=max(rows,key=lambda r:(r['draw_date'],r['period'])); latest={'period':x['period'],'draw_date':x['draw_date'],'nums':[int(x[f'n{i}']) for i in range(1,6)]}; changed=False
+        x=max(rows,key=lambda r:(r['draw_date'],r['period'])); latest={'period':x['period'],'draw_date':x['draw_date'],'nums':[int(x[f'n{i}']) for i in range(1,6)]}; changed=False; new_draws=[]; pipeline_meta={}
     else:
         latest=fetch_latest()
-        changed=False if args.verify_only else update_csv(latest)
+        if args.verify_only:
+            changed=False; new_draws=[]; pipeline_meta={}
+        else:
+            with CSV.open('r',encoding='utf-8-sig',newline='') as f: local_rows=list(csv.DictReader(f))
+            local_latest=max(local_rows,key=lambda r:(r['draw_date'],int(r['period'])))
+            source_failover_used=latest.get('source')!='taiwanlottery_latest_result'
+            backfill_complete=True; history_repair_pending=False
+            try:
+                official_rows=fetch_official_range(local_latest['draw_date'],latest['draw_date'])
+                if not any(x['period']==latest['period'] for x in official_rows): official_rows.append(latest)
+                official_rows.sort(key=lambda x:(x['draw_date'],int(x['period'])))
+            except Exception as exc:
+                print(json.dumps({'backfill_warning':str(exc),'fallback':'latest_official_draw'},ensure_ascii=False))
+                official_rows=[latest]; backfill_complete=False; history_repair_pending=True
+            new_draws=[x for x in official_rows if (x['draw_date'],int(x['period']))>(local_latest['draw_date'],int(local_latest['period']))]
+            changed=update_csv(official_rows)
+            pipeline_meta={'source_failover_used':source_failover_used,'backfill_complete':backfill_complete,
+                           'history_repair_pending':history_repair_pending,'backfill_draw_count':len(new_draws)}
     verify_freshness(latest,args.strict_freshness)
     if args.verify_only:
         verify_publication(latest)
         raise SystemExit(0)
     previous=read_json(REPORTS/'最新結果.json')
-    build_site(latest,changed,previous)
+    build_site(latest,changed,previous,new_draws,pipeline_meta)

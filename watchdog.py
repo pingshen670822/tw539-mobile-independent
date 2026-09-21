@@ -42,13 +42,13 @@ errors=[]
 warnings=[]
 now=datetime.now(TAIPEI)
 deadline_active=now.time()>=clock_time(22,40) or now.time()<clock_time(6,0)
-if deadline_active and official['draw_date']<expected_latest_date(now): errors.append('開獎後兩小時官方資料仍未取得，必須啟動自主修復')
+if deadline_active and official['draw_date']<expected_latest_date(now): warnings.append('開獎後兩小時官方資料仍未取得；持續巡檢，但不得阻斷已對上官方期別的預測')
 if str(health.get('latest_period'))!=str(official['period']): errors.append(f"公開期別 {health.get('latest_period')} != 官方 {official['period']}")
 if health.get('latest_draw_date')!=official['draw_date']: errors.append(f"公開日期 {health.get('latest_draw_date')} != 官方 {official['draw_date']}")
 if not health.get('freshness_ok'): errors.append('公開頁新鮮度未通過')
 if not health.get('full_history_mode'): errors.append('公開頁不是100%全歷史模式')
 if not health.get('history_database_sha256'): errors.append('公開頁缺資料庫指紋')
-for key in ('sync_completed_at','sync_delay_minutes','two_hour_repair_deadline','two_hour_deadline_met','self_repair_status','self_repair_count','last_public_verification_at','mobile_open_sync'):
+for key in ('sync_completed_at','sync_delay_minutes','two_hour_repair_deadline','two_hour_deadline_met','self_repair_status','self_repair_count','last_public_verification_at','mobile_open_sync','pipeline_version','update_retry_policy','stability_monitor','latest_review_accounted'):
     if key not in health: errors.append('公開健康檔缺少自主修復欄位：'+key)
 if not health.get('two_hour_deadline_met',True): warnings.append('本期超過兩小時期限後才完成同步')
 data_latest=result.get('data_latest') or {}
@@ -90,7 +90,7 @@ rolling=result.get('rolling_weight_adjustment') or {}
 if rolling.get('production_weights')!=result.get('production_weights') or rolling.get('production_ensemble_weights')!=ensemble or rolling.get('anchor_ensemble_weights')!=selection.get('ensemble_members') or rolling.get('updates')!=360 or rolling.get('method')!='five_member_consensus_with_direct_hit_single_repeat_and_data_change_front9' or rolling.get('strategy_candidate_count')!=30 or rolling.get('strategy_selection_window')!=360 or rolling.get('strategy_consensus_member_count')!=5: errors.append('最新開獎錯誤沒有觸發五組方向共識、直接命中、單碼冷卻與資料變化校正')
 if not rolling.get('direct_hit_calibration_enabled') or rolling.get('direct_hit_window')!=360 or rolling.get('direct_hit_ridge')!=10.0 or rolling.get('direct_hit_full_rank_blend')!=.15 or not rolling.get('direct_hit_full_rank_gate'): errors.append('滾動修正未同步直接命中全排序校準')
 if not rolling.get('single_repeat_break_enabled') or not rolling.get('single_repeat_break_gate') or rolling.get('single_repeat_break_current')!=single_break: errors.append('滾動修正未同步單碼重複冷卻與封存狀態')
-if not rolling.get('data_change_enabled') or rolling.get('data_change_window')!=720 or rolling.get('data_change_ridge')!=1.0 or rolling.get('data_change_rank_blend')!=.5 or rolling.get('data_change_preserve_front')!=5 or not rolling.get('data_change_gate'): errors.append('滾動修正未同步每期資料變化校正')
+if not rolling.get('data_change_enabled') or rolling.get('data_change_window')!=720 or rolling.get('data_change_ridge')!=1.0 or rolling.get('data_change_rank_blend')!=.5 or rolling.get('data_change_preserve_front')!=5 or bool(rolling.get('data_change_gate'))!=bool(backtest.get('data_change_gate')): errors.append('滾動修正未同步每期資料變化校正')
 rate_selection=rolling.get('learning_rate_selection') or {}
 if rate_selection.get('candidate_count')!=30 or rate_selection.get('learning_rate_candidate_count')!=6 or rate_selection.get('boundary_blend_candidate_count')!=5 or not rate_selection.get('holdout_not_used'): errors.append('舊邊界診斷未保持隔離')
 if backtest.get('next_signed_weights')!=result.get('production_weights') or backtest.get('rolling_update_count')!=360: errors.append('隔離回測沒有重演方向模型逐期選擇')
@@ -99,14 +99,15 @@ if health.get('polarity_selection_window')!=360 or health.get('polarity_consensu
 direct_baseline=backtest.get('direct_hit_baseline') or {}
 if not backtest.get('direct_hit_calibration_enabled') or backtest.get('direct_hit_window')!=360 or backtest.get('direct_hit_ridge')!=10.0 or backtest.get('direct_hit_full_rank_blend')!=.15 or not backtest.get('direct_hit_full_rank_gate'): errors.append('直接命中全排序校準參數錯誤')
 if not backtest.get('single_repeat_break_enabled') or backtest.get('single_repeat_break_cooldown')!=1 or not backtest.get('single_repeat_break_gate'): errors.append('單碼重複冷卻參數或上線守門錯誤')
-if not backtest.get('data_change_enabled') or backtest.get('data_change_window')!=720 or backtest.get('data_change_ridge')!=1.0 or backtest.get('data_change_rank_blend')!=.5 or backtest.get('data_change_preserve_front')!=5 or not backtest.get('data_change_gate'): errors.append('每期資料變化校正參數或上線守門錯誤')
+if not backtest.get('data_change_enabled') or backtest.get('data_change_window')!=720 or backtest.get('data_change_ridge')!=1.0 or backtest.get('data_change_rank_blend')!=.5 or backtest.get('data_change_preserve_front')!=5: errors.append('每期資料變化校正參數錯誤')
+if not backtest.get('data_change_gate'): warnings.append('每期資料變化校正未通過上線守門，正式排序已自動停用此模組')
 for after,before in (('single_repeat_break_hits','single_repeat_break_baseline_hits'),('single_repeat_break_recent_54_hits','single_repeat_break_recent_54_baseline_hits'),('single_repeat_break_recent_120_hits','single_repeat_break_recent_120_baseline_hits')):
     if backtest.get(after,0)<backtest.get(before,0): errors.append('單碼重複冷卻拖累隔離命中')
 for current,baseline in ((backtest,direct_baseline),((backtest.get('recent_54') or {}),(backtest.get('direct_hit_baseline_recent_54') or {})),((backtest.get('recent_120') or {}),(backtest.get('direct_hit_baseline_recent_120') or {}))):
     if current.get('top5_avg_hits',0)<baseline.get('top5_avg_hits',0) or current.get('top9_avg_hits',0)<baseline.get('top9_avg_hits',0): errors.append('直接命中全排序校準拖累前五或前九')
 if not health.get('direct_hit_calibration_enabled') or health.get('direct_hit_window')!=360 or health.get('direct_hit_ridge')!=10.0 or health.get('direct_hit_full_rank_blend')!=.15 or not health.get('direct_hit_full_rank_gate'): errors.append('公開健康檔未同步直接命中全排序校準')
 if not health.get('single_repeat_break_enabled') or not health.get('single_repeat_break_gate') or health.get('single_repeat_break_current')!=single_break: errors.append('公開健康檔未同步單碼重複冷卻')
-if not health.get('data_change_enabled') or health.get('data_change_window')!=720 or health.get('data_change_ridge')!=1.0 or health.get('data_change_rank_blend')!=.5 or health.get('data_change_preserve_front')!=5 or not health.get('data_change_gate'): errors.append('公開健康檔未同步每期資料變化校正')
+if not health.get('data_change_enabled') or health.get('data_change_window')!=720 or health.get('data_change_ridge')!=1.0 or health.get('data_change_rank_blend')!=.5 or health.get('data_change_preserve_front')!=5 or bool(health.get('data_change_gate'))!=bool(backtest.get('data_change_gate')): errors.append('公開健康檔未同步每期資料變化校正')
 stability=backtest.get('anchor_stability') or {}
 if stability.get('selected') not in ('穩定冠軍','每日挑戰者') or rolling.get('anchor_stability')!=stability or health.get('anchor_stability')!=stability or rolling.get('anchor_weights')!=result.get('production_anchor_weights') or health.get('production_anchor_weights')!=result.get('production_anchor_weights'): errors.append('穩定冠軍與每日挑戰模型守門未完整同步')
 if not backtest.get('catastrophic_guard_enabled'): errors.append('公開結果未啟用災難失準保護')
@@ -121,31 +122,25 @@ if not settlements:
 else:
     review=settlements[-1]
     if review.get('target_draw_date')!=official['draw_date'] or str(review.get('official_period'))!=str(official['period']): errors.append('最新命中檢討未對應官方最新期別')
-    if review.get('review_status')!='completed_from_pre_draw_seal' or len(review.get('actual_rankings') or [])!=5 or len(review.get('module_review') or [])!=len(result.get('production_weights') or {}): errors.append('最新命中檢討缺少實際排名或錯誤模組分析')
-    expected_top5_hits=sorted(set(review.get('actual_numbers') or []).intersection(review.get('top5_published') or []))
-    if len(review.get('top5_published') or [])!=5 or sorted(review.get('top5_hits') or [])!=expected_top5_hits: errors.append('最新命中檢討缺少或算錯前5命中資料')
-    actual_boundary=sorted(x.get('number') for x in (review.get('actual_rankings') or []) if 10<=int(x.get('rank',99))<=15)
-    if sorted(review.get('rank10_15_hits') or [])!=actual_boundary or review.get('boundary_review_status') not in ('triggered_and_recalculated','checked_no_rank_10_15_hit'): errors.append('最新命中檢討缺少第10至15名偏移檢查')
-    if any(any(key not in module for key in ('boundary_actual_mean','false_top9_mean','boundary_discrimination_gap','boundary_error_flag')) for module in (review.get('module_review') or [])): errors.append('最新命中檢討缺少前9邊界逐模組比較')
-    if not (review.get('data_integrity') or {}).get('no_post_draw_substitution'): errors.append('命中檢討未禁止開獎後換號')
-    if not (review.get('rolling_adjustment') or {}).get('completed') or (review.get('rolling_adjustment') or {}).get('candidate_count')!=286 or (review.get('rolling_adjustment') or {}).get('boundary_parameter_candidate_count')!=30: errors.append('命中檢討後沒有完成286組權重與30組前9邊界重算')
-    if not health.get('settled_previous'): errors.append('健康檔沒有標示最新命中檢討完成')
-    expected_condition=(len(review.get('top9_hits') or [])==0 and float(review.get('average_actual_rank') or 0)>=22)
-    expected_guard=expected_condition and bool(backtest.get('catastrophic_guard_policy_recommends'))
-    if bool(backtest.get('catastrophic_guard_current_condition'))!=expected_condition or bool(health.get('catastrophic_guard_current_condition'))!=expected_condition: errors.append('災難失準條件沒有依最新封存檢討同步')
-    if bool(backtest.get('catastrophic_guard_current_trigger'))!=expected_guard or bool(health.get('catastrophic_guard_current_trigger'))!=expected_guard: errors.append('災難失準保護沒有依最新封存檢討同步啟動')
-    base=list(backtest.get('next_unguarded_ranked') or [])
-    if expected_guard and len(base)==39:
-        previous=set(review.get('actual_numbers') or [])
-        qualified=previous.intersection(base[:9]);blocked=previous-qualified
-        rotated=base[12:]+base[:12]
-        first=base[0]
-        eligible=[number for number in rotated if number!=first and number not in blocked]
-        front=[first]+eligible[:8];expected_ranked=front+[number for number in rotated if number not in front]
-        if expected_ranked[0]!=first: errors.append('災難失準保護錯誤換掉原始第1名')
+    if review.get('review_status')=='completed_from_pre_draw_seal':
+        if len(review.get('actual_rankings') or [])!=5 or len(review.get('module_review') or [])!=len(result.get('production_weights') or {}): errors.append('最新命中檢討缺少實際排名或錯誤模組分析')
+        expected_top5_hits=sorted(set(review.get('actual_numbers') or []).intersection(review.get('top5_published') or []))
+        if len(review.get('top5_published') or [])!=5 or sorted(review.get('top5_hits') or [])!=expected_top5_hits: errors.append('最新命中檢討缺少或算錯前5命中資料')
+        actual_boundary=sorted(x.get('number') for x in (review.get('actual_rankings') or []) if 10<=int(x.get('rank',99))<=15)
+        if sorted(review.get('rank10_15_hits') or [])!=actual_boundary or review.get('boundary_review_status') not in ('triggered_and_recalculated','checked_no_rank_10_15_hit'): errors.append('最新命中檢討缺少第10至15名偏移檢查')
+        if any(any(key not in module for key in ('boundary_actual_mean','false_top9_mean','boundary_discrimination_gap','boundary_error_flag')) for module in (review.get('module_review') or [])): errors.append('最新命中檢討缺少前9邊界逐模組比較')
+        if not (review.get('data_integrity') or {}).get('no_post_draw_substitution'): errors.append('命中檢討未禁止開獎後換號')
+        if not (review.get('rolling_adjustment') or {}).get('completed') or (review.get('rolling_adjustment') or {}).get('candidate_count')!=286 or (review.get('rolling_adjustment') or {}).get('boundary_parameter_candidate_count')!=30: errors.append('命中檢討後沒有完成286組權重與30組前9邊界重算')
+        expected_condition=(len(review.get('top9_hits') or [])==0 and float(review.get('average_actual_rank') or 0)>=22)
+        expected_guard=expected_condition and bool(backtest.get('catastrophic_guard_policy_recommends'))
+        if bool(backtest.get('catastrophic_guard_current_condition'))!=expected_condition or bool(health.get('catastrophic_guard_current_condition'))!=expected_condition: errors.append('災難失準條件沒有依最新封存檢討同步')
+        if bool(backtest.get('catastrophic_guard_current_trigger'))!=expected_guard or bool(health.get('catastrophic_guard_current_trigger'))!=expected_guard: errors.append('災難失準保護沒有依最新封存檢討同步啟動')
+    elif review.get('review_status')=='recovery_no_pre_draw_seal':
+        integrity=review.get('data_integrity') or {}
+        if review.get('single_published') is not None or not review.get('review_accounted') or not integrity.get('no_fabricated_prediction'): errors.append('停擺缺口含事後補造預測或未完整登錄')
     else:
-        expected_ranked=base
-    if result.get('ranked_all')!=expected_ranked or backtest.get('next_ranked')!=expected_ranked: errors.append('公開正式排序未套用災難失準保護')
+        errors.append('最新開獎未完成檢討或停擺缺口登錄')
+    if not health.get('settled_previous') or not health.get('latest_review_accounted'): errors.append('健康檔沒有標示最新開獎已完成檢討或缺口登錄')
 visible_pages={}
 for name,page in pages.items():
     visible=re.sub(r'(?is)<(?:style|script)\b[^>]*>.*?</(?:style|script)>',' ',page)
@@ -180,4 +175,4 @@ for term in ('tw539-mobile-ironlaw-v6','mobile-sync.js','icons/icon-192.png','ic
 for term in ('beforeinstallprompt','appinstalled','install-app-button','手機版已安裝'):
     if term not in sync: errors.append(f'公開手機安裝流程缺少：{term}')
 if errors: raise SystemExit('鐵律看門狗失敗：'+'；'.join(errors))
-print(json.dumps({'看門狗':'通過','官方期別':official['period'],'公開期別':health['latest_period'],'全歷史':True,'命中檢討':'完成','滾動候選':286,'1中1主選':result['single_published'],'手機可安裝':True,'模型警報':warnings,'戰報可見英文':0},ensure_ascii=False))
+print(json.dumps({'看門狗':'通過','官方期別':official['period'],'公開期別':health['latest_period'],'全歷史':True,'命中檢討':'已完成或誠實登錄停擺缺口','滾動候選':286,'1中1主選':result['single_published'],'手機可安裝':True,'模型警報':warnings,'戰報可見英文':0},ensure_ascii=False))

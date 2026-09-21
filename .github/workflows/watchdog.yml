@@ -1,11 +1,16 @@
 name: 手機雲端資料鐵律看門狗
 on:
+  workflow_run:
+    workflows: [開獎後全自動更新與手機同步]
+    types: [completed]
   schedule:
     # 台灣時間20:30至隔日00:55每5分鐘輕量巡檢；落後即觸發完整自修。
     # 加密觸發可降低雲端排程偶發延遲造成兩小時期限失守的風險。
     - cron: '30,35,40,45,50,55 12 * * 1-6'
     - cron: '*/5 13-16 * * 1-6'
     - cron: '0 23 * * 1-6'
+    # 全天每小時獨立巡檢；即使主排程沒有啟動，也能偵測公開頁與官方期別差異。
+    - cron: '17 * * * *'
   workflow_dispatch: {}
 permissions:
   contents: read
@@ -21,6 +26,9 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with: {python-version: '3.12'}
+      - name: 等待公開頁版本切換
+        if: github.event_name == 'workflow_run'
+        run: sleep 30
       - name: 比較官方與手機公開頁
         id: first_check
         continue-on-error: true

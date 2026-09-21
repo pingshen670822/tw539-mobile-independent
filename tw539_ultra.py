@@ -638,6 +638,22 @@ def blend_data_change_ranking(baseline: list[int], change: list[int], seed: str,
     return fixed+[number for number in mixed if number not in fixed]
 
 
+def enforce_repeat_qualification_ranking(ranked: list[int], audits: list[dict]) -> tuple[list[int],list[dict]]:
+    """所有後段校正完成後再次守住連莊資格，避免融合模型把不合格上期號碼帶回前九。"""
+    blocked={int(item["number"]) for item in audits if not item.get("qualified")}
+    eligible=[number for number in ranked if number not in blocked]
+    front=eligible[:9]
+    final=front+[number for number in ranked if number not in front]
+    positions={number:index+1 for index,number in enumerate(final)}
+    refreshed=[]
+    for original in audits:
+        item=dict(original);number=int(item["number"])
+        item["final_rank"]=positions[number]
+        item["listed_top9"]=number in final[:9]
+        refreshed.append(item)
+    return final,refreshed
+
+
 def apply_single_repeat_break(ranked: list[int], consensus_ranked: list[int],
                               previous_single: int | None,
                               previous_break_applied: bool) -> tuple[list[int],bool,int,int]:
@@ -792,6 +808,12 @@ def adaptive_polarity_backtest(
         data_change_baseline_rows.append((single_adjusted_ranked,actual,polarities))
         data_change_adjusted_ranked=blend_data_change_ranking(
             single_adjusted_ranked,change_ranked,cases[offset]["seed"])
+        formal_raw=scores_from_features(cases[offset]["features"],signed_consensus)
+        _,case_repeat_audit=apply_repeat_qualification(
+            formal_raw,cases[offset]["features"],signed_consensus,cases[offset]["previous_numbers"],
+            cases[offset]["seed"],cases[offset]["repeat_exposure"],cases[offset]["repeat_hits"])
+        data_change_adjusted_ranked,_=enforce_repeat_qualification_ranking(
+            data_change_adjusted_ranked,case_repeat_audit)
         catastrophic_condition=False
         if previous_base_ranked is not None:
             previous_positions={number:index+1 for index,number in enumerate(previous_base_ranked)}
@@ -932,6 +954,8 @@ def adaptive_polarity_backtest(
     data_change_next_ranked=data_change_ranking(next_change_case,final_change_weights)
     change_adjusted_next_ranked=blend_data_change_ranking(
         simulated_next_ranked,data_change_next_ranked,draws[-1]["period"])
+    change_adjusted_next_ranked,repeat_audit=enforce_repeat_qualification_ranking(
+        change_adjusted_next_ranked,repeat_audit)
     reconstructed_guard_condition=False
     if previous_base_ranked is not None:
         previous_positions={number:index+1 for index,number in enumerate(previous_base_ranked)}
@@ -1772,11 +1796,18 @@ def prediction_seal_payload(based_on_period: str, target_draw_date: str, history
 def _review_blocks(settlements: list[dict], current_weights: dict, selection: dict, fmt) -> tuple[str, str]:
     recent = []
     for item in reversed(settlements[-15:]):
-        recent.append(f"<tr><td>{item.get('target_draw_date','-')}</td><td>{int(item.get('single_published',0)):02}</td><td>{fmt(item.get('top9_published') or []) or '-'}</td><td>{fmt(item.get('actual_numbers') or []) or '-'}</td><td>{'命中' if item.get('single_hit') else '未中'}</td><td>{fmt(item.get('top9_hits') or []) or '-'}</td><td>{fmt(item.get('rank10_15_hits') or []) or '-'}</td><td>{'已觸發邊界回灌' if item.get('rank10_15_hits') else '已檢查、無邊界命中'}</td></tr>")
+        if item.get("review_status") == "recovery_no_pre_draw_seal":
+            recent.append(f"<tr><td>{item.get('target_draw_date','-')}</td><td>無封存</td><td>禁止補算</td><td>{fmt(item.get('actual_numbers') or []) or '-'}</td><td>停擺缺口</td><td>禁止補算</td><td>禁止補算</td><td>已登錄、不造假</td></tr>")
+        else:
+            recent.append(f"<tr><td>{item.get('target_draw_date','-')}</td><td>{int(item.get('single_published',0)):02}</td><td>{fmt(item.get('top9_published') or []) or '-'}</td><td>{fmt(item.get('actual_numbers') or []) or '-'}</td><td>{'命中' if item.get('single_hit') else '未中'}</td><td>{fmt(item.get('top9_hits') or []) or '-'}</td><td>{fmt(item.get('rank10_15_hits') or []) or '-'}</td><td>{'已觸發邊界回灌' if item.get('rank10_15_hits') else '已檢查、無邊界命中'}</td></tr>")
     recent_html = "".join(recent) or "<tr><td colspan='8'>尚無改版後、開獎前封存的實戰結算紀錄</td></tr>"
     if not settlements:
         return recent_html, "<p><b>尚無可檢討的開獎前封存實戰資料。</b></p>"
     item = settlements[-1]
+    if item.get("review_status") == "recovery_no_pre_draw_seal":
+        return recent_html, (f"<p><b>檢討期別：{item.get('target_draw_date','-')}；實際開獎 "
+                            f"{fmt(item.get('actual_numbers') or [])}。此期位於停擺缺口，沒有開獎前正式封存；"
+                            "只登錄官方結果，禁止事後補算、換號或製造命中率。全歷史已補齊並重新運算下一期。</b></p>")
     actual_rows = "".join(
         f"<tr><td>{x.get('number',0):02}</td><td>{x.get('rank','-')}</td><td>{x.get('relative_index',0):.2f}</td><td>{'前9' if x.get('rank',99)<=9 else ('第10至15名' if x.get('rank',99)<=15 else '第16名以後')}</td></tr>"
         for x in item.get("actual_rankings", []))
@@ -1957,8 +1988,12 @@ def main() -> None:
         live_applied=bool(simulated.get("applied"));live_original=int(simulated.get("original") or live_ranked[0])
         live_replacement=int(simulated.get("replacement") or live_ranked[0]);live_previous_single=None
         live_previous_applied=False;live_source="逐期隔離重演"
-    live_ranked=blend_data_change_ranking(
-        live_ranked,bt["data_change_next_ranked"],draws[-1]["period"])
+    if bt.get("data_change_gate"):
+        live_ranked=blend_data_change_ranking(
+            live_ranked,bt["data_change_next_ranked"],draws[-1]["period"])
+    live_ranked,live_repeat_audit=enforce_repeat_qualification_ranking(
+        live_ranked,bt.get("next_repeat_audit") or [])
+    bt["next_repeat_audit"]=live_repeat_audit
     bt["next_unguarded_ranked"]=live_ranked
     bt["single_repeat_break_current"]={
         "applied":live_applied,"original":live_original,"replacement":live_replacement,
@@ -1974,6 +2009,9 @@ def main() -> None:
     unguarded_next=list(bt["next_unguarded_ranked"])
     guarded_next=(apply_catastrophic_guard(unguarded_next,draws[-1]["nums"])
                   if guard_trigger else unguarded_next)
+    guarded_next,live_repeat_audit=enforce_repeat_qualification_ranking(
+        guarded_next,bt.get("next_repeat_audit") or [])
+    bt["next_repeat_audit"]=live_repeat_audit
     ordered_values=sorted(bt["next_score"].values(),reverse=True)
     bt["next_ranked"]=guarded_next
     bt["next_score"]={number:ordered_values[index] for index,number in enumerate(guarded_next)}
