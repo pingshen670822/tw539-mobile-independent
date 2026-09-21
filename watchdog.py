@@ -48,6 +48,10 @@ if health.get('latest_draw_date')!=official['draw_date']: errors.append(f"公開
 if not health.get('freshness_ok'): errors.append('公開頁新鮮度未通過')
 if not health.get('full_history_mode'): errors.append('公開頁不是100%全歷史模式')
 if not health.get('history_database_sha256'): errors.append('公開頁缺資料庫指紋')
+settlement_coverage=health.get('settlement_coverage') or {}
+if (not health.get('settlement_coverage_complete') or settlement_coverage.get('missing_draws')!=0
+        or settlement_coverage.get('accounted_draws')!=settlement_coverage.get('expected_draws')):
+    errors.append('公開歷史結算仍有遺失資料')
 for key in ('sync_completed_at','sync_delay_minutes','two_hour_repair_deadline','two_hour_deadline_met','self_repair_status','self_repair_count','last_public_verification_at','mobile_open_sync','pipeline_version','update_retry_policy','stability_monitor','latest_review_accounted'):
     if key not in health: errors.append('公開健康檔缺少自主修復欄位：'+key)
 if not health.get('two_hour_deadline_met',True): warnings.append('本期超過兩小時期限後才完成同步')
@@ -159,7 +163,9 @@ if '本期最強1顆' not in home or '單碼重複冷卻' not in home or '1中1'
 if any(term in home for term in ('最新一期命中結算','最後360期隔離回測','全歷史運算範圍','鐵律守門')): errors.append('本期預測頁混入其他分類資料')
 if '最新一期命中結算' not in review_page or '開獎前前5正式預測' not in review_page or '前5命中資料' not in review_page or '錯誤模組與前9邊界逐項檢討' not in review_page or '第10至15名命中' not in review_page or '開獎後滾動權重重算' not in review_page or '禁止開獎後換號或補號' not in review_page: errors.append('開獎檢討分頁內容不完整')
 if '最後360期隔離回測' not in backtest_page or '直接命中全排序校準' not in backtest_page or '前9集合允許修正' not in backtest_page or '單碼重複冷卻' not in backtest_page or '每期資料變化校正' not in backtest_page or '最近54期獨立觀察' not in backtest_page or '全歷史逐期一致性掃描' not in backtest_page: errors.append('回測驗證分頁內容不完整')
-if '開獎前封存實戰紀錄' not in history_page or '前5命中資料' not in history_page or '錯誤模組與前9邊界逐項檢討' in history_page: errors.append('歷史封存分頁內容不完整或混入逐項檢討')
+if ('歷史資料完整度' not in history_page or '尚缺官方資料' not in history_page or '官方期別' not in history_page
+        or '開獎前封存實戰紀錄' not in history_page or '前5命中資料' not in history_page
+        or '錯誤模組與前9邊界逐項檢討' in history_page): errors.append('歷史封存分頁內容不完整或混入逐項檢討')
 if '正式方向模型' not in models_page or '全系統重組' not in models_page or '五組正式權重共識' not in models_page or '直接命中全排序校準' not in models_page or '單碼重複冷卻' not in models_page or '每期資料變化校正' not in models_page or '穩定冠軍與每日挑戰模型' not in models_page or '連莊資格驗算規格' not in models_page or '全歷史連莊率不低於12.82%' not in models_page: errors.append('模型說明分頁內容不完整')
 if '鐵律守門' not in health_page or '五組權重共識' not in health_page or '直接命中全排序校準' not in health_page or '單碼重複冷卻' not in health_page or '每期資料變化校正' not in health_page or '手機同步' not in health_page or '開獎後更新與自主修復' not in health_page or '兩小時修復期限' not in health_page: errors.append('系統健康分頁內容不完整')
 if any('低機率' in visible or '當期預測前九' in visible for visible in visible_pages.values()): errors.append('公開分頁仍含易誤解標示或事後回算內容')

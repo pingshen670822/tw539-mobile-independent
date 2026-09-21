@@ -285,18 +285,34 @@ def _review_page(settlements, weights, selection, feature_labels):
     return _page_shell("review.html", "開獎檢討", "只顯示最新一期命中檢討與滾動修正", content)
 
 
-def _history_page(settlements):
+def _history_page(settlements, draws):
+    settlement_by_date={str(item.get("target_draw_date") or ""):item for item in settlements}
+    settlement_dates=sorted(date for date in settlement_by_date if date)
+    start=settlement_dates[0] if settlement_dates else None
+    expected=[draw for draw in draws if start and start<=str(draw.get("date") or "")<=str(draws[-1].get("date") or "")]
+    expected_dates=[str(draw.get("date") or "") for draw in expected]
+    missing_dates=[date for date in expected_dates if date not in settlement_by_date]
+    sealed=sum(1 for date in expected_dates if (settlement_by_date.get(date) or {}).get("review_status")=="completed_from_pre_draw_seal")
+    recovered=sum(1 for date in expected_dates if (settlement_by_date.get(date) or {}).get("review_status")=="recovery_no_pre_draw_seal")
     rows_list=[]
     for item in reversed(settlements):
+        period=str(item.get('official_period') or '－')
         if item.get("review_status") == "recovery_no_pre_draw_seal":
-            rows_list.append(f"<tr><td>{item.get('target_draw_date','－')}</td><td>無封存</td><td>禁止補算</td><td>禁止補算</td><td>禁止補算</td><td>{_fmt(item.get('actual_numbers') or [])}</td><td>停擺缺口</td><td>禁止補算</td><td>禁止補算</td></tr>")
+            rows_list.append(f"<tr><td>{item.get('target_draw_date','－')}</td><td>{period}</td><td>官方開獎已補齊</td><td>原始封存不存在</td><td>禁止補算</td><td>禁止補算</td><td>禁止補算</td><td>{_fmt(item.get('actual_numbers') or [])}</td><td>停擺缺口已登錄</td><td>禁止補算</td><td>禁止補算</td></tr>")
         else:
-            rows_list.append(f"<tr><td>{item.get('target_draw_date','－')}</td><td>{int(item.get('single_published',0)):02}</td><td>{_fmt(item.get('top5_published') or [])}</td><td>{_fmt(item.get('top5_hits') or []) or '未命中'}・{len(item.get('top5_hits') or [])}顆</td><td>{_fmt(item.get('top9_published') or [])}</td><td>{_fmt(item.get('actual_numbers') or [])}</td><td>{'命中' if item.get('single_hit') else '未中'}</td><td>{_fmt(item.get('top9_hits') or []) or '0顆'}</td><td>{_fmt(item.get('rank10_15_hits') or []) or '0顆'}</td></tr>")
+            rows_list.append(f"<tr><td>{item.get('target_draw_date','－')}</td><td>{period}</td><td>事前封存已驗證</td><td>{int(item.get('single_published',0)):02}</td><td>{_fmt(item.get('top5_published') or [])}</td><td>{_fmt(item.get('top5_hits') or []) or '未命中'}・{len(item.get('top5_hits') or [])}顆</td><td>{_fmt(item.get('top9_published') or [])}</td><td>{_fmt(item.get('actual_numbers') or [])}</td><td>{'命中' if item.get('single_hit') else '未中'}</td><td>{_fmt(item.get('top9_hits') or []) or '0顆'}</td><td>{_fmt(item.get('rank10_15_hits') or []) or '0顆'}</td></tr>")
     rows = "".join(rows_list)
     if not rows:
-        rows = "<tr><td colspan='9'>尚無已結算封存紀錄</td></tr>"
+        rows = "<tr><td colspan='11'>尚無已結算封存紀錄</td></tr>"
     content = f"""
-<div class='band'><h2>開獎前封存實戰紀錄</h2><p class='note'>本頁只列歷史結算總表；最新一期的逐模組原因與權重調整請看「開獎檢討」。</p><div class='table-wrap'><table><thead><tr><th>開獎日</th><th>開獎前1中1</th><th>開獎前前5</th><th>前5命中資料</th><th>開獎前前9</th><th>實際開獎</th><th>主選結果</th><th>前9命中</th><th>第10至15名命中</th></tr></thead><tbody>{rows}</tbody></table></div></div>"""
+<div class='band'><h2>歷史資料完整度</h2><div class='grid'>
+<div class='card'><div class='label'>官方開獎應有</div><div class='value'>{len(expected_dates)}期</div></div>
+<div class='card'><div class='label'>已登錄</div><div class='value ok'>{len(expected_dates)-len(missing_dates)}期</div></div>
+<div class='card'><div class='label'>可驗證事前封存</div><div class='value'>{sealed}期</div></div>
+<div class='card'><div class='label'>停擺官方補錄</div><div class='value'>{recovered}期</div></div>
+<div class='card'><div class='label'>尚缺官方資料</div><div class='value {'ok' if not missing_dates else 'bad'}'>{len(missing_dates)}期</div></div>
+</div><p class='note'>停擺期間遺失的是開獎前預測封存，不是官方開獎資料。官方期別與實際號碼已逐期補齊；不存在的事前封存不得於開獎後補造。</p></div>
+<div class='band'><h2>開獎前封存實戰紀錄</h2><p class='note'>本頁逐期顯示官方期別、資料狀態與結算；最新一期的逐模組原因與權重調整請看「開獎檢討」。</p><div class='table-wrap'><table><thead><tr><th>開獎日</th><th>官方期別</th><th>資料狀態</th><th>開獎前1中1</th><th>開獎前前5</th><th>前5命中資料</th><th>開獎前前9</th><th>實際開獎</th><th>主選結果</th><th>前9命中</th><th>第10至15名命中</th></tr></thead><tbody>{rows}</tbody></table></div></div>"""
     return _page_shell("history.html", "歷史封存", "只顯示各期開獎前正式封存與結算", content)
 
 
@@ -415,7 +431,7 @@ def render_report_pages(draws, weights, score, tickets, bt, full_scan, repeat_au
         "index.html": _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, target.isoformat(), generated_at, feature_labels, bt),
         "backtest.html": _backtest_page(bt, full_scan),
         "review.html": _review_page(settlements, weights, selection, feature_labels),
-        "history.html": _history_page(settlements),
+        "history.html": _history_page(settlements, draws),
         "models.html": _models_page(draws, weights, bt, selection, repeat_audit, feature_labels),
         "health.html": _health_page(draws, bt, full_scan, generated_at, settlements, health),
     }

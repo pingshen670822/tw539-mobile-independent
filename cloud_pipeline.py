@@ -338,6 +338,49 @@ def account_for_new_draws(previous, new_draws, latest):
     existing=refresh_latest_settlement(latest)
     return [existing] if existing else []
 
+def repair_settlement_coverage(draws):
+    """以官方歷史資料補回遺失的結算列；沒有事前封存時只登錄官方事實。"""
+    history=read_jsonl(REPORTS/'prediction-history.jsonl')
+    draw_dates={str(draw.get('date') or '') for draw in draws}
+    prediction_dates=sorted({str(item.get('target_draw_date') or '') for item in history
+                             if str(item.get('target_draw_date') or '') in draw_dates})
+    if not prediction_dates:
+        return {'coverage_start':None,'expected_draws':0,'accounted_draws':0,
+                'missing_draws':0,'missing_dates':[],'repaired_draws':0,
+                'sealed_prediction_draws':0,'official_recovery_draws':0},[]
+    start=prediction_dates[0]
+    expected=[draw for draw in draws if start<=str(draw.get('date') or '')<=str(draws[-1].get('date') or '')]
+    settlements=read_jsonl(REPORTS/'published-settlements.jsonl')
+    accounted_dates={str(item.get('target_draw_date') or '') for item in settlements}
+    repaired=[]
+    for draw in expected:
+        draw_date=str(draw.get('date') or '')
+        if draw_date in accounted_dates:
+            continue
+        official={'period':str(draw['period']),'draw_date':draw_date,'nums':list(draw['nums'])}
+        matching=[item for item in history if item.get('target_draw_date')==draw_date]
+        if matching:
+            try:
+                item=settle_previous(matching[-1],official)
+            except Exception:
+                item=recovery_review(official)
+        else:
+            item=recovery_review(official)
+        repaired.append(item)
+        accounted_dates.add(draw_date)
+    settlements=read_jsonl(REPORTS/'published-settlements.jsonl')
+    latest_by_date={str(item.get('target_draw_date') or ''):item for item in settlements}
+    expected_dates=[str(draw.get('date') or '') for draw in expected]
+    missing=[date for date in expected_dates if date not in latest_by_date]
+    sealed=sum(1 for date in expected_dates if (latest_by_date.get(date) or {}).get('review_status')=='completed_from_pre_draw_seal')
+    recovered=sum(1 for date in expected_dates if (latest_by_date.get(date) or {}).get('review_status')=='recovery_no_pre_draw_seal')
+    return {
+        'coverage_start':start,'coverage_end':expected_dates[-1] if expected_dates else None,
+        'expected_draws':len(expected_dates),'accounted_draws':len(expected_dates)-len(missing),
+        'missing_draws':len(missing),'missing_dates':missing,'repaired_draws':len(repaired),
+        'sealed_prediction_draws':sealed,'official_recovery_draws':recovered,
+    },repaired
+
 def refresh_report_pages(current):
     """結算完成後以同一份正式結果重建分頁，避免檢討頁落後一期。"""
     from report_pages import render_report_pages
@@ -381,10 +424,19 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
     repair_run=os.getenv('TW539_SELF_REPAIR','').lower() in ('1','true','yes')
     pipeline_meta=pipeline_meta or {}
     accounted=account_for_new_draws(previous,new_draws or [],latest)
-    settlement=accounted[-1] if accounted else None
+    from tw539_ultra import load_draws
+    settlement_coverage,coverage_repaired=repair_settlement_coverage(load_draws(CSV))
+    settlement_rows=read_jsonl(REPORTS/'published-settlements.jsonl')
+    latest_settlements=[item for item in settlement_rows if item.get('target_draw_date')==latest['draw_date']]
+    settlement=latest_settlements[-1] if latest_settlements else (accounted[-1] if accounted else None)
     subprocess.run([sys.executable,str(ROOT/'tw539_ultra.py'),'--backtest','360'],check=True,cwd=ROOT)
     current=read_json(REPORTS/'最新結果.json') or {}
-    completed=[x for x in accounted if x and x.get('review_status')=='completed_from_pre_draw_seal']
+    completed=[]
+    completed_keys=set()
+    for item in accounted+coverage_repaired:
+        key=(item or {}).get('target_draw_date')
+        if item and item.get('review_status')=='completed_from_pre_draw_seal' and key not in completed_keys:
+            completed.append(item);completed_keys.add(key)
     if completed:
         diagnostic=(current.get('weight_selection_diagnostics') or [{}])[0]
         rolling_adjustment={
@@ -510,7 +562,14 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
         'recalculation_fingerprint':current.get('recalculation_fingerprint'),
         'settled_previous':bool(settlement and settlement.get('review_status') in ('completed_from_pre_draw_seal','recovery_no_pre_draw_seal')),
         'latest_review_status':settlement.get('review_status') if settlement else 'no_new_draw',
-        'latest_review_accounted':bool(settlement and settlement.get('review_accounted',settlement.get('review_status')=='completed_from_pre_draw_seal'))
+        'latest_review_accounted':bool(settlement and settlement.get('review_accounted',settlement.get('review_status')=='completed_from_pre_draw_seal')),
+        'settlement_coverage':settlement_coverage,
+        'settlement_coverage_complete':settlement_coverage.get('missing_draws')==0,
+        'settlement_expected_draws':settlement_coverage.get('expected_draws'),
+        'settlement_accounted_draws':settlement_coverage.get('accounted_draws'),
+        'settlement_missing_draws':settlement_coverage.get('missing_draws'),
+        'settlement_official_recovery_draws':settlement_coverage.get('official_recovery_draws'),
+        'settlement_sealed_prediction_draws':settlement_coverage.get('sealed_prediction_draws')
     }
     coverage=current.get('history_coverage') or {}
     health['full_history_mode']=coverage.get('mode')=='all_available_history_for_every_prediction'
@@ -564,6 +623,9 @@ def verify_publication(latest):
             errors.append(f'{label}未對應官方最新期別')
         if not item.get('full_history_mode') or not item.get('history_database_sha256'):
             errors.append(f'{label}未通過全歷史鐵律')
+        settlement_coverage=item.get('settlement_coverage') or {}
+        if not item.get('settlement_coverage_complete') or settlement_coverage.get('missing_draws')!=0:
+            errors.append(f'{label}仍有歷史結算資料缺口')
     for name in REPORT_PAGE_FILES:
         if not (REPORTS/name).exists() or not (SITE/name).exists():
             errors.append(f'分類分頁缺失：{name}')
