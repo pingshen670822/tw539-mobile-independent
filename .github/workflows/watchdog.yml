@@ -19,6 +19,7 @@ permissions:
 jobs:
   verify-and-repair:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     concurrency:
       group: tw539-watchdog
       cancel-in-progress: false
@@ -32,15 +33,18 @@ jobs:
       - name: 比較官方與手機公開頁
         id: first_check
         continue-on-error: true
+        timeout-minutes: 4
         run: python watchdog.py
       - name: 落後時自動重跑主流程
         if: steps.first_check.outcome == 'failure'
+        timeout-minutes: 2
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh workflow run auto-update.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}" -f repair=true
       - name: 修復後再次驗證
         if: steps.first_check.outcome == 'failure'
+        timeout-minutes: 17
         run: |
           for i in {1..30}; do
             sleep 30

@@ -10,6 +10,7 @@ REPORT_PAGE_FILES=('index.html','backtest.html','review.html','history.html','mo
 API='https://api.taiwanlottery.com/TLCAPIWeB/Lottery/LatestResult'
 HISTORY_API='https://api.taiwanlottery.com/TLCAPIWeB/Lottery/Daily539Result'
 TAIPEI=timezone(timedelta(hours=8))
+MODEL_TIMEOUT_SECONDS=900
 
 def _request_json(url, params=None):
     if params:
@@ -429,7 +430,11 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
     settlement_rows=read_jsonl(REPORTS/'published-settlements.jsonl')
     latest_settlements=[item for item in settlement_rows if item.get('target_draw_date')==latest['draw_date']]
     settlement=latest_settlements[-1] if latest_settlements else (accounted[-1] if accounted else None)
-    subprocess.run([sys.executable,str(ROOT/'tw539_ultra.py'),'--backtest','360'],check=True,cwd=ROOT)
+    try:
+        subprocess.run([sys.executable,str(ROOT/'tw539_ultra.py'),'--backtest','360'],
+                       check=True,cwd=ROOT,timeout=MODEL_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f'完整運算超過{MODEL_TIMEOUT_SECONDS}秒，已強制停止並交由下一輪自主修復') from exc
     current=read_json(REPORTS/'最新結果.json') or {}
     completed=[]
     completed_keys=set()

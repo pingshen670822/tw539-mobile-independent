@@ -13,31 +13,46 @@ SETTLEMENTS='https://pingshen670822.github.io/tw539-mobile-independent/published
 MANIFEST='https://pingshen670822.github.io/tw539-mobile-independent/manifest.webmanifest'
 WORKER='https://pingshen670822.github.io/tw539-mobile-independent/service-worker.js'
 SYNC='https://pingshen670822.github.io/tw539-mobile-independent/mobile-sync.js'
+PUBLIC_FETCH_RETRY_DELAYS=(0,2,6)
+PUBLIC_FETCH_TIMEOUT_SECONDS=25
 official=fetch_latest()
 stamp=str(int(time.time()))
 headers={'User-Agent':'TW539-ironlaw-watchdog/1.0','Cache-Control':'no-cache'}
-req=urllib.request.Request(PAGE+'?t='+stamp,headers=headers)
-with urllib.request.urlopen(req,timeout=40) as r: health=json.load(r)
+
+def fetch_public(url):
+    """有界重試公開頁，避免單次瞬時錯誤誤觸發修復或卡死。"""
+    last=None
+    for attempt,delay in enumerate(PUBLIC_FETCH_RETRY_DELAYS,1):
+        if delay: time.sleep(delay)
+        try:
+            separator='&' if '?' in url else '?'
+            req=urllib.request.Request(f'{url}{separator}t={stamp}-{attempt}',headers=headers)
+            with urllib.request.urlopen(req,timeout=PUBLIC_FETCH_TIMEOUT_SECONDS) as response:
+                body=response.read()
+                if response.status!=200:
+                    raise RuntimeError(f'狀態碼{response.status}')
+                return response.status,response.headers.get_content_type(),body
+        except Exception as exc:
+            last=exc
+    raise RuntimeError(f'公開頁連續{len(PUBLIC_FETCH_RETRY_DELAYS)}次讀取失敗：{url}：{last}') from last
+
+def fetch_public_json(url):
+    return json.loads(fetch_public(url)[2].decode('utf-8'))
+
+health=fetch_public_json(PAGE)
 pages={}
 for name in REPORT_PAGES:
-    report_req=urllib.request.Request(REPORT_ROOT+name+'?t='+stamp,headers=headers)
-    with urllib.request.urlopen(report_req,timeout=40) as r: pages[name]=r.read().decode('utf-8')
-result_req=urllib.request.Request(RESULT+'?t='+stamp,headers=headers)
-with urllib.request.urlopen(result_req,timeout=40) as r: result=json.load(r)
-version_req=urllib.request.Request(VERSION+'?t='+stamp,headers=headers)
-with urllib.request.urlopen(version_req,timeout=40) as r: version=json.load(r)
-settlement_req=urllib.request.Request(SETTLEMENTS+'?t='+stamp,headers=headers)
-with urllib.request.urlopen(settlement_req,timeout=40) as r: settlements=[json.loads(line) for line in r.read().decode('utf-8').splitlines() if line.strip()]
-manifest_req=urllib.request.Request(MANIFEST+'?t='+stamp,headers=headers)
-with urllib.request.urlopen(manifest_req,timeout=40) as r: manifest=json.load(r)
-worker_req=urllib.request.Request(WORKER+'?t='+stamp,headers=headers)
-with urllib.request.urlopen(worker_req,timeout=40) as r: worker=r.read().decode('utf-8')
-sync_req=urllib.request.Request(SYNC+'?t='+stamp,headers=headers)
-with urllib.request.urlopen(sync_req,timeout=40) as r: sync=r.read().decode('utf-8')
+    pages[name]=fetch_public(REPORT_ROOT+name)[2].decode('utf-8')
+result=fetch_public_json(RESULT)
+version=fetch_public_json(VERSION)
+settlements=[json.loads(line) for line in fetch_public(SETTLEMENTS)[2].decode('utf-8').splitlines() if line.strip()]
+manifest=fetch_public_json(MANIFEST)
+worker=fetch_public(WORKER)[2].decode('utf-8')
+sync=fetch_public(SYNC)[2].decode('utf-8')
 public_icons={}
 for name in ('icon-180.png','icon-192.png','icon-512.png','maskable-512.png'):
-    icon_req=urllib.request.Request(REPORT_ROOT+'icons/'+name+'?t='+stamp,headers=headers)
-    with urllib.request.urlopen(icon_req,timeout=40) as r: public_icons[name]=(r.status,r.headers.get_content_type(),r.read(24))
+    status,content_type,body=fetch_public(REPORT_ROOT+'icons/'+name)
+    public_icons[name]=(status,content_type,body[:24])
 errors=[]
 warnings=[]
 now=datetime.now(TAIPEI)
@@ -178,9 +193,9 @@ if not {'192x192','512x512'}.issubset({item.get('sizes') for item in manifest_ic
     errors.append('公開手機安裝清單缺少必要圖示')
 for name,(status,content_type,raw) in public_icons.items():
     if status!=200 or content_type!='image/png' or raw[:8]!=b'\x89PNG\r\n\x1a\n': errors.append(f'公開手機安裝圖示無效：{name}')
-for term in ('tw539-mobile-ironlaw-v6','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
+for term in ('tw539-mobile-ironlaw-v7','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
     if term not in worker: errors.append(f'公開離線安裝快取缺少：{term}')
-for term in ('beforeinstallprompt','appinstalled','install-app-button','手機版已安裝'):
+for term in ('beforeinstallprompt','appinstalled','install-app-button','手機版已安裝','AbortController','SYNC_TIMEOUT_MS=10000','syncInFlight'):
     if term not in sync: errors.append(f'公開手機安裝流程缺少：{term}')
 if errors: raise SystemExit('鐵律看門狗失敗：'+'；'.join(errors))
 print(json.dumps({'看門狗':'通過','官方期別':official['period'],'公開期別':health['latest_period'],'全歷史':True,'命中檢討':'已完成或誠實登錄停擺缺口','滾動候選':286,'1中1主選':result['single_published'],'手機可安裝':True,'模型警報':warnings,'戰報可見英文':0},ensure_ascii=False))

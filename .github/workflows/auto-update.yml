@@ -9,7 +9,10 @@ on:
       - 'system_audit.py'
       - 'tw539_ultra.py'
       - 'watchdog.py'
+      - 'site/mobile-sync.js'
+      - 'site/service-worker.js'
       - '.github/workflows/auto-update.yml'
+      - '.github/workflows/watchdog.yml'
   schedule:
     # 鐵律：台灣時間週一至週六 20:40～23:50 每10分鐘監控。
     # GitHub 排程可能延遲，因此不能只排三次；任一輪取得新期別即重算並部署。
@@ -33,6 +36,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -41,6 +45,7 @@ jobs:
         continue-on-error: true
         run: python ironlaw_guard.py --structure-only
       - name: 取得官方開獎並重算
+        timeout-minutes: 18
         env:
           TW539_SELF_REPAIR: ${{ inputs.repair || false }}
         run: |
@@ -54,14 +59,17 @@ jobs:
           done
           exit 1
       - name: 發布核心驗收
+        timeout-minutes: 3
         run: python cloud_pipeline.py --verify-only --strict-freshness
       - name: 深度模型與版面診斷
+        timeout-minutes: 8
         id: deep_audit
         continue-on-error: true
         run: |
           python ironlaw_guard.py
           python system_audit.py
       - name: 保存最新資料與戰報
+        timeout-minutes: 5
         run: |
           git config user.name "tw539-auto-update"
           git config user.email "actions@users.noreply.github.com"
@@ -94,6 +102,7 @@ jobs:
     needs: update
     if: failure()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: 建立自動更新失敗告警
         env:

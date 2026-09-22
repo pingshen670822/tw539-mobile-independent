@@ -1,4 +1,4 @@
-if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').then(r=>r.update());
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').then(r=>r.update()).catch(()=>{});
 const installButton=document.getElementById('install-app-button');
 const installStatus=document.getElementById('install-app-status');
 const installHelp=document.getElementById('install-app-help');
@@ -37,14 +37,23 @@ showInstallState();
 const pageVersion=(document.querySelector("meta[name='tw539-version']")||{}).content||'';
 let current=pageVersion;
 let timer=null;
+let syncInFlight=false;
+const SYNC_TIMEOUT_MS=10000;
+const SUCCESS_SYNC_DELAY_MS=30000;
+const RETRY_SYNC_DELAY_MS=5000;
 const syncState=document.createElement('div');
 syncState.setAttribute('style','position:fixed;right:8px;bottom:8px;z-index:9999;padding:7px 10px;border-radius:9px;background:#172033;color:#fff;font:700 12px sans-serif;box-shadow:0 2px 8px #0005');
 syncState.textContent='同步檢查中';
 document.body.appendChild(syncState);
 async function checkVersion(){
   clearTimeout(timer);
+  if(syncInFlight){timer=setTimeout(checkVersion,2000);return;}
+  syncInFlight=true;
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),SYNC_TIMEOUT_MS);
+  let nextDelay=RETRY_SYNC_DELAY_MS;
   try{
-    const r=await fetch('./version.json?t='+Date.now(),{cache:'no-store',headers:{'Cache-Control':'no-cache'}});
+    const r=await fetch('./version.json?t='+Date.now(),{cache:'no-store',headers:{'Cache-Control':'no-cache'},signal:controller.signal});
     if(!r.ok)throw new Error('同步失敗');
     const v=await r.json();
     if(current&&current!==v.version){
@@ -57,10 +66,14 @@ async function checkVersion(){
         return;
       }
     }
-    current=v.version;syncState.textContent='同步正常・'+v.latest_draw_date;syncState.style.background='#176b3a';
-    timer=setTimeout(checkVersion,30000);
+    current=v.version;syncState.textContent='同步正常・'+v.latest_draw_date;syncState.style.background='#176b3a';nextDelay=SUCCESS_SYNC_DELAY_MS;
   }
-  catch(e){syncState.textContent='同步重試中';syncState.style.background='#8b0000';timer=setTimeout(checkVersion,5000);}
+  catch(e){syncState.textContent=e.name==='AbortError'?'同步逾時，立即重試':'同步重試中';syncState.style.background='#8b0000';}
+  finally{
+    clearTimeout(timeout);
+    syncInFlight=false;
+    timer=setTimeout(checkVersion,nextDelay);
+  }
 }
 checkVersion();
 addEventListener('focus',checkVersion);
