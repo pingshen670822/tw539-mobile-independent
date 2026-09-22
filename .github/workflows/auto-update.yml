@@ -39,6 +39,13 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
+        with: {fetch-depth: 0}
+      - name: 同步遠端最新基底
+        timeout-minutes: 2
+        run: |
+          git fetch origin master
+          git checkout -B master origin/master
+          git branch --set-upstream-to=origin/master master
       - uses: actions/setup-python@v7
         with: {python-version: '3.12'}
       - name: 鐵律完整性檢查
@@ -79,8 +86,14 @@ jobs:
             if git push; then
               exit 0
             fi
+            git rebase --abort || true
             git fetch origin master
-            git rebase origin/master
+            if git rebase -X theirs origin/master; then
+              sleep $((attempt * 5))
+              continue
+            fi
+            git rebase --abort || true
+            sleep $((attempt * 10))
           done
           exit 1
       - uses: actions/configure-pages@v6
