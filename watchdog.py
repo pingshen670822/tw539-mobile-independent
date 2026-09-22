@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """比較官方最新期別與公開手機頁；手機頁落後即失敗。"""
 import hashlib, html, json, re, time, urllib.request
+import os
 from datetime import datetime, time as clock_time
 from cloud_pipeline import TAIPEI, expected_latest_date, fetch_latest
 
@@ -13,8 +14,9 @@ SETTLEMENTS='https://pingshen670822.github.io/tw539-mobile-independent/published
 MANIFEST='https://pingshen670822.github.io/tw539-mobile-independent/manifest.webmanifest'
 WORKER='https://pingshen670822.github.io/tw539-mobile-independent/service-worker.js'
 SYNC='https://pingshen670822.github.io/tw539-mobile-independent/mobile-sync.js'
-PUBLIC_FETCH_RETRY_DELAYS=(0,2,6)
-PUBLIC_FETCH_TIMEOUT_SECONDS=25
+FAST_WATCHDOG=os.getenv('TW539_WATCHDOG_FAST','').lower() in ('1','true','yes')
+PUBLIC_FETCH_RETRY_DELAYS=(0,1) if FAST_WATCHDOG else (0,2,6)
+PUBLIC_FETCH_TIMEOUT_SECONDS=5 if FAST_WATCHDOG else 25
 official=fetch_latest()
 stamp=str(int(time.time()))
 headers={'User-Agent':'TW539-ironlaw-watchdog/1.0','Cache-Control':'no-cache'}
@@ -40,11 +42,21 @@ def fetch_public_json(url):
     return json.loads(fetch_public(url)[2].decode('utf-8'))
 
 health=fetch_public_json(PAGE)
+result=fetch_public_json(RESULT)
+version=fetch_public_json(VERSION)
+if FAST_WATCHDOG:
+    fast_errors=[]
+    if str(health.get('latest_period'))!=str(official['period']): fast_errors.append('公開期別落後官方')
+    if health.get('latest_draw_date')!=official['draw_date'] or not health.get('freshness_ok'): fast_errors.append('公開日期或新鮮度未通過')
+    data_latest=result.get('data_latest') or {}
+    if str(data_latest.get('period'))!=str(official['period']) or data_latest.get('date')!=official['draw_date']: fast_errors.append('公開結果落後官方')
+    if str(version.get('latest_period'))!=str(official['period']) or version.get('latest_draw_date')!=official['draw_date']: fast_errors.append('手機版本落後官方')
+    if fast_errors: raise SystemExit('即時自修檢查失敗：'+'；'.join(fast_errors))
+    print(json.dumps({'即時自修檢查':'通過','官方期別':official['period'],'公開期別':health['latest_period']},ensure_ascii=False))
+    raise SystemExit(0)
 pages={}
 for name in REPORT_PAGES:
     pages[name]=fetch_public(REPORT_ROOT+name)[2].decode('utf-8')
-result=fetch_public_json(RESULT)
-version=fetch_public_json(VERSION)
 settlements=[json.loads(line) for line in fetch_public(SETTLEMENTS)[2].decode('utf-8').splitlines() if line.strip()]
 manifest=fetch_public_json(MANIFEST)
 worker=fetch_public(WORKER)[2].decode('utf-8')

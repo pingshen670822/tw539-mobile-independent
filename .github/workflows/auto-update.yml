@@ -56,6 +56,10 @@ jobs:
         env:
           TW539_SELF_REPAIR: ${{ inputs.repair || false }}
         run: |
+          if [ "$TW539_SELF_REPAIR" = "true" ] && python cloud_pipeline.py --verify-only --strict-freshness; then
+            echo "本地資料完整，立即略過重算並重新部署"
+            exit 0
+          fi
           for attempt in 1 2 3; do
             if python cloud_pipeline.py --strict-freshness; then
               exit 0
@@ -68,13 +72,6 @@ jobs:
       - name: 發布核心驗收
         timeout-minutes: 3
         run: python cloud_pipeline.py --verify-only --strict-freshness
-      - name: 深度模型與版面診斷
-        timeout-minutes: 8
-        id: deep_audit
-        continue-on-error: true
-        run: |
-          python ironlaw_guard.py
-          python system_audit.py
       - name: 保存最新資料與戰報
         timeout-minutes: 5
         run: |
@@ -103,6 +100,14 @@ jobs:
 
       - name: 鐵律最終驗證
         run: python cloud_pipeline.py --verify-only --strict-freshness
+
+      - name: 部署後深度模型與版面診斷
+        timeout-minutes: 8
+        id: deep_audit
+        continue-on-error: true
+        run: |
+          python ironlaw_guard.py
+          python system_audit.py
 
       - name: 深度診斷異常記錄
         if: steps.deep_audit.outcome == 'failure'

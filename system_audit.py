@@ -416,7 +416,10 @@ if expected_direction not in visible_text(SITE/'backtest.html') or expected_dire
 service=(SITE/'service-worker.js').read_text(encoding='utf-8')
 sync=(SITE/'mobile-sync.js').read_text(encoding='utf-8')
 if "cache:'no-store'" not in service or 'system-health.json' not in service: fail('手機快取可能保留過期資料')
-if 'setTimeout(checkVersion,30000)' not in sync or 'setTimeout(checkVersion,5000)' not in sync or 'visibilitychange' not in sync or 'pageshow' not in sync: fail('手機開啟即同步或重試機制已損壞')
+if ('SUCCESS_SYNC_DELAY_MS=30000' not in sync or 'RETRY_SYNC_DELAY_MS=5000' not in sync
+        or 'timer=setTimeout(checkVersion,nextDelay)' not in sync
+        or 'visibilitychange' not in sync or 'pageshow' not in sync):
+    fail('手機開啟即同步或重試機制已損壞')
 manifest=read_json(SITE/'manifest.webmanifest')
 if manifest.get('id')!='./' or manifest.get('scope')!='./' or manifest.get('display')!='standalone' or not str(manifest.get('start_url','')).startswith('./index.html'):
     fail('手機安裝清單缺少獨立應用啟動設定')
@@ -427,9 +430,9 @@ if not {'192x192','512x512'}.issubset(icon_sizes) or not any('maskable' in item.
 for name,size in (('icon-180.png',(180,180)),('icon-192.png',(192,192)),('icon-512.png',(512,512)),('maskable-512.png',(512,512))):
     path=SITE/'icons'/name
     if not path.exists() or png_size(path)!=size: fail(f'手機安裝圖示不完整：{name}')
-for term in ('tw539-mobile-ironlaw-v6','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
+for term in ('tw539-mobile-ironlaw-v7','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
     if term not in service: fail(f'離線安裝快取缺少：{term}')
-for term in ('beforeinstallprompt','appinstalled','install-app-button','手機版已安裝'):
+for term in ('beforeinstallprompt','appinstalled','install-app-button','手機版已安裝','AbortController','SYNC_TIMEOUT_MS=10000','syncInFlight'):
     if term not in sync: fail(f'手機安裝流程缺少：{term}')
 
 history_file=REPORTS/'prediction-history.jsonl'

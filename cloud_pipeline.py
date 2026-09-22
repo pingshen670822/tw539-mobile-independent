@@ -11,16 +11,19 @@ API='https://api.taiwanlottery.com/TLCAPIWeB/Lottery/LatestResult'
 HISTORY_API='https://api.taiwanlottery.com/TLCAPIWeB/Lottery/Daily539Result'
 TAIPEI=timezone(timedelta(hours=8))
 MODEL_TIMEOUT_SECONDS=900
+FAST_WATCHDOG=os.getenv('TW539_WATCHDOG_FAST','').lower() in ('1','true','yes')
+REQUEST_RETRY_DELAYS=(0,1) if FAST_WATCHDOG else (0,3,10)
+REQUEST_TIMEOUT_SECONDS=8 if FAST_WATCHDOG else 45
 
 def _request_json(url, params=None):
     if params:
         url += ('&' if '?' in url else '?') + urllib.parse.urlencode(params)
     last=None
-    for delay in (0,3,10):
+    for delay in REQUEST_RETRY_DELAYS:
         if delay: time.sleep(delay)
         try:
             req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 TW539-cloud/2.0','Accept':'application/json','Cache-Control':'no-cache'})
-            with urllib.request.urlopen(req,timeout=45) as r:
+            with urllib.request.urlopen(req,timeout=REQUEST_TIMEOUT_SECONDS) as r:
                 if r.status!=200: raise RuntimeError(f'官方回應狀態 {r.status}')
                 return json.load(r)
         except Exception as e: last=e
