@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-29T07:40:59+08:00",
+  "generated_at": "2026-09-29T07:58:49+08:00",
   "based_on_period": "115000235",
   "target_draw_date": "2026-09-29",
   "recalculation_fingerprint": "40d9944b3a296f5c",
@@ -14525,8 +14525,97 @@
     },
     "contribution_total": 0.700877706
   },
+  "single_explanation": {
+    "label": "本期唯一最強獨支",
+    "candidate": 16,
+    "unique": true,
+    "rank": 1,
+    "universe_size": 39,
+    "runner_up": 17,
+    "final_score": 0.96020788895,
+    "raw_score": 0.700877705641,
+    "runner_up_final_score": 0.763755831299,
+    "lead_over_runner_up": 0.196452057651,
+    "relative_index": 100.0,
+    "module_support_votes": 1,
+    "module_count": 4,
+    "module_calculations": [
+      {
+        "module": "full_frequency_balance",
+        "label": "全歷史頻率平衡",
+        "source": "全歷史出現率與五除以三十九基準的距離",
+        "feature_value": 0.262002872,
+        "signed_weight": -0.033333333333,
+        "weighted_contribution": -0.008733429,
+        "module_rank": 21,
+        "supports": false
+      },
+      {
+        "module": "full_transition_correction",
+        "label": "全歷史轉移反向校正",
+        "source": "上一期五碼在全歷史出現後，下一期接續本號碼的加一平滑統計",
+        "feature_value": 1.755050759,
+        "signed_weight": 0.266666666667,
+        "weighted_contribution": 0.468013536,
+        "module_rank": 2,
+        "supports": true
+      },
+      {
+        "module": "full_signature_correction",
+        "label": "全歷史同型反向校正",
+        "source": "上一期和值區、奇偶數、低區數與十位區段相同時的全歷史後續統計",
+        "feature_value": -0.397807239,
+        "signed_weight": -0.3,
+        "weighted_contribution": 0.119342172,
+        "module_rank": 16,
+        "supports": false
+      },
+      {
+        "module": "full_overdue_correction",
+        "label": "全歷史遺漏反向校正",
+        "source": "目前遺漏間隔相對本號碼全歷史平均間隔的對數校正",
+        "feature_value": 0.305638568,
+        "signed_weight": 0.4,
+        "weighted_contribution": 0.122255427,
+        "module_rank": 17,
+        "supports": false
+      }
+    ],
+    "raw_score_calculation": {
+      "operation": "四項標準值分別乘以正式帶方向權重後加總",
+      "contribution_total": 0.700877706
+    },
+    "data_source": {
+      "mode": "每期使用當期以前全部可用歷史資料",
+      "first_draw_date": "2007-01-01",
+      "last_draw_date": "2026-09-28",
+      "draws_used": 5979,
+      "previous_draw_numbers": [
+        13,
+        19,
+        21,
+        27,
+        32
+      ]
+    },
+    "selection_process": [
+      "建立當期以前全部歷史狀態",
+      "計算四項全歷史標準化特徵",
+      "套用三百六十期滾動選出的帶方向權重",
+      "未通過上線守門的校準模組自動回退",
+      "套用連莊資格與單碼重複冷卻",
+      "一至三十九依最終分數排序，同分以期號封存碼固定先後",
+      "只公布唯一第1名作為本期最強獨支"
+    ],
+    "tie_break_rule": "同分時使用依據期號與號碼產生的穩定封存碼固定排序，禁止人工挑選",
+    "direct_hit_gate_passed": false,
+    "data_change_gate_passed": false,
+    "strong_confidence_gate_passed": false,
+    "derived_from_pre_draw_seal": true
+  },
   "single_recommendation": {
-    "label": "本期綜合最強",
+    "label": "本期唯一最強獨支",
+    "evidence_label": "本期綜合最強",
     "strong": false,
     "consensus_votes": 1,
     "module_count": 4,
