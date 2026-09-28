@@ -26,6 +26,7 @@ from tw539_ultra import (FORMAL_FEATURE_KEYS, GLOBAL_HISTORY_BLEND, MAX_ANCHOR_M
                          adaptive_polarity_backtest,
                          apply_catastrophic_guard, apply_single_repeat_break,
                          apply_repeat_qualification, average_weights, build_number_diagnostics,
+                         build_single_explanation,
                          candidate_grid_sha256, ensemble_scores_from_features, evaluation_cases,
                          fast_case_ranking, formal_history_state, load_draws, rank_numbers,
                          ranking_direction_metrics, rolling_ensemble_direction_metrics, scores,
@@ -255,6 +256,11 @@ if ranked_all!=recalculated_ranking: fail('連莊資格後完整39碼排名與�
 recalculated_number_diagnostics=build_number_diagnostics(recalculated_ranking,qualified_scores,raw_current,current_features,weights)
 if result.get('number_diagnostics')!=recalculated_number_diagnostics: fail('開獎前39碼模組貢獻無法重現')
 if result.get('single_selection_evidence')!=recalculated_number_diagnostics[0]: fail('最強獨隻缺少可重現的模組證據')
+recalculated_single_explanation=build_single_explanation(
+    recalculated_ranking,recalculated_number_diagnostics,weights,
+    (result.get('backtest') or {}).get('single_module_consensus') or [],draws,result.get('backtest') or {})
+if result.get('single_explanation')!=recalculated_single_explanation:
+    fail('唯一最強獨支完整解釋無法由開獎前資料重現')
 repeat_by_number={x.get('number'):x for x in (result.get('repeat_qualification') or [])}
 for n in set(ranked[:9])&set(latest['nums']):
     if not (repeat_by_number.get(n) or {}).get('qualified'): fail(f'上一期號碼{n:02}未通過連莊資格卻列入前9')
@@ -352,6 +358,8 @@ for label,item in (('戰報健康檔',health),('手機健康檔',site_health)):
     if not item.get('freshness_ok'): fail(f'{label}未對上官方最新期別')
     if not item.get('cloud_independent_update') or item.get('local_computer_required') is not False or not item.get('cloud_update_schedule'):
         fail(f'{label}未確認關機後仍由雲端獨立更新')
+    if not item.get('desktop_mobile_sync') or not item.get('desktop_mobile_shared_version'):
+        fail(f'{label}未確認電腦版與手機版同版同步')
     if latest['date']<expected_latest_date(): warn(f'{label}官方開獎日落後日曆預期，但不得阻斷正式發布')
     if bool(item.get('ranking_direction_valid'))!=bool(backtest.get('ranking_direction_valid')): fail(f'{label}未同步排序方向狀態')
     if item.get('rank10_15_avg_hits')!=backtest.get('rank10_15_avg_hits') or item.get('top9_capture_rate')!=backtest.get('top9_capture_rate') or bool(item.get('boundary_control_valid'))!=bool(backtest.get('boundary_control_valid')): fail(f'{label}未同步前9邊界狀態')
@@ -375,7 +383,7 @@ if version.get('latest_period')!=latest['period'] or version.get('latest_draw_da
 
 page_rules={
     'index.html':{
-        'required':('本期最強1顆','最強號碼多邏輯總結','單碼重複冷卻','強烈推薦守門','失準事件監測','本期分級主選','1中1','2中1～2','3中1～3','5中2～3','9中3～5','本期前15名單一明細','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不做補位'),
+        'required':('本期唯一最強獨支','唯一最強獨支完整運算來源','四項來源、權重與加減分','完整加總算式','唯一性與產生流程','最強號碼多邏輯總結','單碼重複冷卻','強烈推薦守門','失準事件監測','本期分級主選','1中1','2中1～2','3中1～3','5中2～3','9中3～5','本期前15名單一明細','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不做補位'),
         'forbidden':('最新一期命中結算','最後360期隔離回測','全歷史運算範圍','鐵律守門')},
     'backtest.html':{
         'required':('最後360期隔離回測','直接命中全排序校準','前9集合允許修正','單碼重複冷卻','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),

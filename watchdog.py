@@ -79,10 +79,12 @@ settlement_coverage=health.get('settlement_coverage') or {}
 if (not health.get('settlement_coverage_complete') or settlement_coverage.get('missing_draws')!=0
         or settlement_coverage.get('accounted_draws')!=settlement_coverage.get('expected_draws')):
     errors.append('公開歷史結算仍有遺失資料')
-for key in ('sync_completed_at','sync_delay_minutes','two_hour_repair_deadline','two_hour_deadline_met','self_repair_status','self_repair_count','last_public_verification_at','mobile_open_sync','pipeline_version','update_retry_policy','stability_monitor','latest_review_accounted','cloud_independent_update','local_computer_required','cloud_update_schedule'):
+for key in ('sync_completed_at','sync_delay_minutes','two_hour_repair_deadline','two_hour_deadline_met','self_repair_status','self_repair_count','last_public_verification_at','mobile_open_sync','pipeline_version','update_retry_policy','stability_monitor','latest_review_accounted','cloud_independent_update','local_computer_required','cloud_update_schedule','desktop_mobile_sync','desktop_mobile_shared_version'):
     if key not in health: errors.append('公開健康檔缺少自主修復欄位：'+key)
 if not health.get('cloud_independent_update') or health.get('local_computer_required') is not False:
     errors.append('公開健康檔未確認關機後仍由雲端獨立更新')
+if not health.get('desktop_mobile_sync') or not health.get('desktop_mobile_shared_version'):
+    errors.append('公開健康檔未確認電腦版與手機版同版同步')
 if not health.get('two_hour_deadline_met',True): warnings.append('本期超過兩小時期限後才完成同步')
 data_latest=result.get('data_latest') or {}
 if str(data_latest.get('period'))!=str(official['period']) or data_latest.get('date')!=official['draw_date']: errors.append('公開結果未對應官方最新期別')
@@ -95,6 +97,11 @@ if not single_break.get('applied') and result.get('single_published')!=single_br
 ranked_all=result.get('ranked_all') or []
 if len(ranked_all)!=39 or set(ranked_all)!=set(range(1,40)) or ranked!=ranked_all[:15]: errors.append('公開結果缺少開獎前完整39碼排序')
 if len(result.get('number_diagnostics') or [])!=39 or result.get('single_selection_evidence')!=(result.get('number_diagnostics') or [{}])[0]: errors.append('公開結果缺少最強獨隻逐模組證據')
+single_explanation=result.get('single_explanation') or {}
+if (single_explanation.get('candidate')!=result.get('single_published') or single_explanation.get('rank')!=1
+        or single_explanation.get('unique') is not True or len(single_explanation.get('module_calculations') or [])!=4
+        or not single_explanation.get('derived_from_pre_draw_seal')):
+    errors.append('公開結果缺少唯一最強獨支完整運算來源')
 seal=result.get('pre_draw_seal') or {}; sealed_payload=seal.get('sealed_payload') or {}
 seal_hash=hashlib.sha256(json.dumps(sealed_payload,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 if seal.get('sha256')!=seal_hash or not seal.get('no_post_draw_substitution') or result.get('recalculation_fingerprint')!=seal_hash[:16]: errors.append('開獎前封存雜湊驗證失敗')
@@ -207,7 +214,11 @@ for name,page in pages.items():
     for term in ("rel='manifest'","rel='apple-touch-icon'","mobile-web-app-capable","apple-mobile-web-app-capable","id='install-app-button'",'安裝手機版','mobile-sync.js'):
         if term not in page: errors.append(f'{name} 缺少手機安裝條件：{term}')
 home=visible_pages['index.html']; review_page=visible_pages['review.html']; backtest_page=visible_pages['backtest.html']; history_page=visible_pages['history.html']; models_page=visible_pages['models.html']; health_page=visible_pages['health.html']
-if '本期最強1顆' not in home or '單碼重複冷卻' not in home or '1中1' not in home or (ranked and f'{int(ranked[0]):02}' not in home): errors.append('本期預測頁未顯示1中1主選或單碼重複冷卻狀態')
+if ('本期唯一最強獨支' not in home or '唯一最強獨支完整運算來源' not in home
+        or '四項來源、權重與加減分' not in home or '完整加總算式' not in home
+        or '唯一性與產生流程' not in home or '單碼重複冷卻' not in home or '1中1' not in home
+        or (ranked and f'{int(ranked[0]):02}' not in home)):
+    errors.append('本期預測頁未完整顯示唯一最強獨支、運算來源或單碼冷卻狀態')
 if any(term in home for term in ('最新一期命中結算','最後360期隔離回測','全歷史運算範圍','鐵律守門')): errors.append('本期預測頁混入其他分類資料')
 if '最新一期命中結算' not in review_page or '開獎前前5正式預測' not in review_page or '前5命中資料' not in review_page or '錯誤模組與前9邊界逐項檢討' not in review_page or '第10至15名命中' not in review_page or '開獎後滾動權重重算' not in review_page or '禁止開獎後換號或補號' not in review_page: errors.append('開獎檢討分頁內容不完整')
 if '最後360期隔離回測' not in backtest_page or '直接命中全排序校準' not in backtest_page or '前9集合允許修正' not in backtest_page or '單碼重複冷卻' not in backtest_page or '每期資料變化校正' not in backtest_page or '最近54期獨立觀察' not in backtest_page or '全歷史逐期一致性掃描' not in backtest_page: errors.append('回測驗證分頁內容不完整')

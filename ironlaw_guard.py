@@ -28,8 +28,15 @@ checks[ROOT/'tw539_ultra.py'].extend(['DIRECT_HIT_WINDOW = 360','DIRECT_HIT_RIDG
                                      'data_change_cases','blend_data_change_ranking','data_change_gate',
                                      'SINGLE_REPEAT_BREAK_COOLDOWN = 1','apply_single_repeat_break',
                                      'single_repeat_break_gate',
-                                     'five_member_consensus_with_direct_hit_single_repeat_and_data_change_front9'])
+                                     'five_member_consensus_with_direct_hit_single_repeat_and_data_change_front9',
+                                     'build_single_explanation','"single_explanation": single_explanation',
+                                     '本期唯一最強獨支','只公布唯一第1名作為本期最強獨支'])
+checks[ROOT/'report_pages.py'].remove('本期最強1顆')
 checks[ROOT/'report_pages.py'].extend(['直接命中全排序校準','任何一項降低即禁止上線並自動回退','單碼重複冷卻','每期資料變化校正','本機關機','照常更新'])
+checks[ROOT/'report_pages.py'].extend(['本期唯一最強獨支','唯一最強獨支完整運算來源',
+                                      '四項來源、權重與加減分','完整加總算式','唯一性與產生流程',
+                                      '電腦手機同步','同一版號'])
+checks[ROOT/'cloud_pipeline.py'].extend(['desktop_mobile_sync','desktop_mobile_shared_version'])
 checks[ROOT/'system_audit.py'].remove('最新開獎錯誤沒有觸發三十組方向模型五組權重共識')
 checks[ROOT/'system_audit.py'].append('最新開獎錯誤沒有觸發五組方向共識、直接命中、單碼冷卻與資料變化校正')
 checks[ROOT/'watchdog.py'].remove('三十組方向模型、三百六十期選擇窗與五組權重共識')

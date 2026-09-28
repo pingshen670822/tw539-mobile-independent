@@ -1767,6 +1767,76 @@ def build_number_diagnostics(ranked: list[int], score: dict[int, float], raw_sco
     return result
 
 
+def build_single_explanation(ranked: list[int], diagnostics: list[dict], weights: dict[str, float],
+                             module_consensus: list[dict], draws: list[dict], backtest: dict) -> dict:
+    """把唯一第1名的資料來源、逐模組算式、守門與排序規則封裝成可公開重現的說明。"""
+    if len(ranked)!=39 or len(set(ranked))!=39 or not diagnostics:
+        raise ValueError("唯一最強獨支需要完整且不重複的三十九碼排序")
+    evidence=diagnostics[0]
+    consensus_by_key={item.get("module"):item for item in module_consensus}
+    source_rules={
+        "full_frequency_balance":"全歷史出現率與五除以三十九基準的距離",
+        "full_transition_correction":"上一期五碼在全歷史出現後，下一期接續本號碼的加一平滑統計",
+        "full_signature_correction":"上一期和值區、奇偶數、低區數與十位區段相同時的全歷史後續統計",
+        "full_overdue_correction":"目前遺漏間隔相對本號碼全歷史平均間隔的對數校正",
+    }
+    module_rows=[]
+    for key in FORMAL_FEATURE_KEYS:
+        consensus=consensus_by_key.get(key) or {}
+        module_rows.append({
+            "module":key,
+            "label":FEATURE_LABELS[key],
+            "source":source_rules[key],
+            "feature_value":evidence["feature_values"][key],
+            "signed_weight":round(float(weights[key]),12),
+            "weighted_contribution":evidence["weighted_contributions"][key],
+            "module_rank":consensus.get("rank"),
+            "supports":bool(consensus.get("supports")),
+        })
+    runner_up=diagnostics[1]
+    return {
+        "label":"本期唯一最強獨支",
+        "candidate":ranked[0],
+        "unique":True,
+        "rank":1,
+        "universe_size":39,
+        "runner_up":ranked[1],
+        "final_score":evidence["final_score"],
+        "raw_score":evidence["raw_score"],
+        "runner_up_final_score":runner_up["final_score"],
+        "lead_over_runner_up":round(evidence["final_score"]-runner_up["final_score"],12),
+        "relative_index":evidence["relative_index"],
+        "module_support_votes":sum(bool(item.get("supports")) for item in module_rows),
+        "module_count":len(module_rows),
+        "module_calculations":module_rows,
+        "raw_score_calculation":{
+            "operation":"四項標準值分別乘以正式帶方向權重後加總",
+            "contribution_total":evidence["contribution_total"],
+        },
+        "data_source":{
+            "mode":"每期使用當期以前全部可用歷史資料",
+            "first_draw_date":draws[0]["date"],
+            "last_draw_date":draws[-1]["date"],
+            "draws_used":len(draws),
+            "previous_draw_numbers":list(draws[-1]["nums"]),
+        },
+        "selection_process":[
+            "建立當期以前全部歷史狀態",
+            "計算四項全歷史標準化特徵",
+            "套用三百六十期滾動選出的帶方向權重",
+            "未通過上線守門的校準模組自動回退",
+            "套用連莊資格與單碼重複冷卻",
+            "一至三十九依最終分數排序，同分以期號封存碼固定先後",
+            "只公布唯一第1名作為本期最強獨支",
+        ],
+        "tie_break_rule":"同分時使用依據期號與號碼產生的穩定封存碼固定排序，禁止人工挑選",
+        "direct_hit_gate_passed":bool(backtest.get("direct_hit_full_rank_gate")),
+        "data_change_gate_passed":bool(backtest.get("data_change_gate")),
+        "strong_confidence_gate_passed":bool(backtest.get("single_strong_recommendation")),
+        "derived_from_pre_draw_seal":True,
+    }
+
+
 def prediction_seal_payload(based_on_period: str, target_draw_date: str, history_hash: str,
                              ranked_all: list[int], diagnostics: list[dict], weights: dict,
                              selection: dict, ensemble_weights: list[dict] | None = None,
@@ -2078,6 +2148,8 @@ def main() -> None:
     bt["single_confidence_label"]=("超高信心強烈推薦" if bt["single_strong_recommendation"]
                                    else "本期綜合最強")
     number_diagnostics = build_number_diagnostics(ranked, sc, raw_sc, current_features, weights)
+    single_explanation = build_single_explanation(
+        ranked, number_diagnostics, weights, module_consensus, draws, bt)
     tickets = make_tickets(sc, max(1, min(a.tickets, 30)), draws[-1]["period"], set(ranked[-15:]))
     OUT.mkdir(parents=True, exist_ok=True)
     history_payload="|".join(f"{x['period']}:{x['date']}:{','.join(map(str,x['nums']))}" for x in draws)
@@ -2201,8 +2273,10 @@ def main() -> None:
         "single_published": ranked[0],
         "single_repeat_break": bt["single_repeat_break_current"],
         "single_selection_evidence": number_diagnostics[0],
+        "single_explanation": single_explanation,
         "single_recommendation": {
-            "label": bt["single_confidence_label"],
+            "label": "本期唯一最強獨支",
+            "evidence_label": bt["single_confidence_label"],
             "strong": bt["single_strong_recommendation"],
             "consensus_votes": consensus_votes,
             "module_count": len(module_consensus),

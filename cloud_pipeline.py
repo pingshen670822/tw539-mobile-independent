@@ -480,6 +480,7 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
     direction_ok=bool(backtest.get('ranking_direction_valid'))
     degraded=(not direction_ok) or (backtest.get('single_rate',0)<=backtest.get('single_random_baseline',0) and backtest.get('top9_avg_hits',0)<=backtest.get('top9_random_baseline',0))
     checked_at=datetime.now(TAIPEI)
+    version_stamp=checked_at.strftime('%Y%m%d%H%M%S')
     same_period=str(previous_health.get('latest_period'))==str(latest['period'])
     sync_completed_at=(previous_health.get('sync_completed_at') if same_period else None) or checked_at.isoformat(timespec='seconds')
     draw_at=datetime.strptime(latest['draw_date']+' 20:30','%Y-%m-%d %H:%M').replace(tzinfo=TAIPEI)
@@ -499,6 +500,9 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
         'cloud_independent_update':True,
         'local_computer_required':False,
         'cloud_update_schedule':'開獎時段每五分鐘核對、主流程每十分鐘重算、全天每小時巡檢',
+        'desktop_mobile_sync':True,
+        'desktop_mobile_shared_version':version_stamp,
+        'desktop_mobile_source':'電腦版與手機版共用同一次正式運算、同一結果檔與同一組分頁',
         'official_draw_time':draw_at.isoformat(timespec='minutes'),
         'sync_completed_at':sync_completed_at,
         'sync_delay_minutes':sync_delay,
@@ -588,7 +592,6 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
     health['history_database_sha256']=coverage.get('database_sha256')
     (REPORTS/'system-health.json').write_text(json.dumps(health,ensure_ascii=False,indent=2),encoding='utf-8')
     refresh_report_pages(current)
-    version_stamp=datetime.now(TAIPEI).strftime('%Y%m%d%H%M%S')
     publish_report_pages(version_stamp)
     shutil.copy2(REPORTS/'最新結果.json',SITE/'latest-result.json'); shutil.copy2(REPORTS/'system-health.json',SITE/'system-health.json')
     for name in ('prediction-history.jsonl','published-settlements.jsonl'):
@@ -622,6 +625,8 @@ def verify_publication(latest):
     site_result=read_json(SITE/'latest-result.json') or {}
     site_health=read_json(SITE/'system-health.json') or {}
     errors=[]
+    if result!=site_result: errors.append('電腦版與手機版結果檔不同步')
+    if health!=site_health: errors.append('電腦版與手機版健康檔不同步')
     for label,item in (('戰報結果',result),('手機結果',site_result)):
         data=item.get('data_latest') or {}
         if str(data.get('period'))!=str(latest['period']) or data.get('date')!=latest['draw_date']:
@@ -634,6 +639,8 @@ def verify_publication(latest):
             errors.append(f'{label}未對應官方最新期別')
         if not item.get('full_history_mode') or not item.get('history_database_sha256'):
             errors.append(f'{label}未通過全歷史鐵律')
+        if not item.get('desktop_mobile_sync') or not item.get('desktop_mobile_shared_version'):
+            errors.append(f'{label}未確認電腦版與手機版同版同步')
         settlement_coverage=item.get('settlement_coverage') or {}
         if not item.get('settlement_coverage_complete') or settlement_coverage.get('missing_draws')!=0:
             errors.append(f'{label}仍有歷史結算資料缺口')

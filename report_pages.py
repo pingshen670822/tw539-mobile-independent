@@ -80,7 +80,8 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
     latest = draws[-1]
     minimum = min(score.values())
     spread = max(0.00001, max(score.values()) - minimum)
-    features = __import__("tw539_ultra").formal_feature_table(draws)
+    engine = __import__("tw539_ultra")
+    features = engine.formal_feature_table(draws)
     rank_rows = []
     for rank, number in enumerate(ranking[:15], 1):
         index = 100 * (score[number] - minimum) / spread
@@ -106,7 +107,7 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
         for item in repeat_audit
     )
     strong=bool(bt.get("single_strong_recommendation"))
-    confidence_label=bt.get("single_confidence_label") or "本期綜合最強"
+    evidence_label=bt.get("single_confidence_label") or "本期綜合最強"
     condition_rows="".join(
         f"<tr><td>{label}</td><td class='{'ok' if passed else 'bad'}'>{'通過' if passed else '未通過'}</td></tr>"
         for label,passed in (bt.get("single_strong_conditions") or {}).items()
@@ -115,6 +116,22 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
         f"<tr><td>{item.get('label','－')}</td><td>{item.get('rank','－')}</td><td>{'支持' if item.get('supports') else '未支持'}</td></tr>"
         for item in (bt.get("single_module_consensus") or [])
     )
+    raw_scores={
+        number:sum(float(weights[key])*float(features[key][number]) for key in weights)
+        for number in range(1,40)
+    }
+    single_diagnostics=engine.build_number_diagnostics(ranking,score,raw_scores,features,weights)
+    single_explanation=engine.build_single_explanation(
+        ranking,single_diagnostics,weights,bt.get("single_module_consensus") or [],draws,bt)
+    calculation_rows="".join(
+        f"<tr><td>{item['label']}</td><td>{item['source']}</td><td>{item['feature_value']:.9f}</td><td>{item['signed_weight']:+.9f}</td><td>{item['weighted_contribution']:+.9f}</td><td>{item.get('module_rank','－')}</td><td>{'支持' if item['supports'] else '未支持'}</td></tr>"
+        for item in single_explanation["module_calculations"]
+    )
+    score_formula=" ＋ ".join(
+        f"({item['feature_value']:.9f} × {item['signed_weight']:+.9f})"
+        for item in single_explanation["module_calculations"]
+    )+f" ＝ {single_explanation['raw_score']:.9f}"
+    process_text=" → ".join(single_explanation["selection_process"])
     single_rate=100*bt.get("single_rate",0)
     single_break=bt.get("single_repeat_break_current") or {}
     if single_break.get("applied"):
@@ -131,7 +148,8 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
     else:
         guard_note="條件未成立；監測器只記錄，不得改動正式排序。"
     content = f"""
-<div class='band {'strong' if strong else 'primary'}'><div class='badge'>{confidence_label}</div><h2>本期最強1顆</h2><div class='number'>{ranking[0]:02}</div><p><b>{single_break_note} 每期未中檢討已回灌下一次完整運算；最後360期由 {bt.get('single_repeat_break_baseline_hits',0)} 中提高到 {bt.get('single_repeat_break_hits',0)} 中。</b></p><p class='note'>{'多重守門全部通過，列為超高信心強烈推薦。' if strong else '已產出本期綜合最強號碼；超高信心守門未全部通過，因此不偽造強烈推薦標籤。'}</p></div>
+<div class='band {'strong' if strong else 'primary'}'><div class='badge'>本期唯一最強獨支</div><h2>本期唯一最強獨支</h2><div class='number'>{ranking[0]:02}</div><p><b>{single_break_note} 每期未中檢討已回灌下一次完整運算；最後360期由 {bt.get('single_repeat_break_baseline_hits',0)} 中提高到 {bt.get('single_repeat_break_hits',0)} 中。</b></p><p class='note'>證據等級：{evidence_label}。{'多重守門全部通過，列為超高信心強烈推薦。' if strong else '已產出唯一第1名；超高信心守門未全部通過，不把排序分數偽裝成必中機率。'}</p></div>
+<div class='band strong'><h2>唯一最強獨支完整運算來源</h2><div class='grid'><div class='card'><div class='label'>唯一主選</div><div class='value'>{single_explanation['candidate']:02}</div></div><div class='card'><div class='label'>全39碼名次</div><div class='value'>第1名</div></div><div class='card'><div class='label'>最終排序分數</div><div class='value'>{single_explanation['final_score']:.9f}</div></div><div class='card'><div class='label'>原始四模組總分</div><div class='value'>{single_explanation['raw_score']:.9f}</div></div><div class='card'><div class='label'>第二名</div><div class='value'>{single_explanation['runner_up']:02}</div></div><div class='card'><div class='label'>領先第二名</div><div class='value'>{single_explanation['lead_over_runner_up']:.9f}</div></div><div class='card'><div class='label'>正式模組支持</div><div class='value'>{single_explanation['module_support_votes']}／{single_explanation['module_count']}</div></div><div class='card'><div class='label'>使用歷史</div><div class='value'>{single_explanation['data_source']['draws_used']:,}期</div></div></div><h3>四項來源、權重與加減分</h3><div class='table-wrap'><table><thead><tr><th>模組</th><th>資料來源</th><th>標準值</th><th>正式權重</th><th>分數貢獻</th><th>模組名次</th><th>判定</th></tr></thead><tbody>{calculation_rows}</tbody></table></div><h3>完整加總算式</h3><p><b>{score_formula}</b></p><h3>唯一性與產生流程</h3><p>{process_text}</p><p class='note'>同分規則：{single_explanation['tie_break_rule']}。直接命中校準：{'已套用' if single_explanation['direct_hit_gate_passed'] else '未通過並已回退'}；資料變化校正：{'已套用' if single_explanation['data_change_gate_passed'] else '未通過並已停用'}。所有解釋均由開獎前封存資料推導，禁止開獎後補寫理由。</p></div>
 <div class='band'><h2>最強號碼多邏輯總結</h2><div class='grid'><div class='card'><div class='label'>正式邏輯支持</div><div class='value'>{bt.get('single_consensus_votes',0)}／{len(bt.get('single_module_consensus') or [])}</div></div><div class='card'><div class='label'>單碼重複冷卻</div><div class='value'>{'已啟動' if single_break.get('applied') else '待命中'}</div></div><div class='card'><div class='label'>最近54期單碼命中</div><div class='value'>{bt.get('single_repeat_break_recent_54_baseline_hits',0)} → {bt.get('single_repeat_break_recent_54_hits',0)}</div></div></div><h3>強烈推薦守門</h3><div class='table-wrap'><table><thead><tr><th>必要條件</th><th>結果</th></tr></thead><tbody>{condition_rows}</tbody></table></div><h3>正式模組共識</h3><div class='table-wrap'><table><thead><tr><th>邏輯</th><th>單模組名次</th><th>是否支持前9</th></tr></thead><tbody>{consensus_rows}</tbody></table></div></div>
 <div class='band'><h2>本期資料</h2><div class='grid'>
 <div class='card'><div class='label'>預測目標日</div><div class='value'>{target_date}</div></div>
@@ -402,6 +420,8 @@ def _health_page(draws, bt, full_scan, generated_at, settlements, health):
 <div class='card'><div class='label'>執行位置</div><div class='value'>全天候雲端</div></div>
 <div class='card'><div class='label'>本機關機</div><div class='value'>{'照常更新' if health.get('cloud_independent_update') and health.get('local_computer_required') is False else '設定異常'}</div></div>
 <div class='card'><div class='label'>雲端更新排程</div><div class='value'>{health.get('cloud_update_schedule','開獎時段每五分鐘核對')}</div></div>
+<div class='card'><div class='label'>電腦手機同步</div><div class='value'>{'同一版號' if health.get('desktop_mobile_sync') else '同步異常'}</div></div>
+<div class='card'><div class='label'>共同版號</div><div class='value'>{health.get('desktop_mobile_shared_version','－')}</div></div>
 <div class='card'><div class='label'>自主修復狀態</div><div class='value'>{health.get('self_repair_status','雲端待命')}</div></div>
 <div class='card'><div class='label'>累計自主修復</div><div class='value'>{health.get('self_repair_count',0)}次</div></div>
 <div class='card'><div class='label'>最後公開驗收</div><div class='value'>{_display_time(health.get('last_public_verification_at'))}</div></div>
