@@ -19,10 +19,11 @@ permissions:
 jobs:
   verify-and-repair:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
     concurrency:
       group: tw539-watchdog
-      cancel-in-progress: false
+      # 新巡檢接手舊巡檢；已觸發的主更新在另一個雲端工作中繼續執行，避免故障時堆積整天的等待佇列。
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -53,11 +54,11 @@ jobs:
           exit 1
       - name: 修復後再次驗證
         if: steps.fast_check.outcome == 'failure' || steps.full_check.outcome == 'failure'
-        timeout-minutes: 17
+        timeout-minutes: 8
         run: |
-          for i in {1..40}; do
+          for i in {1..24}; do
             python watchdog.py && exit 0
-            sleep 20
+            sleep 15
           done
           exit 1
       - name: 修復失敗建立告警

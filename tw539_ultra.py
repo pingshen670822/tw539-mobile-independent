@@ -1978,16 +1978,22 @@ def main() -> None:
     if previous_prediction:
         live_previous_single=int(previous_prediction["single_published"])
         live_previous_applied=bool((previous_prediction.get("single_repeat_break") or {}).get("applied"))
-        live_pre_break=list(bt.get("next_pre_single_break_ranked") or bt["next_unguarded_ranked"])
+        live_pre_break=list(
+            (bt.get("next_pre_single_break_ranked") if bt.get("direct_hit_full_rank_gate")
+             else bt.get("direct_hit_consensus_next_ranked")) or bt["next_unguarded_ranked"])
         live_ranked,live_applied,live_original,live_replacement=apply_single_repeat_break(
             live_pre_break,bt["direct_hit_consensus_next_ranked"],live_previous_single,live_previous_applied)
         live_source="開獎前逐日封存預測"
     else:
-        live_ranked=list(bt.get("next_after_single_before_data_change") or bt["next_unguarded_ranked"])
-        simulated=bt.get("single_repeat_break_current") or {}
-        live_applied=bool(simulated.get("applied"));live_original=int(simulated.get("original") or live_ranked[0])
-        live_replacement=int(simulated.get("replacement") or live_ranked[0]);live_previous_single=None
-        live_previous_applied=False;live_source="逐期隔離重演"
+        if bt.get("direct_hit_full_rank_gate"):
+            live_ranked=list(bt.get("next_after_single_before_data_change") or bt["next_unguarded_ranked"])
+            simulated=bt.get("single_repeat_break_current") or {}
+            live_applied=bool(simulated.get("applied"));live_original=int(simulated.get("original") or live_ranked[0])
+            live_replacement=int(simulated.get("replacement") or live_ranked[0])
+        else:
+            live_ranked=list(bt.get("direct_hit_consensus_next_ranked") or bt["next_unguarded_ranked"])
+            live_applied=False;live_original=live_ranked[0];live_replacement=live_ranked[0]
+        live_previous_single=None;live_previous_applied=False;live_source="逐期隔離重演"
     if bt.get("data_change_gate"):
         live_ranked=blend_data_change_ranking(
             live_ranked,bt["data_change_next_ranked"],draws[-1]["period"])
@@ -2083,15 +2089,16 @@ def main() -> None:
         production_anchor_weights)
     seal_sha256 = hashlib.sha256(json.dumps(seal_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     fingerprint = seal_sha256[:16]
+    generated_at_iso = datetime.now(TAIPEI).isoformat(timespec="seconds")
     report_pages = render_report_pages(
         draws, weights, sc, tickets, bt, full_scan, repeat_audit,
-        selection, OUT, FEATURE_LABELS)
+        selection, OUT, FEATURE_LABELS, generated_at=generated_at_iso)
     for filename, page in report_pages.items():
         (OUT / filename).write_text(page, encoding="utf-8")
     report = OUT / "最新539科學預測戰報.html"
     report.write_text(report_pages["index.html"], encoding="utf-8")
     result = {
-        "generated_at": datetime.now(TAIPEI).isoformat(timespec="seconds"),
+        "generated_at": generated_at_iso,
         "based_on_period": draws[-1]["period"],
         "target_draw_date": target.isoformat(),
         "recalculation_fingerprint": fingerprint,

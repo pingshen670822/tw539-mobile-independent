@@ -79,8 +79,10 @@ settlement_coverage=health.get('settlement_coverage') or {}
 if (not health.get('settlement_coverage_complete') or settlement_coverage.get('missing_draws')!=0
         or settlement_coverage.get('accounted_draws')!=settlement_coverage.get('expected_draws')):
     errors.append('公開歷史結算仍有遺失資料')
-for key in ('sync_completed_at','sync_delay_minutes','two_hour_repair_deadline','two_hour_deadline_met','self_repair_status','self_repair_count','last_public_verification_at','mobile_open_sync','pipeline_version','update_retry_policy','stability_monitor','latest_review_accounted'):
+for key in ('sync_completed_at','sync_delay_minutes','two_hour_repair_deadline','two_hour_deadline_met','self_repair_status','self_repair_count','last_public_verification_at','mobile_open_sync','pipeline_version','update_retry_policy','stability_monitor','latest_review_accounted','cloud_independent_update','local_computer_required','cloud_update_schedule'):
     if key not in health: errors.append('公開健康檔缺少自主修復欄位：'+key)
+if not health.get('cloud_independent_update') or health.get('local_computer_required') is not False:
+    errors.append('公開健康檔未確認關機後仍由雲端獨立更新')
 if not health.get('two_hour_deadline_met',True): warnings.append('本期超過兩小時期限後才完成同步')
 data_latest=result.get('data_latest') or {}
 if str(data_latest.get('period'))!=str(official['period']) or data_latest.get('date')!=official['draw_date']: errors.append('公開結果未對應官方最新期別')
@@ -119,7 +121,11 @@ if backtest.get('rank10_15_avg_hits')!=health.get('rank10_15_avg_hits') or backt
 if backtest.get('next_signed_weights')!=result.get('production_weights') or result.get('audit_weights')!=result.get('production_weights'): errors.append('公開主選與方向模型隔離回測權重不同')
 rolling=result.get('rolling_weight_adjustment') or {}
 if rolling.get('production_weights')!=result.get('production_weights') or rolling.get('production_ensemble_weights')!=ensemble or rolling.get('anchor_ensemble_weights')!=selection.get('ensemble_members') or rolling.get('updates')!=360 or rolling.get('method')!='five_member_consensus_with_direct_hit_single_repeat_and_data_change_front9' or rolling.get('strategy_candidate_count')!=30 or rolling.get('strategy_selection_window')!=360 or rolling.get('strategy_consensus_member_count')!=5: errors.append('最新開獎錯誤沒有觸發五組方向共識、直接命中、單碼冷卻與資料變化校正')
-if not rolling.get('direct_hit_calibration_enabled') or rolling.get('direct_hit_window')!=360 or rolling.get('direct_hit_ridge')!=10.0 or rolling.get('direct_hit_full_rank_blend')!=.15 or not rolling.get('direct_hit_full_rank_gate'): errors.append('滾動修正未同步直接命中全排序校準')
+direct_gate=bool(backtest.get('direct_hit_full_rank_gate'))
+if (not rolling.get('direct_hit_calibration_enabled') or rolling.get('direct_hit_window')!=360
+        or rolling.get('direct_hit_ridge')!=10.0 or rolling.get('direct_hit_full_rank_blend')!=.15
+        or bool(rolling.get('direct_hit_full_rank_gate'))!=direct_gate):
+    errors.append('滾動修正未同步直接命中全排序校準')
 if not rolling.get('single_repeat_break_enabled') or not rolling.get('single_repeat_break_gate') or rolling.get('single_repeat_break_current')!=single_break: errors.append('滾動修正未同步單碼重複冷卻與封存狀態')
 if not rolling.get('data_change_enabled') or rolling.get('data_change_window')!=720 or rolling.get('data_change_ridge')!=1.0 or rolling.get('data_change_rank_blend')!=.5 or rolling.get('data_change_preserve_front')!=5 or bool(rolling.get('data_change_gate'))!=bool(backtest.get('data_change_gate')): errors.append('滾動修正未同步每期資料變化校正')
 rate_selection=rolling.get('learning_rate_selection') or {}
@@ -128,15 +134,30 @@ if backtest.get('next_signed_weights')!=result.get('production_weights') or back
 if backtest.get('strategy_candidate_count')!=30 or backtest.get('strategy_selection_window')!=360 or backtest.get('strategy_consensus_member_count')!=5: errors.append('隔離回測缺少三十組方向模型、三百六十期選擇窗或五組權重共識')
 if health.get('polarity_selection_window')!=360 or health.get('polarity_consensus_member_count')!=5: errors.append('公開健康檔未同步三百六十期五組權重共識')
 direct_baseline=backtest.get('direct_hit_baseline') or {}
-if not backtest.get('direct_hit_calibration_enabled') or backtest.get('direct_hit_window')!=360 or backtest.get('direct_hit_ridge')!=10.0 or backtest.get('direct_hit_full_rank_blend')!=.15 or not backtest.get('direct_hit_full_rank_gate'): errors.append('直接命中全排序校準參數錯誤')
+if (not backtest.get('direct_hit_calibration_enabled') or backtest.get('direct_hit_window')!=360
+        or backtest.get('direct_hit_ridge')!=10.0 or backtest.get('direct_hit_full_rank_blend')!=.15):
+    errors.append('直接命中全排序校準參數錯誤')
 if not backtest.get('single_repeat_break_enabled') or backtest.get('single_repeat_break_cooldown')!=1 or not backtest.get('single_repeat_break_gate'): errors.append('單碼重複冷卻參數或上線守門錯誤')
 if not backtest.get('data_change_enabled') or backtest.get('data_change_window')!=720 or backtest.get('data_change_ridge')!=1.0 or backtest.get('data_change_rank_blend')!=.5 or backtest.get('data_change_preserve_front')!=5: errors.append('每期資料變化校正參數錯誤')
 if not backtest.get('data_change_gate'): warnings.append('每期資料變化校正未通過上線守門，正式排序已自動停用此模組')
 for after,before in (('single_repeat_break_hits','single_repeat_break_baseline_hits'),('single_repeat_break_recent_54_hits','single_repeat_break_recent_54_baseline_hits'),('single_repeat_break_recent_120_hits','single_repeat_break_recent_120_baseline_hits')):
     if backtest.get(after,0)<backtest.get(before,0): errors.append('單碼重複冷卻拖累隔離命中')
-for current,baseline in ((backtest,direct_baseline),((backtest.get('recent_54') or {}),(backtest.get('direct_hit_baseline_recent_54') or {})),((backtest.get('recent_120') or {}),(backtest.get('direct_hit_baseline_recent_120') or {}))):
-    if current.get('top5_avg_hits',0)<baseline.get('top5_avg_hits',0) or current.get('top9_avg_hits',0)<baseline.get('top9_avg_hits',0): errors.append('直接命中全排序校準拖累前五或前九')
-if not health.get('direct_hit_calibration_enabled') or health.get('direct_hit_window')!=360 or health.get('direct_hit_ridge')!=10.0 or health.get('direct_hit_full_rank_blend')!=.15 or not health.get('direct_hit_full_rank_gate'): errors.append('公開健康檔未同步直接命中全排序校準')
+direct_regressions=[]
+for current,baseline,label in (
+        (backtest,direct_baseline,'三百六十期'),
+        ((backtest.get('recent_54') or {}),(backtest.get('direct_hit_baseline_recent_54') or {}),'最近五十四期'),
+        ((backtest.get('recent_120') or {}),(backtest.get('direct_hit_baseline_recent_120') or {}),'最近一百二十期')):
+    for metric,metric_label in (('top5_avg_hits','前五'),('top9_avg_hits','前九')):
+        if current.get(metric,0)<baseline.get(metric,0):
+            direct_regressions.append(label+metric_label)
+if direct_gate!=(not direct_regressions):
+    errors.append('直接命中全排序校準守門結果與回測數據不一致')
+elif not direct_gate:
+    warnings.append('直接命中全排序校準未通過上線守門，已自動回退五組方向共識：'+','.join(direct_regressions))
+if (not health.get('direct_hit_calibration_enabled') or health.get('direct_hit_window')!=360
+        or health.get('direct_hit_ridge')!=10.0 or health.get('direct_hit_full_rank_blend')!=.15
+        or bool(health.get('direct_hit_full_rank_gate'))!=direct_gate):
+    errors.append('公開健康檔未同步直接命中全排序校準')
 if not health.get('single_repeat_break_enabled') or not health.get('single_repeat_break_gate') or health.get('single_repeat_break_current')!=single_break: errors.append('公開健康檔未同步單碼重複冷卻')
 if not health.get('data_change_enabled') or health.get('data_change_window')!=720 or health.get('data_change_ridge')!=1.0 or health.get('data_change_rank_blend')!=.5 or health.get('data_change_preserve_front')!=5 or bool(health.get('data_change_gate'))!=bool(backtest.get('data_change_gate')): errors.append('公開健康檔未同步每期資料變化校正')
 stability=backtest.get('anchor_stability') or {}

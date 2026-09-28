@@ -399,7 +399,7 @@ def refresh_report_pages(current):
         current.get('backtest') or {},current.get('full_history_scan') or {},
         current.get('repeat_qualification') or [],
         {'diagnostic':selected,'anchor_stability':(current.get('backtest') or {}).get('anchor_stability') or {}},
-        REPORTS,FEATURE_LABELS)
+        REPORTS,FEATURE_LABELS,generated_at=current.get('generated_at'))
     for filename,page in pages.items():
         (REPORTS/filename).write_text(page,encoding='utf-8')
     REPORT.write_text(pages['index.html'],encoding='utf-8')
@@ -496,12 +496,15 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
         'history_repair_pending':bool(pipeline_meta.get('history_repair_pending')),
         'pipeline_version':'continuous-update-v2','update_retry_policy':'三次重試、雙官方端點、缺期逐月補齊',
         'stability_monitor':'每次更新後立即驗證、開獎時段每五分鐘、全天每小時巡檢',
+        'cloud_independent_update':True,
+        'local_computer_required':False,
+        'cloud_update_schedule':'開獎時段每五分鐘核對、主流程每十分鐘重算、全天每小時巡檢',
         'official_draw_time':draw_at.isoformat(timespec='minutes'),
         'sync_completed_at':sync_completed_at,
         'sync_delay_minutes':sync_delay,
         'two_hour_repair_deadline':repair_deadline.isoformat(timespec='minutes'),
         'two_hour_deadline_met':datetime.fromisoformat(sync_completed_at)<=repair_deadline,
-        'self_repair_status':'本次自修完成' if repair_run else '待命中',
+        'self_repair_status':'本次自修完成' if repair_run else '雲端待命',
         'self_repair_count':repair_count,
         'last_self_repair_at':checked_at.isoformat(timespec='seconds') if repair_run else previous_health.get('last_self_repair_at'),
         'last_public_verification_at':checked_at.isoformat(timespec='seconds'),

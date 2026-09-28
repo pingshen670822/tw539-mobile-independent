@@ -209,7 +209,7 @@ def _backtest_page(bt, full_scan):
 <div class='card'><div class='label'>前9至少2中比例</div><div class='value'>{100*bt.get('top9_at_least_2_rate',0):.2f}%</div></div>
 <div class='card'><div class='label'>前5至少2中比例</div><div class='value'>{100*bt.get('top5_at_least_2_rate',0):.2f}%</div></div>
 </div><h3>前後段方向對照</h3><div class='table-wrap'><table><thead><tr><th>項目</th><th>前段</th><th>對照</th><th>判定</th></tr></thead><tbody>{rows}</tbody></table></div><h3>前9逐期命中分布</h3><div class='table-wrap'><table><thead><tr><th>命中數</th><th>期數</th></tr></thead><tbody>{distribution}</tbody></table></div></div>
-<div class='band strong'><h2>直接命中全排序校準</h2><p><b>其餘38顆以五組方向共識85%與直接命中模型15%融合，前9集合允許修正。最近54、120、360期的前5與前9，任何一項降低即禁止上線。</b></p><div class='grid'><div class='card'><div class='label'>最後360期前5</div><div class='value'>{direct_baseline.get('top5_avg_hits',0)} → {bt.get('top5_avg_hits',0)}</div></div><div class='card'><div class='label'>最後360期前9</div><div class='value'>{direct_baseline.get('top9_avg_hits',0)} → {bt.get('top9_avg_hits',0)}</div></div><div class='card'><div class='label'>最近120期前5／前9</div><div class='value'>{direct_baseline120.get('top5_avg_hits',0)}／{direct_baseline120.get('top9_avg_hits',0)} → {recent120.get('top5_avg_hits',0)}／{recent120.get('top9_avg_hits',0)}</div></div><div class='card'><div class='label'>最近54期前5／前9</div><div class='value'>{direct_baseline54.get('top5_avg_hits',0)}／{direct_baseline54.get('top9_avg_hits',0)} → {recent.get('top5_avg_hits',0)}／{recent.get('top9_avg_hits',0)}</div></div><div class='card'><div class='label'>全排序融合占比</div><div class='value'>{100*bt.get('direct_hit_full_rank_blend',0):.0f}%</div></div></div></div>
+<div class='band strong'><h2>直接命中全排序校準</h2><p><b>候選方案將其餘38顆以五組方向共識85%與直接命中模型15%融合，前9集合允許修正。最近54、120、360期的前5與前9，任何一項降低即禁止上線並自動回退五組方向共識。</b></p><div class='grid'><div class='card'><div class='label'>最後360期前5</div><div class='value'>{direct_baseline.get('top5_avg_hits',0)} → {bt.get('top5_avg_hits',0)}</div></div><div class='card'><div class='label'>最後360期前9</div><div class='value'>{direct_baseline.get('top9_avg_hits',0)} → {bt.get('top9_avg_hits',0)}</div></div><div class='card'><div class='label'>最近120期前5／前9</div><div class='value'>{direct_baseline120.get('top5_avg_hits',0)}／{direct_baseline120.get('top9_avg_hits',0)} → {recent120.get('top5_avg_hits',0)}／{recent120.get('top9_avg_hits',0)}</div></div><div class='card'><div class='label'>最近54期前5／前9</div><div class='value'>{direct_baseline54.get('top5_avg_hits',0)}／{direct_baseline54.get('top9_avg_hits',0)} → {recent.get('top5_avg_hits',0)}／{recent.get('top9_avg_hits',0)}</div></div><div class='card'><div class='label'>候選融合占比</div><div class='value'>{100*bt.get('direct_hit_full_rank_blend',0):.0f}%</div></div><div class='card'><div class='label'>實際上線狀態</div><div class='value'>{'已套用' if bt.get('direct_hit_full_rank_gate') else '已回退'}</div></div></div></div>
 <div class='band strong'><h2>每期資料變化校正</h2><p><b>逐期比較四項全歷史特徵在新增開獎前後的變化；固定保留前5，只校正第6名以後的前9邊界，因此1中1與前5完全不受影響。</b></p><div class='grid'><div class='card'><div class='label'>最後360期前9</div><div class='value'>{change_baseline.get('top9_avg_hits',0)} → {bt.get('top9_avg_hits',0)}</div></div><div class='card'><div class='label'>最近120期前9</div><div class='value'>{change_baseline120.get('top9_avg_hits',0)} → {recent120.get('top9_avg_hits',0)}</div></div><div class='card'><div class='label'>最近54期前9</div><div class='value'>{change_baseline54.get('top9_avg_hits',0)} → {recent.get('top9_avg_hits',0)}</div></div><div class='card'><div class='label'>變化比較窗</div><div class='value'>{bt.get('data_change_window',0)}期</div></div><div class='card'><div class='label'>固定保留</div><div class='value'>前{bt.get('data_change_preserve_front',0)}名</div></div><div class='card'><div class='label'>上線守門</div><div class='value'>{'通過' if bt.get('data_change_gate') else '未通過'}</div></div></div></div>
 <div class='band strong'><h2>單碼重複冷卻</h2><p><b>第一名與上一期封存單碼重複、且上一期未曾啟動冷卻時，改採五組方向共識次選；每次切換後保留一期冷卻。校正只讀取當期以前資料。</b></p><div class='grid'><div class='card'><div class='label'>最後360期</div><div class='value'>{bt.get('single_repeat_break_baseline_hits',0)} → {bt.get('single_repeat_break_hits',0)}</div></div><div class='card'><div class='label'>最近120期</div><div class='value'>{bt.get('single_repeat_break_recent_120_baseline_hits',0)} → {bt.get('single_repeat_break_recent_120_hits',0)}</div></div><div class='card'><div class='label'>最近54期</div><div class='value'>{bt.get('single_repeat_break_recent_54_baseline_hits',0)} → {bt.get('single_repeat_break_recent_54_hits',0)}</div></div><div class='card'><div class='label'>隔離切換次數</div><div class='value'>{bt.get('single_repeat_break_application_count',0)}期</div></div><div class='card'><div class='label'>上線守門</div><div class='value'>{'通過' if bt.get('single_repeat_break_gate') else '未通過'}</div></div></div></div>
 <div class='band'><h2>最近54期獨立觀察</h2><div class='table-wrap'><table><thead><tr><th>項目</th><th>結果</th></tr></thead><tbody>{recent_rows}</tbody></table></div></div>
@@ -399,7 +399,10 @@ def _health_page(draws, bt, full_scan, generated_at, settlements, health):
 <div class='card'><div class='label'>同步延遲</div><div class='value'>{health.get('sync_delay_minutes','－')}分鐘</div></div>
 <div class='card'><div class='label'>兩小時修復期限</div><div class='value'>{_display_time(health.get('two_hour_repair_deadline'))}</div></div>
 <div class='card'><div class='label'>期限結果</div><div class='value'>{'期限內完成' if health.get('two_hour_deadline_met',True) else '逾時並已觸發自修'}</div></div>
-<div class='card'><div class='label'>自主修復狀態</div><div class='value'>{health.get('self_repair_status','待命中')}</div></div>
+<div class='card'><div class='label'>執行位置</div><div class='value'>全天候雲端</div></div>
+<div class='card'><div class='label'>本機關機</div><div class='value'>{'照常更新' if health.get('cloud_independent_update') and health.get('local_computer_required') is False else '設定異常'}</div></div>
+<div class='card'><div class='label'>雲端更新排程</div><div class='value'>{health.get('cloud_update_schedule','開獎時段每五分鐘核對')}</div></div>
+<div class='card'><div class='label'>自主修復狀態</div><div class='value'>{health.get('self_repair_status','雲端待命')}</div></div>
 <div class='card'><div class='label'>累計自主修復</div><div class='value'>{health.get('self_repair_count',0)}次</div></div>
 <div class='card'><div class='label'>最後公開驗收</div><div class='value'>{_display_time(health.get('last_public_verification_at'))}</div></div>
 </div></div>
@@ -417,14 +420,17 @@ def _health_page(draws, bt, full_scan, generated_at, settlements, health):
     return _page_shell("health.html", "系統健康", "只顯示資料更新、同步與完整性狀態", content)
 
 
-def render_report_pages(draws, weights, score, tickets, bt, full_scan, repeat_audit, selection, reports_dir: Path, feature_labels: dict) -> dict[str, str]:
+def render_report_pages(draws, weights, score, tickets, bt, full_scan, repeat_audit, selection, reports_dir: Path, feature_labels: dict, generated_at: str | None = None) -> dict[str, str]:
     latest = draws[-1]
     rank_numbers = __import__("tw539_ultra").rank_numbers
     ranking = rank_numbers(score, latest["period"])
     target = datetime.strptime(latest["date"], "%Y-%m-%d").date() + timedelta(days=1)
     while target.weekday() == 6:
         target += timedelta(days=1)
-    generated_at = datetime.now(TAIPEI).strftime("%Y-%m-%d %H:%M")
+    if generated_at:
+        generated_at = str(generated_at)[:16].replace("T", " ")
+    else:
+        generated_at = datetime.now(TAIPEI).strftime("%Y-%m-%d %H:%M")
     settlements = _read_jsonl(reports_dir / "published-settlements.jsonl")
     health = _read_json(reports_dir / "system-health.json")
     return {
