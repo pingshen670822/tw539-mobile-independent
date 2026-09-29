@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-09-29T11:04:37+08:00",
+  "generated_at": "2026-09-29T13:03:24+08:00",
   "based_on_period": "115000235",
   "target_draw_date": "2026-09-29",
-  "recalculation_fingerprint": "c542e161f383024b",
+  "recalculation_fingerprint": "729651edb073b1cf",
   "pre_draw_seal": {
     "algorithm": "sha256",
-    "sha256": "c542e161f383024b0a91625324f66f62ed8bf434210debac4f99b5cdf513e46e",
+    "sha256": "729651edb073b1cf352a011da6da9f18e25f39129657d9d8159a2902b9636d4f",
     "sealed_payload": {
       "based_on_period": "115000235",
       "target_draw_date": "2026-09-29",
@@ -960,6 +960,1401 @@
             "recent54_direction_valid": false
           }
         }
+      },
+      "strict_publication_gate": {
+        "policy": "strict_no_padding_v1",
+        "no_padding": true,
+        "thresholds": {
+          "maximum_internal_rank": 9,
+          "minimum_relative_index": 75.0,
+          "minimum_positive_modules": 2,
+          "module_support_rank": 15,
+          "minimum_module_support": 2,
+          "direct_hit_gate_required": true,
+          "repeat_qualification_required_for_previous_draw_numbers": true
+        },
+        "qualified_numbers": [
+          16,
+          15,
+          39,
+          2,
+          28,
+          8,
+          22,
+          17
+        ],
+        "qualified_count": 8,
+        "requested_sizes": {
+          "single": 1,
+          "two": 2,
+          "three": 3,
+          "five": 5,
+          "nine": 9
+        },
+        "tiers": {
+          "single": [
+            16
+          ],
+          "two": [
+            16,
+            15
+          ],
+          "three": [
+            16,
+            15,
+            39
+          ],
+          "five": [
+            16,
+            15,
+            39,
+            2,
+            28
+          ],
+          "nine": [
+            16,
+            15,
+            39,
+            2,
+            28,
+            8,
+            22,
+            17
+          ]
+        },
+        "tier_status": {
+          "single": "full",
+          "two": "full",
+          "three": "full",
+          "five": "full",
+          "nine": "insufficient_no_padding"
+        },
+        "details": [
+          {
+            "number": 16,
+            "rank": 1,
+            "qualified": true,
+            "relative_index": 100.0,
+            "final_score": 0.96020788895,
+            "positive_module_count": 3,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_transition_correction",
+              "full_signature_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 21,
+              "full_transition_correction": 2,
+              "full_signature_correction": 14,
+              "full_overdue_correction": 17
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": true,
+              "positive_score": true,
+              "relative_index": true,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": []
+          },
+          {
+            "number": 14,
+            "rank": 2,
+            "qualified": false,
+            "relative_index": 92.100291,
+            "final_score": 0.763755831299,
+            "positive_module_count": 2,
+            "module_top15_support_count": 1,
+            "module_top15_support": [
+              "full_signature_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 35,
+              "full_transition_correction": 33,
+              "full_signature_correction": 1,
+              "full_overdue_correction": 19
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": true,
+              "positive_score": true,
+              "relative_index": true,
+              "positive_modules": true,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 15,
+            "rank": 3,
+            "qualified": true,
+            "relative_index": 89.571842,
+            "final_score": 0.700877705636,
+            "positive_module_count": 3,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_signature_correction",
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 25,
+              "full_transition_correction": 22,
+              "full_signature_correction": 7,
+              "full_overdue_correction": 12
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": true,
+              "positive_score": true,
+              "relative_index": true,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": []
+          },
+          {
+            "number": 39,
+            "rank": 4,
+            "qualified": true,
+            "relative_index": 85.977453,
+            "final_score": 0.611491497014,
+            "positive_module_count": 2,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_transition_correction",
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 18,
+              "full_transition_correction": 10,
+              "full_signature_correction": 22,
+              "full_overdue_correction": 7
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": true,
+              "positive_score": true,
+              "relative_index": true,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": []
+          },
+          {
+            "number": 2,
+            "rank": 5,
+            "qualified": true,
+            "relative_index": 83.957769,
+            "final_score": 0.56126545666,
+            "positive_module_count": 2,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_transition_correction",
+              "full_signature_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 38,
+              "full_transition_correction": 14,
+              "full_signature_correction": 13,
+              "full_overdue_correction": 25
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": true,
+              "positive_score": true,
+              "relative_index": true,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": []
+          },
+          {
+            "number": 28,
+            "rank": 6,
+            "qualified": true,
+            "relative_index": 82.51722,
+            "final_score": 0.525441493838,
+            "positive_module_count": 2,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_transition_correction",
+              "full_signature_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 26,
+              "full_transition_correction": 4,
+              "full_signature_correction": 4,
+              "full_overdue_correction": 36
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": true,
+              "positive_score": true,
+              "relative_index": true,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": []
+          },
+          {
+            "number": 8,
+            "rank": 7,
+            "qualified": true,
+            "relative_index": 81.823933,
+            "final_score": 0.508200665929,
+            "positive_module_count": 2,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_transition_correction",
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 36,
+              "full_transition_correction": 7,
+              "full_signature_correction": 33,
+              "full_overdue_correction": 15
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": true,
+              "positive_score": true,
+              "relative_index": true,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": []
+          },
+          {
+            "number": 22,
+            "rank": 8,
+            "qualified": true,
+            "relative_index": 81.709725,
+            "final_score": 0.50536049469,
+            "positive_module_count": 2,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_transition_correction",
+              "full_signature_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 30,
+              "full_transition_correction": 12,
+              "full_signature_correction": 12,
+              "full_overdue_correction": 21
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": true,
+              "positive_score": true,
+              "relative_index": true,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": []
+          },
+          {
+            "number": 17,
+            "rank": 9,
+            "qualified": true,
+            "relative_index": 79.466322,
+            "final_score": 0.449570966781,
+            "positive_module_count": 3,
+            "module_top15_support_count": 3,
+            "module_top15_support": [
+              "full_frequency_balance",
+              "full_signature_correction",
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 6,
+              "full_transition_correction": 37,
+              "full_signature_correction": 2,
+              "full_overdue_correction": 9
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": true,
+              "positive_score": true,
+              "relative_index": true,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": []
+          },
+          {
+            "number": 21,
+            "rank": 10,
+            "qualified": false,
+            "relative_index": 76.442385,
+            "final_score": 0.374370895696,
+            "positive_module_count": 3,
+            "module_top15_support_count": 3,
+            "module_top15_support": [
+              "full_transition_correction",
+              "full_signature_correction",
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 22,
+              "full_transition_correction": 13,
+              "full_signature_correction": 5,
+              "full_overdue_correction": 3
+            },
+            "is_previous_draw_number": true,
+            "repeat_qualified": false,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": true,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": false
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "上一期號碼未通過連莊資格"
+            ]
+          },
+          {
+            "number": 32,
+            "rank": 11,
+            "qualified": false,
+            "relative_index": 76.021896,
+            "final_score": 0.363914075359,
+            "positive_module_count": 3,
+            "module_top15_support_count": 3,
+            "module_top15_support": [
+              "full_frequency_balance",
+              "full_transition_correction",
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 13,
+              "full_transition_correction": 1,
+              "full_signature_correction": 27,
+              "full_overdue_correction": 1
+            },
+            "is_previous_draw_number": true,
+            "repeat_qualified": false,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": true,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": false
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "上一期號碼未通過連莊資格"
+            ]
+          },
+          {
+            "number": 13,
+            "rank": 12,
+            "qualified": false,
+            "relative_index": 74.919685,
+            "final_score": 0.336503995294,
+            "positive_module_count": 3,
+            "module_top15_support_count": 3,
+            "module_top15_support": [
+              "full_frequency_balance",
+              "full_transition_correction",
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 15,
+              "full_transition_correction": 3,
+              "full_signature_correction": 34,
+              "full_overdue_correction": 2
+            },
+            "is_previous_draw_number": true,
+            "repeat_qualified": false,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": false
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "相對指數未達七十五",
+              "上一期號碼未通過連莊資格"
+            ]
+          },
+          {
+            "number": 30,
+            "rank": 13,
+            "qualified": false,
+            "relative_index": 71.77963,
+            "final_score": 0.258416292582,
+            "positive_module_count": 4,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_frequency_balance",
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 4,
+              "full_transition_correction": 17,
+              "full_signature_correction": 18,
+              "full_overdue_correction": 6
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "相對指數未達七十五"
+            ]
+          },
+          {
+            "number": 3,
+            "rank": 14,
+            "qualified": false,
+            "relative_index": 70.515482,
+            "final_score": 0.226979104768,
+            "positive_module_count": 3,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_frequency_balance",
+              "full_transition_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 8,
+              "full_transition_correction": 5,
+              "full_signature_correction": 16,
+              "full_overdue_correction": 27
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "相對指數未達七十五"
+            ]
+          },
+          {
+            "number": 20,
+            "rank": 15,
+            "qualified": false,
+            "relative_index": 65.600705,
+            "final_score": 0.104757148574,
+            "positive_module_count": 2,
+            "module_top15_support_count": 1,
+            "module_top15_support": [
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 34,
+              "full_transition_correction": 19,
+              "full_signature_correction": 31,
+              "full_overdue_correction": 14
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "相對指數未達七十五",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 19,
+            "rank": 16,
+            "qualified": false,
+            "relative_index": 65.59897,
+            "final_score": 0.104714005619,
+            "positive_module_count": 2,
+            "module_top15_support_count": 1,
+            "module_top15_support": [
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 24,
+              "full_transition_correction": 30,
+              "full_signature_correction": 19,
+              "full_overdue_correction": 4
+            },
+            "is_previous_draw_number": true,
+            "repeat_qualified": false,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": false
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "相對指數未達七十五",
+              "四個正式模組的前十五支持未達兩項",
+              "上一期號碼未通過連莊資格"
+            ]
+          },
+          {
+            "number": 18,
+            "rank": 17,
+            "qualified": false,
+            "relative_index": 64.669416,
+            "final_score": 0.081597612856,
+            "positive_module_count": 2,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_transition_correction",
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 27,
+              "full_transition_correction": 8,
+              "full_signature_correction": 38,
+              "full_overdue_correction": 8
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "相對指數未達七十五"
+            ]
+          },
+          {
+            "number": 6,
+            "rank": 18,
+            "qualified": false,
+            "relative_index": 64.546125,
+            "final_score": 0.078531576558,
+            "positive_module_count": 1,
+            "module_top15_support_count": 1,
+            "module_top15_support": [
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 33,
+              "full_transition_correction": 26,
+              "full_signature_correction": 30,
+              "full_overdue_correction": 13
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": false,
+              "positive_modules": false,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "相對指數未達七十五",
+              "正貢獻模組未達兩項",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 33,
+            "rank": 19,
+            "qualified": false,
+            "relative_index": 64.314462,
+            "final_score": 0.07277052098,
+            "positive_module_count": 3,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_frequency_balance",
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 2,
+              "full_transition_correction": 23,
+              "full_signature_correction": 20,
+              "full_overdue_correction": 11
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "相對指數未達七十五"
+            ]
+          },
+          {
+            "number": 24,
+            "rank": 20,
+            "qualified": false,
+            "relative_index": 64.119815,
+            "final_score": 0.067929992344,
+            "positive_module_count": 2,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_frequency_balance",
+              "full_transition_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 12,
+              "full_transition_correction": 6,
+              "full_signature_correction": 25,
+              "full_overdue_correction": 28
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "相對指數未達七十五"
+            ]
+          },
+          {
+            "number": 10,
+            "rank": 21,
+            "qualified": false,
+            "relative_index": 62.848359,
+            "final_score": 0.036311089063,
+            "positive_module_count": 2,
+            "module_top15_support_count": 0,
+            "module_top15_support": [],
+            "module_ranks": {
+              "full_frequency_balance": 31,
+              "full_transition_correction": 16,
+              "full_signature_correction": 29,
+              "full_overdue_correction": 18
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "相對指數未達七十五",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 27,
+            "rank": 22,
+            "qualified": false,
+            "relative_index": 62.640323,
+            "final_score": 0.031137581637,
+            "positive_module_count": 2,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_frequency_balance",
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 14,
+              "full_transition_correction": 27,
+              "full_signature_correction": 36,
+              "full_overdue_correction": 5
+            },
+            "is_previous_draw_number": true,
+            "repeat_qualified": false,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": false
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "相對指數未達七十五",
+              "上一期號碼未通過連莊資格"
+            ]
+          },
+          {
+            "number": 35,
+            "rank": 23,
+            "qualified": false,
+            "relative_index": 61.398259,
+            "final_score": 0.000249608231,
+            "positive_module_count": 1,
+            "module_top15_support_count": 1,
+            "module_top15_support": [
+              "full_signature_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 29,
+              "full_transition_correction": 31,
+              "full_signature_correction": 6,
+              "full_overdue_correction": 26
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": true,
+              "relative_index": false,
+              "positive_modules": false,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "相對指數未達七十五",
+              "正貢獻模組未達兩項",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 1,
+            "rank": 24,
+            "qualified": false,
+            "relative_index": 61.132886,
+            "final_score": -0.006349764948,
+            "positive_module_count": 3,
+            "module_top15_support_count": 3,
+            "module_top15_support": [
+              "full_frequency_balance",
+              "full_transition_correction",
+              "full_signature_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 9,
+              "full_transition_correction": 11,
+              "full_signature_correction": 8,
+              "full_overdue_correction": 34
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五"
+            ]
+          },
+          {
+            "number": 5,
+            "rank": 25,
+            "qualified": false,
+            "relative_index": 60.690208,
+            "final_score": -0.017358398909,
+            "positive_module_count": 3,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_frequency_balance",
+              "full_signature_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 3,
+              "full_transition_correction": 39,
+              "full_signature_correction": 3,
+              "full_overdue_correction": 16
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五"
+            ]
+          },
+          {
+            "number": 31,
+            "rank": 26,
+            "qualified": false,
+            "relative_index": 59.662871,
+            "final_score": -0.042906479609,
+            "positive_module_count": 2,
+            "module_top15_support_count": 0,
+            "module_top15_support": [],
+            "module_ranks": {
+              "full_frequency_balance": 28,
+              "full_transition_correction": 21,
+              "full_signature_correction": 32,
+              "full_overdue_correction": 20
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 26,
+            "rank": 27,
+            "qualified": false,
+            "relative_index": 56.598138,
+            "final_score": -0.119121062327,
+            "positive_module_count": 1,
+            "module_top15_support_count": 0,
+            "module_top15_support": [],
+            "module_ranks": {
+              "full_frequency_balance": 23,
+              "full_transition_correction": 18,
+              "full_signature_correction": 23,
+              "full_overdue_correction": 32
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": false,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五",
+              "正貢獻模組未達兩項",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 38,
+            "rank": 28,
+            "qualified": false,
+            "relative_index": 54.234457,
+            "final_score": -0.177901717589,
+            "positive_module_count": 2,
+            "module_top15_support_count": 1,
+            "module_top15_support": [
+              "full_signature_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 17,
+              "full_transition_correction": 32,
+              "full_signature_correction": 11,
+              "full_overdue_correction": 22
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 7,
+            "rank": 29,
+            "qualified": false,
+            "relative_index": 50.36959,
+            "final_score": -0.274014243887,
+            "positive_module_count": 0,
+            "module_top15_support_count": 0,
+            "module_top15_support": [],
+            "module_ranks": {
+              "full_frequency_balance": 39,
+              "full_transition_correction": 28,
+              "full_signature_correction": 21,
+              "full_overdue_correction": 31
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": false,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五",
+              "正貢獻模組未達兩項",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 11,
+            "rank": 30,
+            "qualified": false,
+            "relative_index": 46.641666,
+            "final_score": -0.366721240661,
+            "positive_module_count": 1,
+            "module_top15_support_count": 1,
+            "module_top15_support": [
+              "full_signature_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 37,
+              "full_transition_correction": 35,
+              "full_signature_correction": 10,
+              "full_overdue_correction": 29
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": false,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五",
+              "正貢獻模組未達兩項",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 34,
+            "rank": 31,
+            "qualified": false,
+            "relative_index": 45.081074,
+            "final_score": -0.405530462235,
+            "positive_module_count": 2,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_frequency_balance",
+              "full_overdue_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 5,
+              "full_transition_correction": 24,
+              "full_signature_correction": 37,
+              "full_overdue_correction": 10
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五"
+            ]
+          },
+          {
+            "number": 29,
+            "rank": 32,
+            "qualified": false,
+            "relative_index": 44.987287,
+            "final_score": -0.407862759695,
+            "positive_module_count": 1,
+            "module_top15_support_count": 1,
+            "module_top15_support": [
+              "full_frequency_balance"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 10,
+              "full_transition_correction": 25,
+              "full_signature_correction": 24,
+              "full_overdue_correction": 24
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": false,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五",
+              "正貢獻模組未達兩項",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 23,
+            "rank": 33,
+            "qualified": false,
+            "relative_index": 44.833182,
+            "final_score": -0.411695096806,
+            "positive_module_count": 2,
+            "module_top15_support_count": 2,
+            "module_top15_support": [
+              "full_frequency_balance",
+              "full_transition_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 11,
+              "full_transition_correction": 15,
+              "full_signature_correction": 26,
+              "full_overdue_correction": 33
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": true,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五"
+            ]
+          },
+          {
+            "number": 25,
+            "rank": 34,
+            "qualified": false,
+            "relative_index": 40.481988,
+            "final_score": -0.519901731977,
+            "positive_module_count": 1,
+            "module_top15_support_count": 1,
+            "module_top15_support": [
+              "full_transition_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 19,
+              "full_transition_correction": 9,
+              "full_signature_correction": 35,
+              "full_overdue_correction": 35
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": false,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五",
+              "正貢獻模組未達兩項",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 12,
+            "rank": 35,
+            "qualified": false,
+            "relative_index": 39.362994,
+            "final_score": -0.547729165449,
+            "positive_module_count": 1,
+            "module_top15_support_count": 1,
+            "module_top15_support": [
+              "full_signature_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 20,
+              "full_transition_correction": 36,
+              "full_signature_correction": 9,
+              "full_overdue_correction": 30
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": false,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五",
+              "正貢獻模組未達兩項",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 9,
+            "rank": 36,
+            "qualified": false,
+            "relative_index": 33.872167,
+            "final_score": -0.684276504741,
+            "positive_module_count": 2,
+            "module_top15_support_count": 1,
+            "module_top15_support": [
+              "full_signature_correction"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 32,
+              "full_transition_correction": 20,
+              "full_signature_correction": 15,
+              "full_overdue_correction": 37
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 4,
+            "rank": 37,
+            "qualified": false,
+            "relative_index": 31.188021,
+            "final_score": -0.751026548483,
+            "positive_module_count": 1,
+            "module_top15_support_count": 1,
+            "module_top15_support": [
+              "full_frequency_balance"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 7,
+              "full_transition_correction": 38,
+              "full_signature_correction": 28,
+              "full_overdue_correction": 23
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": false,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五",
+              "正貢獻模組未達兩項",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 36,
+            "rank": 38,
+            "qualified": false,
+            "relative_index": 2.464051,
+            "final_score": -1.465341830649,
+            "positive_module_count": 1,
+            "module_top15_support_count": 0,
+            "module_top15_support": [],
+            "module_ranks": {
+              "full_frequency_balance": 16,
+              "full_transition_correction": 29,
+              "full_signature_correction": 39,
+              "full_overdue_correction": 38
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": false,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五",
+              "正貢獻模組未達兩項",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          },
+          {
+            "number": 37,
+            "rank": 39,
+            "qualified": false,
+            "relative_index": 0.0,
+            "final_score": -1.526618494237,
+            "positive_module_count": 2,
+            "module_top15_support_count": 1,
+            "module_top15_support": [
+              "full_frequency_balance"
+            ],
+            "module_ranks": {
+              "full_frequency_balance": 1,
+              "full_transition_correction": 34,
+              "full_signature_correction": 17,
+              "full_overdue_correction": 39
+            },
+            "is_previous_draw_number": false,
+            "repeat_qualified": true,
+            "checks": {
+              "formal_rank": false,
+              "positive_score": false,
+              "relative_index": false,
+              "positive_modules": true,
+              "module_support": false,
+              "direct_hit_gate": true,
+              "repeat_qualification": true
+            },
+            "failure_reasons": [
+              "未進入內部排序前九",
+              "最終分數未高於零",
+              "相對指數未達七十五",
+              "四個正式模組的前十五支持未達兩項"
+            ]
+          }
+        ]
       }
     },
     "no_post_draw_substitution": true
@@ -13449,10 +14844,10 @@
     "direct_hit_full_rank_blend": 0.35,
     "direct_hit_full_rank_gate": true,
     "direct_hit_weights": {
-      "full_frequency_balance": 0.41483321418296387,
-      "full_transition_correction": 0.2503995820397599,
-      "full_signature_correction": -0.08474677075838617,
-      "full_overdue_correction": 0.25002043301889
+      "full_frequency_balance": 0.4148332141829638,
+      "full_transition_correction": 0.25039958203975987,
+      "full_signature_correction": -0.08474677075838616,
+      "full_overdue_correction": 0.25002043301889015
     },
     "data_change_enabled": true,
     "data_change_window": 720,
@@ -13461,14 +14856,14 @@
     "data_change_preserve_front": 5,
     "data_change_gate": false,
     "data_change_weights": [
-      0.26618240743827043,
-      0.24848327511626123,
+      0.2661824074382705,
+      0.24848327511626125,
       -0.07430822914685922,
-      0.04728882245252028,
+      0.0472888224525203,
       0.017124657996884687,
-      0.19673983087799282,
+      0.19673983087799285,
       0.14821952152599796,
-      0.00165325544521335
+      0.0016532554452132
     ],
     "selected_next_strategy": {
       "method": "five_member_signed_weight_consensus",
@@ -14386,22 +15781,1474 @@
       "contribution_total": -1.465341831
     }
   ],
+  "strict_publication_gate": {
+    "policy": "strict_no_padding_v1",
+    "no_padding": true,
+    "thresholds": {
+      "maximum_internal_rank": 9,
+      "minimum_relative_index": 75.0,
+      "minimum_positive_modules": 2,
+      "module_support_rank": 15,
+      "minimum_module_support": 2,
+      "direct_hit_gate_required": true,
+      "repeat_qualification_required_for_previous_draw_numbers": true
+    },
+    "qualified_numbers": [
+      16,
+      15,
+      39,
+      2,
+      28,
+      8,
+      22,
+      17
+    ],
+    "qualified_count": 8,
+    "requested_sizes": {
+      "single": 1,
+      "two": 2,
+      "three": 3,
+      "five": 5,
+      "nine": 9
+    },
+    "tiers": {
+      "single": [
+        16
+      ],
+      "two": [
+        16,
+        15
+      ],
+      "three": [
+        16,
+        15,
+        39
+      ],
+      "five": [
+        16,
+        15,
+        39,
+        2,
+        28
+      ],
+      "nine": [
+        16,
+        15,
+        39,
+        2,
+        28,
+        8,
+        22,
+        17
+      ]
+    },
+    "tier_status": {
+      "single": "full",
+      "two": "full",
+      "three": "full",
+      "five": "full",
+      "nine": "insufficient_no_padding"
+    },
+    "details": [
+      {
+        "number": 16,
+        "rank": 1,
+        "qualified": true,
+        "relative_index": 100.0,
+        "final_score": 0.96020788895,
+        "positive_module_count": 3,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_transition_correction",
+          "full_signature_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 21,
+          "full_transition_correction": 2,
+          "full_signature_correction": 14,
+          "full_overdue_correction": 17
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": true,
+          "positive_score": true,
+          "relative_index": true,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": []
+      },
+      {
+        "number": 14,
+        "rank": 2,
+        "qualified": false,
+        "relative_index": 92.100291,
+        "final_score": 0.763755831299,
+        "positive_module_count": 2,
+        "module_top15_support_count": 1,
+        "module_top15_support": [
+          "full_signature_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 35,
+          "full_transition_correction": 33,
+          "full_signature_correction": 1,
+          "full_overdue_correction": 19
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": true,
+          "positive_score": true,
+          "relative_index": true,
+          "positive_modules": true,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 15,
+        "rank": 3,
+        "qualified": true,
+        "relative_index": 89.571842,
+        "final_score": 0.700877705636,
+        "positive_module_count": 3,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_signature_correction",
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 25,
+          "full_transition_correction": 22,
+          "full_signature_correction": 7,
+          "full_overdue_correction": 12
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": true,
+          "positive_score": true,
+          "relative_index": true,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": []
+      },
+      {
+        "number": 39,
+        "rank": 4,
+        "qualified": true,
+        "relative_index": 85.977453,
+        "final_score": 0.611491497014,
+        "positive_module_count": 2,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_transition_correction",
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 18,
+          "full_transition_correction": 10,
+          "full_signature_correction": 22,
+          "full_overdue_correction": 7
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": true,
+          "positive_score": true,
+          "relative_index": true,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": []
+      },
+      {
+        "number": 2,
+        "rank": 5,
+        "qualified": true,
+        "relative_index": 83.957769,
+        "final_score": 0.56126545666,
+        "positive_module_count": 2,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_transition_correction",
+          "full_signature_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 38,
+          "full_transition_correction": 14,
+          "full_signature_correction": 13,
+          "full_overdue_correction": 25
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": true,
+          "positive_score": true,
+          "relative_index": true,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": []
+      },
+      {
+        "number": 28,
+        "rank": 6,
+        "qualified": true,
+        "relative_index": 82.51722,
+        "final_score": 0.525441493838,
+        "positive_module_count": 2,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_transition_correction",
+          "full_signature_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 26,
+          "full_transition_correction": 4,
+          "full_signature_correction": 4,
+          "full_overdue_correction": 36
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": true,
+          "positive_score": true,
+          "relative_index": true,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": []
+      },
+      {
+        "number": 8,
+        "rank": 7,
+        "qualified": true,
+        "relative_index": 81.823933,
+        "final_score": 0.508200665929,
+        "positive_module_count": 2,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_transition_correction",
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 36,
+          "full_transition_correction": 7,
+          "full_signature_correction": 33,
+          "full_overdue_correction": 15
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": true,
+          "positive_score": true,
+          "relative_index": true,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": []
+      },
+      {
+        "number": 22,
+        "rank": 8,
+        "qualified": true,
+        "relative_index": 81.709725,
+        "final_score": 0.50536049469,
+        "positive_module_count": 2,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_transition_correction",
+          "full_signature_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 30,
+          "full_transition_correction": 12,
+          "full_signature_correction": 12,
+          "full_overdue_correction": 21
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": true,
+          "positive_score": true,
+          "relative_index": true,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": []
+      },
+      {
+        "number": 17,
+        "rank": 9,
+        "qualified": true,
+        "relative_index": 79.466322,
+        "final_score": 0.449570966781,
+        "positive_module_count": 3,
+        "module_top15_support_count": 3,
+        "module_top15_support": [
+          "full_frequency_balance",
+          "full_signature_correction",
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 6,
+          "full_transition_correction": 37,
+          "full_signature_correction": 2,
+          "full_overdue_correction": 9
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": true,
+          "positive_score": true,
+          "relative_index": true,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": []
+      },
+      {
+        "number": 21,
+        "rank": 10,
+        "qualified": false,
+        "relative_index": 76.442385,
+        "final_score": 0.374370895696,
+        "positive_module_count": 3,
+        "module_top15_support_count": 3,
+        "module_top15_support": [
+          "full_transition_correction",
+          "full_signature_correction",
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 22,
+          "full_transition_correction": 13,
+          "full_signature_correction": 5,
+          "full_overdue_correction": 3
+        },
+        "is_previous_draw_number": true,
+        "repeat_qualified": false,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": true,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": false
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "上一期號碼未通過連莊資格"
+        ]
+      },
+      {
+        "number": 32,
+        "rank": 11,
+        "qualified": false,
+        "relative_index": 76.021896,
+        "final_score": 0.363914075359,
+        "positive_module_count": 3,
+        "module_top15_support_count": 3,
+        "module_top15_support": [
+          "full_frequency_balance",
+          "full_transition_correction",
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 13,
+          "full_transition_correction": 1,
+          "full_signature_correction": 27,
+          "full_overdue_correction": 1
+        },
+        "is_previous_draw_number": true,
+        "repeat_qualified": false,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": true,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": false
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "上一期號碼未通過連莊資格"
+        ]
+      },
+      {
+        "number": 13,
+        "rank": 12,
+        "qualified": false,
+        "relative_index": 74.919685,
+        "final_score": 0.336503995294,
+        "positive_module_count": 3,
+        "module_top15_support_count": 3,
+        "module_top15_support": [
+          "full_frequency_balance",
+          "full_transition_correction",
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 15,
+          "full_transition_correction": 3,
+          "full_signature_correction": 34,
+          "full_overdue_correction": 2
+        },
+        "is_previous_draw_number": true,
+        "repeat_qualified": false,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": false
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "相對指數未達七十五",
+          "上一期號碼未通過連莊資格"
+        ]
+      },
+      {
+        "number": 30,
+        "rank": 13,
+        "qualified": false,
+        "relative_index": 71.77963,
+        "final_score": 0.258416292582,
+        "positive_module_count": 4,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_frequency_balance",
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 4,
+          "full_transition_correction": 17,
+          "full_signature_correction": 18,
+          "full_overdue_correction": 6
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "相對指數未達七十五"
+        ]
+      },
+      {
+        "number": 3,
+        "rank": 14,
+        "qualified": false,
+        "relative_index": 70.515482,
+        "final_score": 0.226979104768,
+        "positive_module_count": 3,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_frequency_balance",
+          "full_transition_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 8,
+          "full_transition_correction": 5,
+          "full_signature_correction": 16,
+          "full_overdue_correction": 27
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "相對指數未達七十五"
+        ]
+      },
+      {
+        "number": 20,
+        "rank": 15,
+        "qualified": false,
+        "relative_index": 65.600705,
+        "final_score": 0.104757148574,
+        "positive_module_count": 2,
+        "module_top15_support_count": 1,
+        "module_top15_support": [
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 34,
+          "full_transition_correction": 19,
+          "full_signature_correction": 31,
+          "full_overdue_correction": 14
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "相對指數未達七十五",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 19,
+        "rank": 16,
+        "qualified": false,
+        "relative_index": 65.59897,
+        "final_score": 0.104714005619,
+        "positive_module_count": 2,
+        "module_top15_support_count": 1,
+        "module_top15_support": [
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 24,
+          "full_transition_correction": 30,
+          "full_signature_correction": 19,
+          "full_overdue_correction": 4
+        },
+        "is_previous_draw_number": true,
+        "repeat_qualified": false,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": false
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "相對指數未達七十五",
+          "四個正式模組的前十五支持未達兩項",
+          "上一期號碼未通過連莊資格"
+        ]
+      },
+      {
+        "number": 18,
+        "rank": 17,
+        "qualified": false,
+        "relative_index": 64.669416,
+        "final_score": 0.081597612856,
+        "positive_module_count": 2,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_transition_correction",
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 27,
+          "full_transition_correction": 8,
+          "full_signature_correction": 38,
+          "full_overdue_correction": 8
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "相對指數未達七十五"
+        ]
+      },
+      {
+        "number": 6,
+        "rank": 18,
+        "qualified": false,
+        "relative_index": 64.546125,
+        "final_score": 0.078531576558,
+        "positive_module_count": 1,
+        "module_top15_support_count": 1,
+        "module_top15_support": [
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 33,
+          "full_transition_correction": 26,
+          "full_signature_correction": 30,
+          "full_overdue_correction": 13
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": false,
+          "positive_modules": false,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "相對指數未達七十五",
+          "正貢獻模組未達兩項",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 33,
+        "rank": 19,
+        "qualified": false,
+        "relative_index": 64.314462,
+        "final_score": 0.07277052098,
+        "positive_module_count": 3,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_frequency_balance",
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 2,
+          "full_transition_correction": 23,
+          "full_signature_correction": 20,
+          "full_overdue_correction": 11
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "相對指數未達七十五"
+        ]
+      },
+      {
+        "number": 24,
+        "rank": 20,
+        "qualified": false,
+        "relative_index": 64.119815,
+        "final_score": 0.067929992344,
+        "positive_module_count": 2,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_frequency_balance",
+          "full_transition_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 12,
+          "full_transition_correction": 6,
+          "full_signature_correction": 25,
+          "full_overdue_correction": 28
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "相對指數未達七十五"
+        ]
+      },
+      {
+        "number": 10,
+        "rank": 21,
+        "qualified": false,
+        "relative_index": 62.848359,
+        "final_score": 0.036311089063,
+        "positive_module_count": 2,
+        "module_top15_support_count": 0,
+        "module_top15_support": [],
+        "module_ranks": {
+          "full_frequency_balance": 31,
+          "full_transition_correction": 16,
+          "full_signature_correction": 29,
+          "full_overdue_correction": 18
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "相對指數未達七十五",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 27,
+        "rank": 22,
+        "qualified": false,
+        "relative_index": 62.640323,
+        "final_score": 0.031137581637,
+        "positive_module_count": 2,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_frequency_balance",
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 14,
+          "full_transition_correction": 27,
+          "full_signature_correction": 36,
+          "full_overdue_correction": 5
+        },
+        "is_previous_draw_number": true,
+        "repeat_qualified": false,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": false
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "相對指數未達七十五",
+          "上一期號碼未通過連莊資格"
+        ]
+      },
+      {
+        "number": 35,
+        "rank": 23,
+        "qualified": false,
+        "relative_index": 61.398259,
+        "final_score": 0.000249608231,
+        "positive_module_count": 1,
+        "module_top15_support_count": 1,
+        "module_top15_support": [
+          "full_signature_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 29,
+          "full_transition_correction": 31,
+          "full_signature_correction": 6,
+          "full_overdue_correction": 26
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": true,
+          "relative_index": false,
+          "positive_modules": false,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "相對指數未達七十五",
+          "正貢獻模組未達兩項",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 1,
+        "rank": 24,
+        "qualified": false,
+        "relative_index": 61.132886,
+        "final_score": -0.006349764948,
+        "positive_module_count": 3,
+        "module_top15_support_count": 3,
+        "module_top15_support": [
+          "full_frequency_balance",
+          "full_transition_correction",
+          "full_signature_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 9,
+          "full_transition_correction": 11,
+          "full_signature_correction": 8,
+          "full_overdue_correction": 34
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五"
+        ]
+      },
+      {
+        "number": 5,
+        "rank": 25,
+        "qualified": false,
+        "relative_index": 60.690208,
+        "final_score": -0.017358398909,
+        "positive_module_count": 3,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_frequency_balance",
+          "full_signature_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 3,
+          "full_transition_correction": 39,
+          "full_signature_correction": 3,
+          "full_overdue_correction": 16
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五"
+        ]
+      },
+      {
+        "number": 31,
+        "rank": 26,
+        "qualified": false,
+        "relative_index": 59.662871,
+        "final_score": -0.042906479609,
+        "positive_module_count": 2,
+        "module_top15_support_count": 0,
+        "module_top15_support": [],
+        "module_ranks": {
+          "full_frequency_balance": 28,
+          "full_transition_correction": 21,
+          "full_signature_correction": 32,
+          "full_overdue_correction": 20
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 26,
+        "rank": 27,
+        "qualified": false,
+        "relative_index": 56.598138,
+        "final_score": -0.119121062327,
+        "positive_module_count": 1,
+        "module_top15_support_count": 0,
+        "module_top15_support": [],
+        "module_ranks": {
+          "full_frequency_balance": 23,
+          "full_transition_correction": 18,
+          "full_signature_correction": 23,
+          "full_overdue_correction": 32
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": false,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五",
+          "正貢獻模組未達兩項",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 38,
+        "rank": 28,
+        "qualified": false,
+        "relative_index": 54.234457,
+        "final_score": -0.177901717589,
+        "positive_module_count": 2,
+        "module_top15_support_count": 1,
+        "module_top15_support": [
+          "full_signature_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 17,
+          "full_transition_correction": 32,
+          "full_signature_correction": 11,
+          "full_overdue_correction": 22
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 7,
+        "rank": 29,
+        "qualified": false,
+        "relative_index": 50.36959,
+        "final_score": -0.274014243887,
+        "positive_module_count": 0,
+        "module_top15_support_count": 0,
+        "module_top15_support": [],
+        "module_ranks": {
+          "full_frequency_balance": 39,
+          "full_transition_correction": 28,
+          "full_signature_correction": 21,
+          "full_overdue_correction": 31
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": false,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五",
+          "正貢獻模組未達兩項",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 11,
+        "rank": 30,
+        "qualified": false,
+        "relative_index": 46.641666,
+        "final_score": -0.366721240661,
+        "positive_module_count": 1,
+        "module_top15_support_count": 1,
+        "module_top15_support": [
+          "full_signature_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 37,
+          "full_transition_correction": 35,
+          "full_signature_correction": 10,
+          "full_overdue_correction": 29
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": false,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五",
+          "正貢獻模組未達兩項",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 34,
+        "rank": 31,
+        "qualified": false,
+        "relative_index": 45.081074,
+        "final_score": -0.405530462235,
+        "positive_module_count": 2,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_frequency_balance",
+          "full_overdue_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 5,
+          "full_transition_correction": 24,
+          "full_signature_correction": 37,
+          "full_overdue_correction": 10
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五"
+        ]
+      },
+      {
+        "number": 29,
+        "rank": 32,
+        "qualified": false,
+        "relative_index": 44.987287,
+        "final_score": -0.407862759695,
+        "positive_module_count": 1,
+        "module_top15_support_count": 1,
+        "module_top15_support": [
+          "full_frequency_balance"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 10,
+          "full_transition_correction": 25,
+          "full_signature_correction": 24,
+          "full_overdue_correction": 24
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": false,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五",
+          "正貢獻模組未達兩項",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 23,
+        "rank": 33,
+        "qualified": false,
+        "relative_index": 44.833182,
+        "final_score": -0.411695096806,
+        "positive_module_count": 2,
+        "module_top15_support_count": 2,
+        "module_top15_support": [
+          "full_frequency_balance",
+          "full_transition_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 11,
+          "full_transition_correction": 15,
+          "full_signature_correction": 26,
+          "full_overdue_correction": 33
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": true,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五"
+        ]
+      },
+      {
+        "number": 25,
+        "rank": 34,
+        "qualified": false,
+        "relative_index": 40.481988,
+        "final_score": -0.519901731977,
+        "positive_module_count": 1,
+        "module_top15_support_count": 1,
+        "module_top15_support": [
+          "full_transition_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 19,
+          "full_transition_correction": 9,
+          "full_signature_correction": 35,
+          "full_overdue_correction": 35
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": false,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五",
+          "正貢獻模組未達兩項",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 12,
+        "rank": 35,
+        "qualified": false,
+        "relative_index": 39.362994,
+        "final_score": -0.547729165449,
+        "positive_module_count": 1,
+        "module_top15_support_count": 1,
+        "module_top15_support": [
+          "full_signature_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 20,
+          "full_transition_correction": 36,
+          "full_signature_correction": 9,
+          "full_overdue_correction": 30
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": false,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五",
+          "正貢獻模組未達兩項",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 9,
+        "rank": 36,
+        "qualified": false,
+        "relative_index": 33.872167,
+        "final_score": -0.684276504741,
+        "positive_module_count": 2,
+        "module_top15_support_count": 1,
+        "module_top15_support": [
+          "full_signature_correction"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 32,
+          "full_transition_correction": 20,
+          "full_signature_correction": 15,
+          "full_overdue_correction": 37
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 4,
+        "rank": 37,
+        "qualified": false,
+        "relative_index": 31.188021,
+        "final_score": -0.751026548483,
+        "positive_module_count": 1,
+        "module_top15_support_count": 1,
+        "module_top15_support": [
+          "full_frequency_balance"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 7,
+          "full_transition_correction": 38,
+          "full_signature_correction": 28,
+          "full_overdue_correction": 23
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": false,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五",
+          "正貢獻模組未達兩項",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 36,
+        "rank": 38,
+        "qualified": false,
+        "relative_index": 2.464051,
+        "final_score": -1.465341830649,
+        "positive_module_count": 1,
+        "module_top15_support_count": 0,
+        "module_top15_support": [],
+        "module_ranks": {
+          "full_frequency_balance": 16,
+          "full_transition_correction": 29,
+          "full_signature_correction": 39,
+          "full_overdue_correction": 38
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": false,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五",
+          "正貢獻模組未達兩項",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      },
+      {
+        "number": 37,
+        "rank": 39,
+        "qualified": false,
+        "relative_index": 0.0,
+        "final_score": -1.526618494237,
+        "positive_module_count": 2,
+        "module_top15_support_count": 1,
+        "module_top15_support": [
+          "full_frequency_balance"
+        ],
+        "module_ranks": {
+          "full_frequency_balance": 1,
+          "full_transition_correction": 34,
+          "full_signature_correction": 17,
+          "full_overdue_correction": 39
+        },
+        "is_previous_draw_number": false,
+        "repeat_qualified": true,
+        "checks": {
+          "formal_rank": false,
+          "positive_score": false,
+          "relative_index": false,
+          "positive_modules": true,
+          "module_support": false,
+          "direct_hit_gate": true,
+          "repeat_qualification": true
+        },
+        "failure_reasons": [
+          "未進入內部排序前九",
+          "最終分數未高於零",
+          "相對指數未達七十五",
+          "四個正式模組的前十五支持未達兩項"
+        ]
+      }
+    ]
+  },
+  "published_predictions": {
+    "single": [
+      16
+    ],
+    "two": [
+      16,
+      15
+    ],
+    "three": [
+      16,
+      15,
+      39
+    ],
+    "five": [
+      16,
+      15,
+      39,
+      2,
+      28
+    ],
+    "nine": [
+      16,
+      15,
+      39,
+      2,
+      28,
+      8,
+      22,
+      17
+    ]
+  },
+  "qualified_numbers": [
+    16,
+    15,
+    39,
+    2,
+    28,
+    8,
+    22,
+    17
+  ],
   "forced_ticket_exclusions": [
-    37,
-    36,
-    4,
-    9,
-    12,
-    25,
-    23,
-    29,
-    34,
-    11,
-    7,
-    38,
-    26,
+    14,
+    21,
+    32,
+    13,
+    30,
+    3,
+    20,
+    19,
+    18,
+    6,
+    33,
+    24,
+    10,
+    27,
+    35,
+    1,
+    5,
     31,
-    5
+    26,
+    38,
+    7,
+    11,
+    34,
+    29,
+    23,
+    25,
+    12,
+    9,
+    4,
+    36,
+    37
   ],
   "previous_draw_overlap_audit": {
     "method": "model_score_with_repeat_qualification",
@@ -14605,7 +17452,7 @@
       "未通過上線守門的校準模組自動回退",
       "套用連莊資格與單碼重複冷卻",
       "一至三十九依最終分數排序，同分以期號封存碼固定先後",
-      "只公布唯一第1名作為本期最強獨支"
+      "第1名仍須逐項通過嚴格發布守門；未達標就不發布、不補位"
     ],
     "tie_break_rule": "同分時使用依據期號與號碼產生的穩定封存碼固定排序，禁止人工挑選",
     "direct_hit_gate_passed": true,
@@ -14664,17 +17511,18 @@
   },
   "release_policy": {
     "official_release_allowed": true,
-    "single": "published_every_draw",
+    "single": "strict_gate_or_withheld",
     "single_edge_verified": false,
-    "top5": "published_with_backtest",
-    "top9": "published_with_backtest"
+    "top5": "strict_gate_no_padding",
+    "top9": "strict_gate_no_padding",
+    "no_padding": true
   },
   "tickets": [
     [
-      14,
+      15,
       16,
       17,
-      21,
+      22,
       39
     ],
     [
@@ -14686,44 +17534,30 @@
     ],
     [
       2,
-      14,
-      15,
+      16,
+      17,
       28,
       39
     ],
     [
-      14,
+      8,
       15,
-      16,
-      30,
-      39
-    ],
-    [
-      15,
-      16,
       17,
       22,
-      39
-    ],
-    [
-      14,
-      15,
-      16,
-      22,
-      33
-    ],
-    [
-      8,
-      14,
-      15,
-      22,
-      39
+      28
     ],
     [
       2,
       15,
-      16,
-      32,
+      22,
+      28,
+      39
+    ],
+    [
+      2,
+      8,
+      17,
+      22,
       39
     ]
   ],
@@ -14861,10 +17695,10 @@
     "direct_hit_full_rank_blend": 0.35,
     "direct_hit_full_rank_gate": true,
     "direct_hit_weights": {
-      "full_frequency_balance": 0.41483321418296387,
-      "full_transition_correction": 0.2503995820397599,
-      "full_signature_correction": -0.08474677075838617,
-      "full_overdue_correction": 0.25002043301889
+      "full_frequency_balance": 0.4148332141829638,
+      "full_transition_correction": 0.25039958203975987,
+      "full_signature_correction": -0.08474677075838616,
+      "full_overdue_correction": 0.25002043301889015
     },
     "direct_hit_baseline": {
       "samples": 360,
@@ -15031,14 +17865,14 @@
       "delta_full_overdue_correction"
     ],
     "data_change_weights": [
-      0.26618240743827043,
-      0.24848327511626123,
+      0.2661824074382705,
+      0.24848327511626125,
       -0.07430822914685922,
-      0.04728882245252028,
+      0.0472888224525203,
       0.017124657996884687,
-      0.19673983087799282,
+      0.19673983087799285,
       0.14821952152599796,
-      0.00165325544521335
+      0.0016532554452132
     ],
     "data_change_baseline": {
       "samples": 360,
@@ -15359,37 +18193,37 @@
     "next_score": {
       "16": 0.9602078889500554,
       "14": 0.7637558312985558,
-      "15": 0.700877705635634,
+      "15": 0.7008777056356339,
       "39": 0.6114914970141658,
       "2": 0.5612654566604778,
       "28": 0.5254414938384458,
       "8": 0.5082006659287442,
       "22": 0.5053604946903312,
       "17": 0.4495709667806896,
-      "21": 0.3743708956964988,
+      "21": 0.37437089569649884,
       "32": 0.3639140753586895,
       "13": 0.33650399529411423,
       "30": 0.25841629258210685,
-      "3": 0.22697910476790392,
+      "3": 0.22697910476790384,
       "20": 0.10475714857360621,
       "19": 0.10471400561944591,
-      "18": 0.08159761285588145,
+      "18": 0.08159761285588148,
       "6": 0.07853157655782461,
-      "33": 0.07277052097983287,
+      "33": 0.07277052097983298,
       "24": 0.06792999234376455,
       "10": 0.03631108906317849,
       "27": 0.03113758163735787,
       "35": 0.0002496082309440543,
-      "1": -0.006349764947660398,
+      "1": -0.006349764947660356,
       "5": -0.01735839890877952,
       "31": -0.04290647960873764,
       "26": -0.11912106232679043,
-      "38": -0.1779017175887704,
+      "38": -0.17790171758877052,
       "7": -0.27401424388703305,
       "11": -0.3667212406605844,
       "34": -0.40553046223490624,
       "29": -0.40786275969510727,
-      "23": -0.4116950968060286,
+      "23": -0.4116950968060285,
       "25": -0.5199017319773043,
       "12": -0.547729165449059,
       "9": -0.6842765047414685,
@@ -15405,32 +18239,32 @@
       "5": 0.07853157660010066,
       "6": 0.00024960828565423476,
       "7": -0.519901731895239,
-      "8": 0.08159761289567068,
+      "8": 0.0815976128956707,
       "9": -0.7510265483934427,
-      "10": -0.006349764890463391,
-      "11": -0.41169509672645016,
+      "10": -0.00634976489046335,
+      "11": -0.41169509672645005,
       "12": -0.40786275961801566,
       "13": 0.561265456670425,
       "14": 0.52544149385088,
       "15": 0.5053604947077389,
-      "16": 0.7008777056406077,
+      "16": 0.7008777056406076,
       "17": 0.6114914970216263,
       "18": 0.036311089112915015,
       "19": 0.3365039953214693,
-      "20": 0.07277052102459575,
+      "20": 0.07277052102459586,
       "21": 0.9602078889500554,
-      "22": 0.22697910480023267,
+      "22": 0.2269791048002326,
       "23": -0.4055304621603015,
       "24": 0.10471400565674831,
       "25": -0.5477291653645069,
       "26": -0.36672124058846645,
       "27": 0.06792999239101426,
       "28": 0.25841629261194876,
-      "29": -0.1779017175216261,
+      "29": -0.1779017175216262,
       "30": 0.5082006659436652,
       "31": -0.2740142438174019,
       "32": 0.7637558313010426,
-      "33": 0.3743708957188802,
+      "33": 0.37437089571888027,
       "34": -0.042906479546566983,
       "35": -0.017358398849095687,
       "36": -1.5266184941427323,
@@ -15801,10 +18635,10 @@
       "boundary_control_valid": true,
       "ranking_direction_valid": false,
       "backtest_weights": {
-        "full_frequency_balance": 0.1871614548197034,
+        "full_frequency_balance": 0.18716145481970345,
         "full_transition_correction": 0.19528050077475712,
-        "full_signature_correction": 0.18403287778048094,
-        "full_overdue_correction": 0.4335251666250585
+        "full_signature_correction": 0.18403287778048102,
+        "full_overdue_correction": 0.4335251666250584
       },
       "anchor_weights": {
         "full_frequency_balance": 0.10000000000000002,
@@ -15813,10 +18647,10 @@
         "full_overdue_correction": 0.3666666666666667
       },
       "end_weights": {
-        "full_frequency_balance": 0.1871614548197034,
+        "full_frequency_balance": 0.18716145481970345,
         "full_transition_correction": 0.19528050077475712,
-        "full_signature_correction": 0.18403287778048094,
-        "full_overdue_correction": 0.4335251666250585
+        "full_signature_correction": 0.18403287778048102,
+        "full_overdue_correction": 0.4335251666250584
       },
       "anchor_ensemble_weights": [
         {
@@ -15842,20 +18676,20 @@
         {
           "full_frequency_balance": 0.21356123157973397,
           "full_transition_correction": 0.18601497906435735,
-          "full_signature_correction": 0.1570244018731699,
-          "full_overdue_correction": 0.44339938748273877
+          "full_signature_correction": 0.1570244018731701,
+          "full_overdue_correction": 0.4433993874827386
         },
         {
-          "full_frequency_balance": 0.2843345142808522,
-          "full_transition_correction": 0.2369254639339323,
-          "full_signature_correction": 0.15359424254983206,
+          "full_frequency_balance": 0.28433451428085227,
+          "full_transition_correction": 0.23692546393393213,
+          "full_signature_correction": 0.1535942425498322,
           "full_overdue_correction": 0.3251457792353834
         },
         {
-          "full_frequency_balance": 0.06358861859852406,
-          "full_transition_correction": 0.16290105932598176,
-          "full_signature_correction": 0.24147998891844083,
-          "full_overdue_correction": 0.5320303331570534
+          "full_frequency_balance": 0.06358861859852408,
+          "full_transition_correction": 0.16290105932598192,
+          "full_signature_correction": 0.24147998891844072,
+          "full_overdue_correction": 0.5320303331570533
         }
       ],
       "rolling_update_count": 360,
@@ -15907,6 +18741,1401 @@
       "單碼信賴下限高於隨機基準": false
     },
     "single_strong_recommendation": false,
-    "single_confidence_label": "本期綜合最強"
+    "single_confidence_label": "本期綜合最強",
+    "strict_publication_gate": {
+      "policy": "strict_no_padding_v1",
+      "no_padding": true,
+      "thresholds": {
+        "maximum_internal_rank": 9,
+        "minimum_relative_index": 75.0,
+        "minimum_positive_modules": 2,
+        "module_support_rank": 15,
+        "minimum_module_support": 2,
+        "direct_hit_gate_required": true,
+        "repeat_qualification_required_for_previous_draw_numbers": true
+      },
+      "qualified_numbers": [
+        16,
+        15,
+        39,
+        2,
+        28,
+        8,
+        22,
+        17
+      ],
+      "qualified_count": 8,
+      "requested_sizes": {
+        "single": 1,
+        "two": 2,
+        "three": 3,
+        "five": 5,
+        "nine": 9
+      },
+      "tiers": {
+        "single": [
+          16
+        ],
+        "two": [
+          16,
+          15
+        ],
+        "three": [
+          16,
+          15,
+          39
+        ],
+        "five": [
+          16,
+          15,
+          39,
+          2,
+          28
+        ],
+        "nine": [
+          16,
+          15,
+          39,
+          2,
+          28,
+          8,
+          22,
+          17
+        ]
+      },
+      "tier_status": {
+        "single": "full",
+        "two": "full",
+        "three": "full",
+        "five": "full",
+        "nine": "insufficient_no_padding"
+      },
+      "details": [
+        {
+          "number": 16,
+          "rank": 1,
+          "qualified": true,
+          "relative_index": 100.0,
+          "final_score": 0.96020788895,
+          "positive_module_count": 3,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_transition_correction",
+            "full_signature_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 21,
+            "full_transition_correction": 2,
+            "full_signature_correction": 14,
+            "full_overdue_correction": 17
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": true,
+            "positive_score": true,
+            "relative_index": true,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": []
+        },
+        {
+          "number": 14,
+          "rank": 2,
+          "qualified": false,
+          "relative_index": 92.100291,
+          "final_score": 0.763755831299,
+          "positive_module_count": 2,
+          "module_top15_support_count": 1,
+          "module_top15_support": [
+            "full_signature_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 35,
+            "full_transition_correction": 33,
+            "full_signature_correction": 1,
+            "full_overdue_correction": 19
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": true,
+            "positive_score": true,
+            "relative_index": true,
+            "positive_modules": true,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 15,
+          "rank": 3,
+          "qualified": true,
+          "relative_index": 89.571842,
+          "final_score": 0.700877705636,
+          "positive_module_count": 3,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_signature_correction",
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 25,
+            "full_transition_correction": 22,
+            "full_signature_correction": 7,
+            "full_overdue_correction": 12
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": true,
+            "positive_score": true,
+            "relative_index": true,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": []
+        },
+        {
+          "number": 39,
+          "rank": 4,
+          "qualified": true,
+          "relative_index": 85.977453,
+          "final_score": 0.611491497014,
+          "positive_module_count": 2,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_transition_correction",
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 18,
+            "full_transition_correction": 10,
+            "full_signature_correction": 22,
+            "full_overdue_correction": 7
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": true,
+            "positive_score": true,
+            "relative_index": true,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": []
+        },
+        {
+          "number": 2,
+          "rank": 5,
+          "qualified": true,
+          "relative_index": 83.957769,
+          "final_score": 0.56126545666,
+          "positive_module_count": 2,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_transition_correction",
+            "full_signature_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 38,
+            "full_transition_correction": 14,
+            "full_signature_correction": 13,
+            "full_overdue_correction": 25
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": true,
+            "positive_score": true,
+            "relative_index": true,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": []
+        },
+        {
+          "number": 28,
+          "rank": 6,
+          "qualified": true,
+          "relative_index": 82.51722,
+          "final_score": 0.525441493838,
+          "positive_module_count": 2,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_transition_correction",
+            "full_signature_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 26,
+            "full_transition_correction": 4,
+            "full_signature_correction": 4,
+            "full_overdue_correction": 36
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": true,
+            "positive_score": true,
+            "relative_index": true,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": []
+        },
+        {
+          "number": 8,
+          "rank": 7,
+          "qualified": true,
+          "relative_index": 81.823933,
+          "final_score": 0.508200665929,
+          "positive_module_count": 2,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_transition_correction",
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 36,
+            "full_transition_correction": 7,
+            "full_signature_correction": 33,
+            "full_overdue_correction": 15
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": true,
+            "positive_score": true,
+            "relative_index": true,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": []
+        },
+        {
+          "number": 22,
+          "rank": 8,
+          "qualified": true,
+          "relative_index": 81.709725,
+          "final_score": 0.50536049469,
+          "positive_module_count": 2,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_transition_correction",
+            "full_signature_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 30,
+            "full_transition_correction": 12,
+            "full_signature_correction": 12,
+            "full_overdue_correction": 21
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": true,
+            "positive_score": true,
+            "relative_index": true,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": []
+        },
+        {
+          "number": 17,
+          "rank": 9,
+          "qualified": true,
+          "relative_index": 79.466322,
+          "final_score": 0.449570966781,
+          "positive_module_count": 3,
+          "module_top15_support_count": 3,
+          "module_top15_support": [
+            "full_frequency_balance",
+            "full_signature_correction",
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 6,
+            "full_transition_correction": 37,
+            "full_signature_correction": 2,
+            "full_overdue_correction": 9
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": true,
+            "positive_score": true,
+            "relative_index": true,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": []
+        },
+        {
+          "number": 21,
+          "rank": 10,
+          "qualified": false,
+          "relative_index": 76.442385,
+          "final_score": 0.374370895696,
+          "positive_module_count": 3,
+          "module_top15_support_count": 3,
+          "module_top15_support": [
+            "full_transition_correction",
+            "full_signature_correction",
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 22,
+            "full_transition_correction": 13,
+            "full_signature_correction": 5,
+            "full_overdue_correction": 3
+          },
+          "is_previous_draw_number": true,
+          "repeat_qualified": false,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": true,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": false
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "上一期號碼未通過連莊資格"
+          ]
+        },
+        {
+          "number": 32,
+          "rank": 11,
+          "qualified": false,
+          "relative_index": 76.021896,
+          "final_score": 0.363914075359,
+          "positive_module_count": 3,
+          "module_top15_support_count": 3,
+          "module_top15_support": [
+            "full_frequency_balance",
+            "full_transition_correction",
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 13,
+            "full_transition_correction": 1,
+            "full_signature_correction": 27,
+            "full_overdue_correction": 1
+          },
+          "is_previous_draw_number": true,
+          "repeat_qualified": false,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": true,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": false
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "上一期號碼未通過連莊資格"
+          ]
+        },
+        {
+          "number": 13,
+          "rank": 12,
+          "qualified": false,
+          "relative_index": 74.919685,
+          "final_score": 0.336503995294,
+          "positive_module_count": 3,
+          "module_top15_support_count": 3,
+          "module_top15_support": [
+            "full_frequency_balance",
+            "full_transition_correction",
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 15,
+            "full_transition_correction": 3,
+            "full_signature_correction": 34,
+            "full_overdue_correction": 2
+          },
+          "is_previous_draw_number": true,
+          "repeat_qualified": false,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": false
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "相對指數未達七十五",
+            "上一期號碼未通過連莊資格"
+          ]
+        },
+        {
+          "number": 30,
+          "rank": 13,
+          "qualified": false,
+          "relative_index": 71.77963,
+          "final_score": 0.258416292582,
+          "positive_module_count": 4,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_frequency_balance",
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 4,
+            "full_transition_correction": 17,
+            "full_signature_correction": 18,
+            "full_overdue_correction": 6
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "相對指數未達七十五"
+          ]
+        },
+        {
+          "number": 3,
+          "rank": 14,
+          "qualified": false,
+          "relative_index": 70.515482,
+          "final_score": 0.226979104768,
+          "positive_module_count": 3,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_frequency_balance",
+            "full_transition_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 8,
+            "full_transition_correction": 5,
+            "full_signature_correction": 16,
+            "full_overdue_correction": 27
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "相對指數未達七十五"
+          ]
+        },
+        {
+          "number": 20,
+          "rank": 15,
+          "qualified": false,
+          "relative_index": 65.600705,
+          "final_score": 0.104757148574,
+          "positive_module_count": 2,
+          "module_top15_support_count": 1,
+          "module_top15_support": [
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 34,
+            "full_transition_correction": 19,
+            "full_signature_correction": 31,
+            "full_overdue_correction": 14
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "相對指數未達七十五",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 19,
+          "rank": 16,
+          "qualified": false,
+          "relative_index": 65.59897,
+          "final_score": 0.104714005619,
+          "positive_module_count": 2,
+          "module_top15_support_count": 1,
+          "module_top15_support": [
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 24,
+            "full_transition_correction": 30,
+            "full_signature_correction": 19,
+            "full_overdue_correction": 4
+          },
+          "is_previous_draw_number": true,
+          "repeat_qualified": false,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": false
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "相對指數未達七十五",
+            "四個正式模組的前十五支持未達兩項",
+            "上一期號碼未通過連莊資格"
+          ]
+        },
+        {
+          "number": 18,
+          "rank": 17,
+          "qualified": false,
+          "relative_index": 64.669416,
+          "final_score": 0.081597612856,
+          "positive_module_count": 2,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_transition_correction",
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 27,
+            "full_transition_correction": 8,
+            "full_signature_correction": 38,
+            "full_overdue_correction": 8
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "相對指數未達七十五"
+          ]
+        },
+        {
+          "number": 6,
+          "rank": 18,
+          "qualified": false,
+          "relative_index": 64.546125,
+          "final_score": 0.078531576558,
+          "positive_module_count": 1,
+          "module_top15_support_count": 1,
+          "module_top15_support": [
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 33,
+            "full_transition_correction": 26,
+            "full_signature_correction": 30,
+            "full_overdue_correction": 13
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": false,
+            "positive_modules": false,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "相對指數未達七十五",
+            "正貢獻模組未達兩項",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 33,
+          "rank": 19,
+          "qualified": false,
+          "relative_index": 64.314462,
+          "final_score": 0.07277052098,
+          "positive_module_count": 3,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_frequency_balance",
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 2,
+            "full_transition_correction": 23,
+            "full_signature_correction": 20,
+            "full_overdue_correction": 11
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "相對指數未達七十五"
+          ]
+        },
+        {
+          "number": 24,
+          "rank": 20,
+          "qualified": false,
+          "relative_index": 64.119815,
+          "final_score": 0.067929992344,
+          "positive_module_count": 2,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_frequency_balance",
+            "full_transition_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 12,
+            "full_transition_correction": 6,
+            "full_signature_correction": 25,
+            "full_overdue_correction": 28
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "相對指數未達七十五"
+          ]
+        },
+        {
+          "number": 10,
+          "rank": 21,
+          "qualified": false,
+          "relative_index": 62.848359,
+          "final_score": 0.036311089063,
+          "positive_module_count": 2,
+          "module_top15_support_count": 0,
+          "module_top15_support": [],
+          "module_ranks": {
+            "full_frequency_balance": 31,
+            "full_transition_correction": 16,
+            "full_signature_correction": 29,
+            "full_overdue_correction": 18
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "相對指數未達七十五",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 27,
+          "rank": 22,
+          "qualified": false,
+          "relative_index": 62.640323,
+          "final_score": 0.031137581637,
+          "positive_module_count": 2,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_frequency_balance",
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 14,
+            "full_transition_correction": 27,
+            "full_signature_correction": 36,
+            "full_overdue_correction": 5
+          },
+          "is_previous_draw_number": true,
+          "repeat_qualified": false,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": false
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "相對指數未達七十五",
+            "上一期號碼未通過連莊資格"
+          ]
+        },
+        {
+          "number": 35,
+          "rank": 23,
+          "qualified": false,
+          "relative_index": 61.398259,
+          "final_score": 0.000249608231,
+          "positive_module_count": 1,
+          "module_top15_support_count": 1,
+          "module_top15_support": [
+            "full_signature_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 29,
+            "full_transition_correction": 31,
+            "full_signature_correction": 6,
+            "full_overdue_correction": 26
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": true,
+            "relative_index": false,
+            "positive_modules": false,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "相對指數未達七十五",
+            "正貢獻模組未達兩項",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 1,
+          "rank": 24,
+          "qualified": false,
+          "relative_index": 61.132886,
+          "final_score": -0.006349764948,
+          "positive_module_count": 3,
+          "module_top15_support_count": 3,
+          "module_top15_support": [
+            "full_frequency_balance",
+            "full_transition_correction",
+            "full_signature_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 9,
+            "full_transition_correction": 11,
+            "full_signature_correction": 8,
+            "full_overdue_correction": 34
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五"
+          ]
+        },
+        {
+          "number": 5,
+          "rank": 25,
+          "qualified": false,
+          "relative_index": 60.690208,
+          "final_score": -0.017358398909,
+          "positive_module_count": 3,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_frequency_balance",
+            "full_signature_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 3,
+            "full_transition_correction": 39,
+            "full_signature_correction": 3,
+            "full_overdue_correction": 16
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五"
+          ]
+        },
+        {
+          "number": 31,
+          "rank": 26,
+          "qualified": false,
+          "relative_index": 59.662871,
+          "final_score": -0.042906479609,
+          "positive_module_count": 2,
+          "module_top15_support_count": 0,
+          "module_top15_support": [],
+          "module_ranks": {
+            "full_frequency_balance": 28,
+            "full_transition_correction": 21,
+            "full_signature_correction": 32,
+            "full_overdue_correction": 20
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 26,
+          "rank": 27,
+          "qualified": false,
+          "relative_index": 56.598138,
+          "final_score": -0.119121062327,
+          "positive_module_count": 1,
+          "module_top15_support_count": 0,
+          "module_top15_support": [],
+          "module_ranks": {
+            "full_frequency_balance": 23,
+            "full_transition_correction": 18,
+            "full_signature_correction": 23,
+            "full_overdue_correction": 32
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": false,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五",
+            "正貢獻模組未達兩項",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 38,
+          "rank": 28,
+          "qualified": false,
+          "relative_index": 54.234457,
+          "final_score": -0.177901717589,
+          "positive_module_count": 2,
+          "module_top15_support_count": 1,
+          "module_top15_support": [
+            "full_signature_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 17,
+            "full_transition_correction": 32,
+            "full_signature_correction": 11,
+            "full_overdue_correction": 22
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 7,
+          "rank": 29,
+          "qualified": false,
+          "relative_index": 50.36959,
+          "final_score": -0.274014243887,
+          "positive_module_count": 0,
+          "module_top15_support_count": 0,
+          "module_top15_support": [],
+          "module_ranks": {
+            "full_frequency_balance": 39,
+            "full_transition_correction": 28,
+            "full_signature_correction": 21,
+            "full_overdue_correction": 31
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": false,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五",
+            "正貢獻模組未達兩項",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 11,
+          "rank": 30,
+          "qualified": false,
+          "relative_index": 46.641666,
+          "final_score": -0.366721240661,
+          "positive_module_count": 1,
+          "module_top15_support_count": 1,
+          "module_top15_support": [
+            "full_signature_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 37,
+            "full_transition_correction": 35,
+            "full_signature_correction": 10,
+            "full_overdue_correction": 29
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": false,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五",
+            "正貢獻模組未達兩項",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 34,
+          "rank": 31,
+          "qualified": false,
+          "relative_index": 45.081074,
+          "final_score": -0.405530462235,
+          "positive_module_count": 2,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_frequency_balance",
+            "full_overdue_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 5,
+            "full_transition_correction": 24,
+            "full_signature_correction": 37,
+            "full_overdue_correction": 10
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五"
+          ]
+        },
+        {
+          "number": 29,
+          "rank": 32,
+          "qualified": false,
+          "relative_index": 44.987287,
+          "final_score": -0.407862759695,
+          "positive_module_count": 1,
+          "module_top15_support_count": 1,
+          "module_top15_support": [
+            "full_frequency_balance"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 10,
+            "full_transition_correction": 25,
+            "full_signature_correction": 24,
+            "full_overdue_correction": 24
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": false,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五",
+            "正貢獻模組未達兩項",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 23,
+          "rank": 33,
+          "qualified": false,
+          "relative_index": 44.833182,
+          "final_score": -0.411695096806,
+          "positive_module_count": 2,
+          "module_top15_support_count": 2,
+          "module_top15_support": [
+            "full_frequency_balance",
+            "full_transition_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 11,
+            "full_transition_correction": 15,
+            "full_signature_correction": 26,
+            "full_overdue_correction": 33
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": true,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五"
+          ]
+        },
+        {
+          "number": 25,
+          "rank": 34,
+          "qualified": false,
+          "relative_index": 40.481988,
+          "final_score": -0.519901731977,
+          "positive_module_count": 1,
+          "module_top15_support_count": 1,
+          "module_top15_support": [
+            "full_transition_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 19,
+            "full_transition_correction": 9,
+            "full_signature_correction": 35,
+            "full_overdue_correction": 35
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": false,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五",
+            "正貢獻模組未達兩項",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 12,
+          "rank": 35,
+          "qualified": false,
+          "relative_index": 39.362994,
+          "final_score": -0.547729165449,
+          "positive_module_count": 1,
+          "module_top15_support_count": 1,
+          "module_top15_support": [
+            "full_signature_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 20,
+            "full_transition_correction": 36,
+            "full_signature_correction": 9,
+            "full_overdue_correction": 30
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": false,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五",
+            "正貢獻模組未達兩項",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 9,
+          "rank": 36,
+          "qualified": false,
+          "relative_index": 33.872167,
+          "final_score": -0.684276504741,
+          "positive_module_count": 2,
+          "module_top15_support_count": 1,
+          "module_top15_support": [
+            "full_signature_correction"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 32,
+            "full_transition_correction": 20,
+            "full_signature_correction": 15,
+            "full_overdue_correction": 37
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 4,
+          "rank": 37,
+          "qualified": false,
+          "relative_index": 31.188021,
+          "final_score": -0.751026548483,
+          "positive_module_count": 1,
+          "module_top15_support_count": 1,
+          "module_top15_support": [
+            "full_frequency_balance"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 7,
+            "full_transition_correction": 38,
+            "full_signature_correction": 28,
+            "full_overdue_correction": 23
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": false,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五",
+            "正貢獻模組未達兩項",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 36,
+          "rank": 38,
+          "qualified": false,
+          "relative_index": 2.464051,
+          "final_score": -1.465341830649,
+          "positive_module_count": 1,
+          "module_top15_support_count": 0,
+          "module_top15_support": [],
+          "module_ranks": {
+            "full_frequency_balance": 16,
+            "full_transition_correction": 29,
+            "full_signature_correction": 39,
+            "full_overdue_correction": 38
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": false,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五",
+            "正貢獻模組未達兩項",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        },
+        {
+          "number": 37,
+          "rank": 39,
+          "qualified": false,
+          "relative_index": 0.0,
+          "final_score": -1.526618494237,
+          "positive_module_count": 2,
+          "module_top15_support_count": 1,
+          "module_top15_support": [
+            "full_frequency_balance"
+          ],
+          "module_ranks": {
+            "full_frequency_balance": 1,
+            "full_transition_correction": 34,
+            "full_signature_correction": 17,
+            "full_overdue_correction": 39
+          },
+          "is_previous_draw_number": false,
+          "repeat_qualified": true,
+          "checks": {
+            "formal_rank": false,
+            "positive_score": false,
+            "relative_index": false,
+            "positive_modules": true,
+            "module_support": false,
+            "direct_hit_gate": true,
+            "repeat_qualification": true
+          },
+          "failure_reasons": [
+            "未進入內部排序前九",
+            "最終分數未高於零",
+            "相對指數未達七十五",
+            "四個正式模組的前十五支持未達兩項"
+          ]
+        }
+      ]
+    }
   }
 }

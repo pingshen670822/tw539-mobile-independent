@@ -26,7 +26,7 @@ from tw539_ultra import (FORMAL_FEATURE_KEYS, GLOBAL_HISTORY_BLEND, MAX_ANCHOR_M
                          adaptive_polarity_backtest,
                          apply_catastrophic_guard, apply_single_repeat_break,
                          apply_repeat_qualification, average_weights, build_number_diagnostics,
-                         build_single_explanation,
+                         build_single_explanation, build_strict_publication_gate,
                          candidate_grid_sha256, ensemble_scores_from_features, evaluation_cases,
                          fast_case_ranking, formal_history_state, load_draws, rank_numbers,
                          ranking_direction_metrics, rolling_ensemble_direction_metrics, scores,
@@ -201,7 +201,7 @@ if stability.get('selected') not in ('穩定冠軍','每日挑戰者') or bool(s
 if (result.get('rolling_calibration') or {}).get('anchor_stability')!=stability or (result.get('rolling_weight_adjustment') or {}).get('anchor_stability')!=stability: fail('穩定模型守門未同步封存')
 if len(ranked_all)!=39 or set(ranked_all)!=set(range(1,40)) or ranked!=ranked_all[:15]: fail('開獎前完整39碼排序缺失或前15不同步')
 if len(ranked)!=15 or len(set(ranked))!=15 or any(not 1<=int(n)<=39 for n in ranked): fail('前十五名資料錯誤')
-elif result.get('single_candidate')!=ranked[0] or result.get('single_published')!=ranked[0]: fail('1中1主選未固定產出並公開')
+elif result.get('single_candidate')!=ranked[0]: fail('內部首位候選未固定產出')
 pre_single_break=list(
     (recalculated_holdout.get('next_pre_single_break_ranked')
      if recalculated_holdout.get('direct_hit_full_rank_gate')
@@ -255,6 +255,15 @@ recalculated_ranking=expected_current_ranking
 if ranked_all!=recalculated_ranking: fail('連莊資格後完整39碼排名與公開排名不同')
 recalculated_number_diagnostics=build_number_diagnostics(recalculated_ranking,qualified_scores,raw_current,current_features,weights)
 if result.get('number_diagnostics')!=recalculated_number_diagnostics: fail('開獎前39碼模組貢獻無法重現')
+recalculated_strict=build_strict_publication_gate(
+    recalculated_ranking,recalculated_number_diagnostics,recalculated_repeat,latest['nums'],backtest)
+strict=result.get('strict_publication_gate') or {}
+if strict!=recalculated_strict or strict!=backtest.get('strict_publication_gate'): fail('嚴格發布守門無法由開獎前資料重現')
+strict_tiers=strict.get('tiers') or {};qualified_numbers=list(strict.get('qualified_numbers') or [])
+expected_single=(strict_tiers.get('single') or [None])[0]
+if result.get('single_published')!=expected_single or result.get('published_predictions')!=strict_tiers: fail('正式發布號碼含未達標號碼或分級不同步')
+if not strict.get('no_padding') or any((strict_tiers.get(key) or [])!=qualified_numbers[:size]
+        for key,size in (strict.get('requested_sizes') or {}).items()): fail('嚴格發布未遵守不足不補位')
 if result.get('single_selection_evidence')!=recalculated_number_diagnostics[0]: fail('最強獨隻缺少可重現的模組證據')
 recalculated_single_explanation=build_single_explanation(
     recalculated_ranking,recalculated_number_diagnostics,weights,
@@ -265,7 +274,7 @@ repeat_by_number={x.get('number'):x for x in (result.get('repeat_qualification')
 for n in set(ranked[:9])&set(latest['nums']):
     if not (repeat_by_number.get(n) or {}).get('qualified'): fail(f'上一期號碼{n:02}未通過連莊資格卻列入前9')
     if not (repeat_by_number.get(n) or {}).get('repeat_backtest_pass'): fail(f'上一期號碼{n:02}個別連莊回測未達標卻列入前9')
-if not (result.get('release_policy') or {}).get('official_release_allowed'): fail('主選公開狀態遭門檻封鎖')
+if not (result.get('release_policy') or {}).get('official_release_allowed') or not (result.get('release_policy') or {}).get('no_padding'): fail('正式發布政策未啟用嚴格不足不補位')
 
 target=datetime.strptime(latest['date'],'%Y-%m-%d').date()+timedelta(days=1)
 while target.weekday()==6: target+=timedelta(days=1)
@@ -275,6 +284,7 @@ seal_hash=hashlib.sha256(json.dumps(sealed_payload,ensure_ascii=False,sort_keys=
 if seal.get('algorithm')!='sha256' or seal.get('sha256')!=seal_hash or not seal.get('no_post_draw_substitution'): fail('開獎前封存雜湊或禁止事後換號旗標錯誤')
 if sealed_payload.get('based_on_period')!=latest['period'] or sealed_payload.get('target_draw_date')!=target.isoformat(): fail('開獎前封存期別日期錯誤')
 if sealed_payload.get('history_database_sha256')!=coverage.get('database_sha256') or sealed_payload.get('ranked_all')!=ranked_all or sealed_payload.get('number_diagnostics')!=result.get('number_diagnostics'): fail('開獎前封存內容與公開結果不同步')
+if sealed_payload.get('strict_publication_gate')!=strict: fail('開獎前封存缺少嚴格發布守門')
 if sealed_payload.get('production_ensemble_weights')!=ensemble_weights: fail('開獎前封存缺少三模型終點權重')
 if sealed_payload.get('production_anchor_weights')!=result.get('production_anchor_weights'): fail('開獎前封存缺少穩定模型錨定權重')
 if sealed_payload.get('rolling_learning_rate')!=(result.get('rolling_weight_adjustment') or {}).get('learning_rate'): fail('開獎前封存缺少正式模型學習幅度')
@@ -282,16 +292,16 @@ if sealed_payload.get('rolling_boundary_blend')!=(result.get('rolling_weight_adj
 if result.get('recalculation_fingerprint')!=seal_hash[:16]: fail('預測重算指紋沒有取自完整開獎前封存資料')
 
 tickets=[tuple(int(n) for n in ticket) for ticket in (result.get('tickets') or [])]
-if not tickets or len(tickets)!=len(set(tickets)): fail('精選組合缺失或重複')
+if len(tickets)!=len(set(tickets)): fail('精選組合重複')
 for ticket in tickets:
     if len(ticket)!=5 or len(set(ticket))!=5 or not valid_ticket(tuple(sorted(ticket))): fail('精選組合未通過牌型限制')
 for index,ticket in enumerate(tickets):
     if any(len(set(ticket)&set(other))>3 for other in tickets[:index]): fail('精選組合彼此重疊過高')
 full_ranking=expected_current_ranking
-forced_exclusion=set(full_ranking[-15:])
-if set(result.get('forced_ticket_exclusions') or [])!=forced_exclusion: fail('強制投注排除名單與正式排序不同步')
+forced_exclusion=set(range(1,40))-set(qualified_numbers)
+if set(result.get('forced_ticket_exclusions') or [])!=forced_exclusion: fail('強制投注排除名單與嚴格合格號碼不同步')
 for ticket in tickets:
-    if set(ticket)&forced_exclusion: fail('推薦牌組含強制投注排除號碼')
+    if set(ticket)&forced_exclusion or not set(ticket).issubset(set(qualified_numbers)): fail('推薦牌組含未達標號碼')
 if backtest.get('samples')!=360: fail('隔離回測不是三百六十期')
 if sum(int(v) for v in (backtest.get('top9_hit_distribution') or {}).values())!=backtest.get('samples'): fail('前9逐期命中分布加總錯誤')
 for key in ('single_rate','single_random_baseline','single_wilson_lower95'):
@@ -383,7 +393,7 @@ if version.get('latest_period')!=latest['period'] or version.get('latest_draw_da
 
 page_rules={
     'index.html':{
-        'required':('本期唯一最強獨支','唯一最強獨支完整運算來源','四項來源、權重與加減分','完整加總算式','唯一性與產生流程','最強號碼多邏輯總結','單碼重複冷卻','強烈推薦守門','失準事件監測','本期分級主選','1中1','2中1～2','3中1～3','5中2～3','9中3～5','本期前15名單一明細','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不做補位'),
+        'required':('第1名候選完整運算來源','嚴格發布守門','四項來源、權重與加減分','完整加總算式','唯一性與產生流程','最強號碼多邏輯總結','單碼重複冷卻','強烈推薦守門','失準事件監測','本期分級正式發布','1中1','2中1～2','3中1～3','5中2～3','9中3～5','內部前十五診斷（非正式推薦）','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不足不補位'),
         'forbidden':('最新一期命中結算','最後360期逐期走步回測','全歷史運算範圍','鐵律守門')},
     'backtest.html':{
         'required':('最後360期逐期走步回測','直接命中全排序校準','前5與前9任一關鍵區段退化即自動回退','資料變化影子驗證','單碼重複冷卻','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),
@@ -497,7 +507,12 @@ else:
                         or len(str(item.get('review_evidence_sha256') or ''))!=64):
                     fail('停擺缺口紀錄不完整或含事後補造預測')
                 continue
-            if item.get('single_published') is None or item.get('single_hit') not in (True,False) or len(item.get('top5_published') or [])!=5: fail('已結算紀錄缺少開獎前封存主選或前5')
+            if item.get('publication_policy')=='strict_no_padding_v1':
+                if not item.get('publication_no_padding') or len(item.get('top5_published') or [])>5 or len(item.get('top9_published') or [])>9: fail('嚴格發布結算紀錄發生補位或超額')
+                if item.get('single_published') is None and item.get('single_hit') is not None: fail('未發布獨支仍被計入命中率')
+                if item.get('single_published') is not None and item.get('single_hit') not in (True,False): fail('已發布獨支缺少命中結算')
+            elif item.get('single_published') is None or item.get('single_hit') not in (True,False) or len(item.get('top5_published') or [])!=5:
+                fail('舊版已結算紀錄缺少開獎前封存主選或前5')
             expected_top5_hits=sorted(set(item.get('actual_numbers') or []).intersection(item.get('top5_published') or []))
             if sorted(item.get('top5_hits') or [])!=expected_top5_hits: fail('命中檢討的前5命中資料錯誤')
             sealed=[x for x in records if x.get('target_draw_date')==item.get('target_draw_date') and x.get('recalculation_fingerprint')==item.get('fingerprint')]

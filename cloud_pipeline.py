@@ -191,7 +191,12 @@ def enrich_settlement(item, prediction, latest):
         ranked,diagnostics,legacy_hash=reconstruct_pre_draw_snapshot(prediction)
     diagnostics_by_number={int(x['number']):x for x in diagnostics}
     if set(diagnostics_by_number)!=set(range(1,40)): raise RuntimeError('開獎前39碼診斷不完整')
-    actual=set(latest['nums']); top5=ranked[:5]; top9=ranked[:9]
+    actual=set(latest['nums'])
+    published=prediction.get('published_predictions')
+    if isinstance(published,dict):
+        top5=list(published.get('five') or []);top9=list(published.get('nine') or [])
+    else:
+        top5=ranked[:5];top9=ranked[:9]
     unguarded=list((prediction.get('backtest') or {}).get('next_unguarded_ranked') or ranked)
     unguarded_single=unguarded[0] if unguarded else None
     missed=[n for n in top5 if n not in actual]
@@ -227,12 +232,16 @@ def enrich_settlement(item, prediction, latest):
     item.update({
         'official_period':latest['period'],'actual_numbers':latest['nums'],
         'top5_published':top5,'top9_published':top9,
+        'publication_policy':(prediction.get('strict_publication_gate') or {}).get('policy','legacy_fixed_tiers'),
+        'publication_no_padding':bool((prediction.get('strict_publication_gate') or {}).get('no_padding')),
         'single_published':prediction.get('single_published'),
-        'single_hit':bool(prediction.get('single_published') in actual),
+        'single_hit':(bool(prediction.get('single_published') in actual)
+                      if prediction.get('single_published') is not None else None),
         'unguarded_single':unguarded_single,
         'unguarded_single_hit':bool(unguarded_single in actual),
         'catastrophic_guard_was_active':bool((prediction.get('backtest') or {}).get('catastrophic_guard_current_trigger')),
-        'catastrophic_guard_single_effect':('removed_hit' if unguarded_single in actual and prediction.get('single_published') not in actual
+        'catastrophic_guard_single_effect':('removed_hit' if prediction.get('single_published') is not None
+                                           and unguarded_single in actual and prediction.get('single_published') not in actual
                                            else 'preserved_or_no_hit'),
         'top5_hits':sorted(actual.intersection(top5)),'top9_hits':sorted(actual.intersection(top9)),
         'rank10_15_hits':sorted(boundary_hits),'false_top9':false_top9,
@@ -285,13 +294,18 @@ def compact_prediction_history(current):
 def settle_previous(previous, latest):
     if not previous or previous.get('target_draw_date') != latest['draw_date']: return None
     actual=set(latest['nums']); top=previous.get('ranked_top15') or []
+    published=previous.get('published_predictions')
+    if isinstance(published,dict):
+        top5=list(published.get('five') or []);top9=list(published.get('nine') or [])
+    else:
+        top5=top[:5];top9=top[:9]
     item={
         'target_draw_date':latest['draw_date'],'actual_numbers':latest['nums'],
         'based_on_period':previous.get('based_on_period'),'fingerprint':previous.get('recalculation_fingerprint'),
         'single_published':previous.get('single_published'),
         'single_hit':bool(previous.get('single_published') in actual) if previous.get('single_published') else None,
-        'top5_published':top[:5],'top9_published':top[:9],
-        'top5_hits':sorted(actual.intersection(top[:5])),'top9_hits':sorted(actual.intersection(top[:9])),
+        'top5_published':top5,'top9_published':top9,
+        'top5_hits':sorted(actual.intersection(top5)),'top9_hits':sorted(actual.intersection(top9)),
         'settled_at':datetime.now(TAIPEI).isoformat(timespec='seconds')
     }
     item=enrich_settlement(item,previous,latest)
@@ -513,8 +527,11 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
         'last_self_repair_at':checked_at.isoformat(timespec='seconds') if repair_run else previous_health.get('last_self_repair_at'),
         'last_public_verification_at':checked_at.isoformat(timespec='seconds'),
         'mobile_open_sync':'開啟、回到前景、重新連網均立即核對版本',
-        'model_release_allowed':True,
-        'single_release_allowed':True,
+        'model_release_allowed':bool((current.get('strict_publication_gate') or {}).get('qualified_numbers')),
+        'single_release_allowed':current.get('single_published') is not None,
+        'strict_publication_policy':(current.get('strict_publication_gate') or {}).get('policy'),
+        'strict_publication_no_padding':bool((current.get('strict_publication_gate') or {}).get('no_padding')),
+        'strict_publication_qualified_count':len((current.get('strict_publication_gate') or {}).get('qualified_numbers') or []),
         'single_edge_verified':bool((current.get('backtest') or {}).get('single_release_allowed')),
         'ranking_direction_valid':direction_ok,
         'top1_hits':backtest.get('single_hits'),'bottom1_hits':backtest.get('bottom1_hits'),
@@ -620,6 +637,7 @@ def verify_freshness(latest, strict=False):
     return ok
 
 def verify_publication(latest):
+    from tw539_ultra import build_strict_publication_gate
     result=read_json(REPORTS/'最新結果.json') or {}
     health=read_json(REPORTS/'system-health.json') or {}
     site_result=read_json(SITE/'latest-result.json') or {}
@@ -632,8 +650,27 @@ def verify_publication(latest):
         if str(data.get('period'))!=str(latest['period']) or data.get('date')!=latest['draw_date']:
             errors.append(f'{label}未對應官方最新期別')
         ranked=item.get('ranked_top15') or []
-        if not ranked or item.get('single_candidate')!=ranked[0] or item.get('single_published')!=ranked[0]:
-            errors.append(f'{label}的1中1主選未完整公開')
+        if not ranked or item.get('single_candidate')!=ranked[0]:
+            errors.append(f'{label}缺少完整內部首位候選')
+            continue
+        strict=item.get('strict_publication_gate') or {}
+        expected=build_strict_publication_gate(
+            item.get('ranked_all') or [],item.get('number_diagnostics') or [],
+            item.get('repeat_qualification') or [],(item.get('data_latest') or {}).get('nums') or [],
+            item.get('backtest') or {})
+        if strict!=expected or strict!=(item.get('backtest') or {}).get('strict_publication_gate'):
+            errors.append(f'{label}的嚴格發布守門無法重現')
+        tiers=strict.get('tiers') or {};qualified=list(strict.get('qualified_numbers') or [])
+        expected_single=(tiers.get('single') or [None])[0]
+        if item.get('single_published')!=expected_single or item.get('published_predictions')!=tiers:
+            errors.append(f'{label}仍有未達標號碼或分級發布不同步')
+        if not strict.get('no_padding') or any((tiers.get(key) or [])!=qualified[:size]
+                for key,size in (strict.get('requested_sizes') or {}).items()):
+            errors.append(f'{label}未遵守不足不補位鐵律')
+        excluded=set(range(1,40))-set(qualified)
+        if set(item.get('forced_ticket_exclusions') or [])!=excluded or any(
+                not set(ticket).issubset(set(qualified)) for ticket in (item.get('tickets') or [])):
+            errors.append(f'{label}的推薦牌組含未達標號碼')
     for label,item in (('戰報健康檔',health),('手機健康檔',site_health)):
         if str(item.get('latest_period'))!=str(latest['period']) or item.get('latest_draw_date')!=latest['draw_date']:
             errors.append(f'{label}未對應官方最新期別')

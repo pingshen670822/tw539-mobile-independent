@@ -263,6 +263,12 @@ CATASTROPHIC_ROTATION = 12
 CATASTROPHIC_POLICY_WINDOW = 20
 CATASTROPHIC_POLICY_MIN_TRIALS = 10
 CATASTROPHIC_GUARD_EXECUTION_ENABLED = False
+# 正式公開守門：不夠格就少列，禁止為了湊滿一、二、三、五、九顆而補號。
+STRICT_PUBLICATION_MAX_RANK = 9
+STRICT_PUBLICATION_MIN_RELATIVE_INDEX = 75.0
+STRICT_PUBLICATION_MIN_POSITIVE_MODULES = 2
+STRICT_PUBLICATION_MODULE_SUPPORT_RANK = 15
+STRICT_PUBLICATION_MIN_MODULE_SUPPORT = 2
 STABILITY_CHAMPION_ANCHOR = {
     "full_frequency_balance": 1/30,
     "full_transition_correction": 8/30,
@@ -1771,6 +1777,75 @@ def build_number_diagnostics(ranked: list[int], score: dict[int, float], raw_sco
     return result
 
 
+def build_strict_publication_gate(ranked: list[int], diagnostics: list[dict], repeat_audit: list[dict],
+                                  previous_numbers: tuple[int, ...] | list[int], backtest: dict) -> dict:
+    """逐號執行正式發布門檻；只刪除不合格號碼，永遠不補位。"""
+    if len(ranked) != 39 or len(set(ranked)) != 39 or len(diagnostics) != 39:
+        raise ValueError("嚴格發布守門需要完整且不重複的三十九碼診斷")
+    diagnostic_by_number={int(item["number"]):item for item in diagnostics}
+    repeat_by_number={int(item["number"]):item for item in repeat_audit}
+    previous=set(int(number) for number in previous_numbers)
+    module_ranks={}
+    for key in FORMAL_FEATURE_KEYS:
+        module_score={number:float(diagnostic_by_number[number]["weighted_contributions"][key])
+                      for number in range(1,40)}
+        module_order=rank_numbers(module_score, "嚴格發布-"+key)
+        module_ranks[key]={number:index for index,number in enumerate(module_order,1)}
+    direct_gate=bool(backtest.get("direct_hit_full_rank_gate"))
+    details=[];qualified=[]
+    failure_labels={
+        "formal_rank":"未進入內部排序前九",
+        "positive_score":"最終分數未高於零",
+        "relative_index":"相對指數未達七十五",
+        "positive_modules":"正貢獻模組未達兩項",
+        "module_support":"四個正式模組的前十五支持未達兩項",
+        "direct_hit_gate":"直接命中跨區段校準未通過",
+        "repeat_qualification":"上一期號碼未通過連莊資格",
+    }
+    for number in ranked:
+        row=diagnostic_by_number[number]
+        positive_count=sum(float(value)>0 for value in row["weighted_contributions"].values())
+        support_modules=[key for key in FORMAL_FEATURE_KEYS
+                         if module_ranks[key][number] <= STRICT_PUBLICATION_MODULE_SUPPORT_RANK]
+        repeat_ok=bool((repeat_by_number.get(number) or {}).get("qualified")) if number in previous else True
+        checks={
+            "formal_rank":int(row["rank"]) <= STRICT_PUBLICATION_MAX_RANK,
+            "positive_score":float(row["final_score"]) > 0,
+            "relative_index":float(row["relative_index"]) >= STRICT_PUBLICATION_MIN_RELATIVE_INDEX,
+            "positive_modules":positive_count >= STRICT_PUBLICATION_MIN_POSITIVE_MODULES,
+            "module_support":len(support_modules) >= STRICT_PUBLICATION_MIN_MODULE_SUPPORT,
+            "direct_hit_gate":direct_gate,
+            "repeat_qualification":repeat_ok,
+        }
+        passed=all(checks.values())
+        if passed: qualified.append(number)
+        details.append({
+            "number":number,"rank":int(row["rank"]),"qualified":passed,
+            "relative_index":float(row["relative_index"]),"final_score":float(row["final_score"]),
+            "positive_module_count":positive_count,"module_top15_support_count":len(support_modules),
+            "module_top15_support":support_modules,"module_ranks":{key:module_ranks[key][number] for key in FORMAL_FEATURE_KEYS},
+            "is_previous_draw_number":number in previous,"repeat_qualified":repeat_ok,
+            "checks":checks,"failure_reasons":[failure_labels[key] for key,value in checks.items() if not value],
+        })
+    requested={"single":1,"two":2,"three":3,"five":5,"nine":9}
+    tiers={key:qualified[:size] for key,size in requested.items()}
+    tier_status={key:("full" if len(tiers[key])==size else "insufficient_no_padding")
+                 for key,size in requested.items()}
+    return {
+        "policy":"strict_no_padding_v1","no_padding":True,
+        "thresholds":{
+            "maximum_internal_rank":STRICT_PUBLICATION_MAX_RANK,
+            "minimum_relative_index":STRICT_PUBLICATION_MIN_RELATIVE_INDEX,
+            "minimum_positive_modules":STRICT_PUBLICATION_MIN_POSITIVE_MODULES,
+            "module_support_rank":STRICT_PUBLICATION_MODULE_SUPPORT_RANK,
+            "minimum_module_support":STRICT_PUBLICATION_MIN_MODULE_SUPPORT,
+            "direct_hit_gate_required":True,"repeat_qualification_required_for_previous_draw_numbers":True,
+        },
+        "qualified_numbers":qualified,"qualified_count":len(qualified),
+        "requested_sizes":requested,"tiers":tiers,"tier_status":tier_status,"details":details,
+    }
+
+
 def build_single_explanation(ranked: list[int], diagnostics: list[dict], weights: dict[str, float],
                              module_consensus: list[dict], draws: list[dict], backtest: dict) -> dict:
     """把唯一第1名的資料來源、逐模組算式、守門與排序規則封裝成可公開重現的說明。"""
@@ -1831,7 +1906,7 @@ def build_single_explanation(ranked: list[int], diagnostics: list[dict], weights
             "未通過上線守門的校準模組自動回退",
             "套用連莊資格與單碼重複冷卻",
             "一至三十九依最終分數排序，同分以期號封存碼固定先後",
-            "只公布唯一第1名作為本期最強獨支",
+            "第1名仍須逐項通過嚴格發布守門；未達標就不發布、不補位",
         ],
         "tie_break_rule":"同分時使用依據期號與號碼產生的穩定封存碼固定排序，禁止人工挑選",
         "direct_hit_gate_passed":bool(backtest.get("direct_hit_full_rank_gate")),
@@ -1846,7 +1921,8 @@ def prediction_seal_payload(based_on_period: str, target_draw_date: str, history
                              selection: dict, ensemble_weights: list[dict] | None = None,
                              production_learning_rate: float = 0.0,
                              production_boundary_blend: float = 0.0,
-                             production_anchor_weights: dict | None = None) -> dict:
+                             production_anchor_weights: dict | None = None,
+                             strict_publication_gate: dict | None = None) -> dict:
     return {
         "based_on_period": based_on_period,
         "target_draw_date": target_draw_date,
@@ -1864,6 +1940,7 @@ def prediction_seal_payload(based_on_period: str, target_draw_date: str, history
         "rolling_boundary_blend": production_boundary_blend,
         "rolling_learning_rate_selection_window": selection["learning_rate_selection"]["selection_window"],
         "adaptive_polarity": selection.get("adaptive_polarity") or {},
+        "strict_publication_gate": strict_publication_gate or {},
     }
 
 
@@ -2154,7 +2231,14 @@ def main() -> None:
     number_diagnostics = build_number_diagnostics(ranked, sc, raw_sc, current_features, weights)
     single_explanation = build_single_explanation(
         ranked, number_diagnostics, weights, module_consensus, draws, bt)
-    tickets = make_tickets(sc, max(1, min(a.tickets, 30)), draws[-1]["period"], set(ranked[-15:]))
+    strict_publication_gate=build_strict_publication_gate(
+        ranked,number_diagnostics,repeat_audit,draws[-1]["nums"],bt)
+    bt["strict_publication_gate"]=strict_publication_gate
+    qualified_numbers=list(strict_publication_gate["qualified_numbers"])
+    qualified_set=set(qualified_numbers)
+    forced_ticket_exclusions=[number for number in ranked if number not in qualified_set]
+    tickets=(make_tickets(sc,max(1,min(a.tickets,30)),draws[-1]["period"],set(forced_ticket_exclusions))
+             if len(qualified_numbers)>=5 else [])
     OUT.mkdir(parents=True, exist_ok=True)
     history_payload="|".join(f"{x['period']}:{x['date']}:{','.join(map(str,x['nums']))}" for x in draws)
     history_hash=hashlib.sha256(history_payload.encode()).hexdigest()
@@ -2162,7 +2246,7 @@ def main() -> None:
         draws[-1]["period"], target.isoformat(), history_hash, ranked,
         number_diagnostics, weights, selection, production_ensemble,
         bt["rolling_learning_rate"], bt["rolling_boundary_blend"],
-        production_anchor_weights)
+        production_anchor_weights,strict_publication_gate)
     seal_sha256 = hashlib.sha256(json.dumps(seal_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     fingerprint = seal_sha256[:16]
     generated_at_iso = datetime.now(TAIPEI).isoformat(timespec="seconds")
@@ -2264,7 +2348,10 @@ def main() -> None:
         "ranked_all": ranked,
         "ranked_top15": ranked[:15],
         "number_diagnostics": number_diagnostics,
-        "forced_ticket_exclusions": list(reversed(ranked[-15:])),
+        "strict_publication_gate": strict_publication_gate,
+        "published_predictions": strict_publication_gate["tiers"],
+        "qualified_numbers": qualified_numbers,
+        "forced_ticket_exclusions": forced_ticket_exclusions,
         "previous_draw_overlap_audit": {
             "method": "model_score_with_repeat_qualification",
             "previous_numbers": list(draws[-1]["nums"]),
@@ -2274,12 +2361,14 @@ def main() -> None:
         },
         "repeat_qualification": repeat_audit,
         "single_candidate": ranked[0],
-        "single_published": ranked[0],
+        "single_published": (strict_publication_gate["tiers"]["single"][0]
+                             if strict_publication_gate["tiers"]["single"] else None),
         "single_repeat_break": bt["single_repeat_break_current"],
         "single_selection_evidence": number_diagnostics[0],
         "single_explanation": single_explanation,
         "single_recommendation": {
-            "label": "本期唯一最強獨支",
+            "label": ("本期唯一最強獨支" if strict_publication_gate["tiers"]["single"]
+                      else "嚴格守門未達標，本期獨支不發布"),
             "evidence_label": bt["single_confidence_label"],
             "strong": bt["single_strong_recommendation"],
             "consensus_votes": consensus_votes,
@@ -2293,10 +2382,11 @@ def main() -> None:
         },
         "release_policy": {
             "official_release_allowed": True,
-            "single": "published_every_draw",
+            "single": "strict_gate_or_withheld",
             "single_edge_verified": bool(bt["single_release_allowed"]),
-            "top5": "published_with_backtest",
-            "top9": "published_with_backtest"
+            "top5": "strict_gate_no_padding",
+            "top9": "strict_gate_no_padding",
+            "no_padding": True,
         },
         "tickets": tickets,
         "full_history_scan": full_scan,
