@@ -137,7 +137,7 @@ else:
     challenger_anchor=average_weights(anchor_ensemble)
     if rolling_adjustment.get('candidate_anchor_weights')!=challenger_anchor or rolling_adjustment.get('anchor_ensemble_weights')!=anchor_ensemble: fail('每日挑戰模型與三模型錨定搜尋未銜接')
     if rolling_adjustment.get('production_weights')!=weights or rolling_adjustment.get('production_ensemble_weights')!=ensemble_weights: fail('三模型終點權重與正式主選未銜接')
-    if rolling_adjustment.get('updates')!=360 or rolling_adjustment.get('method')!='five_member_consensus_with_direct_hit_single_repeat_and_data_change_front9': fail('最新開獎錯誤沒有觸發五組方向共識、直接命中、單碼冷卻與資料變化校正')
+    if rolling_adjustment.get('updates')!=360 or rolling_adjustment.get('method')!='full_history_consensus_with_35pct_direct_hit_and_shadow_change': fail('最新開獎錯誤沒有觸發全歷史方向共識、直接命中、單碼冷卻與資料變化影子驗證')
     if rolling_adjustment.get('strategy_candidate_count')!=30 or rolling_adjustment.get('strategy_selection_window')!=POLARITY_SELECTION_WINDOW or rolling_adjustment.get('strategy_consensus_member_count')!=POLARITY_CONSENSUS_MEMBERS: fail('方向模型數、三百六十期選擇窗或五組共識錯誤')
     rolling_direct_gate=bool((result.get('backtest') or {}).get('direct_hit_full_rank_gate'))
     if (not rolling_adjustment.get('direct_hit_calibration_enabled')
@@ -384,22 +384,22 @@ if version.get('latest_period')!=latest['period'] or version.get('latest_draw_da
 page_rules={
     'index.html':{
         'required':('本期唯一最強獨支','唯一最強獨支完整運算來源','四項來源、權重與加減分','完整加總算式','唯一性與產生流程','最強號碼多邏輯總結','單碼重複冷卻','強烈推薦守門','失準事件監測','本期分級主選','1中1','2中1～2','3中1～3','5中2～3','9中3～5','本期前15名單一明細','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不做補位'),
-        'forbidden':('最新一期命中結算','最後360期隔離回測','全歷史運算範圍','鐵律守門')},
+        'forbidden':('最新一期命中結算','最後360期逐期走步回測','全歷史運算範圍','鐵律守門')},
     'backtest.html':{
-        'required':('最後360期隔離回測','直接命中全排序校準','前9集合允許修正','單碼重複冷卻','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),
+        'required':('最後360期逐期走步回測','直接命中全排序校準','前5與前9任一關鍵區段退化即自動回退','資料變化影子驗證','單碼重複冷卻','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),
         'forbidden':('本期正式預測','最新一期命中結算','開獎前封存實戰紀錄','正式方向模型')},
     'review.html':{
         'required':('最新一期命中結算','開獎前前5正式預測','前5命中資料','本期重大瑕疵結論','實際開獎號碼原始排名','錯誤模組與前9邊界逐項檢討','第10至15名命中','開獎後滾動權重重算','禁止開獎後換號或補號'),
-        'forbidden':('本期正式預測','最後360期隔離回測','開獎前封存實戰紀錄','全歷史運算範圍')},
+        'forbidden':('本期正式預測','最後360期逐期走步回測','開獎前封存實戰紀錄','全歷史運算範圍')},
     'history.html':{
         'required':('開獎前封存實戰紀錄','開獎前1中1','開獎前前5','前5命中資料','開獎前前9','主選結果','第10至15名命中'),
-        'forbidden':('本期正式預測','錯誤模組與前9邊界逐項檢討','最後360期隔離回測','正式方向模型')},
+        'forbidden':('本期正式預測','錯誤模組與前9邊界逐項檢討','最後360期逐期走步回測','正式方向模型')},
     'models.html':{
         'required':('全歷史運算範圍','全歷史核心占比','正式方向模型','全系統重組','五組正式權重共識','直接命中全排序校準','單碼重複冷卻','多模組校正規格','權重共識','連莊資格驗算規格','相對指數至少75','全歷史連莊率不低於12.82%','不做補位'),
-        'forbidden':('本期正式預測','最新一期命中結算','最後360期隔離回測','開獎前封存實戰紀錄')},
+        'forbidden':('本期正式預測','最新一期命中結算','最後360期逐期走步回測','開獎前封存實戰紀錄')},
     'health.html':{
         'required':('目前資料狀態','開獎後更新與自主修復','兩小時修復期限','自主修復狀態','鐵律守門','五組權重共識','直接命中全排序校準','單碼重複冷卻','模型健康與公開狀態','自動重新運算','手機同步'),
-        'forbidden':('本期正式預測','最新一期命中結算','最後360期隔離回測','正式方向模型')},
+        'forbidden':('本期正式預測','最新一期命中結算','最後360期逐期走步回測','正式方向模型')},
 }
 nav_files=set(page_rules)
 for folder in (REPORTS,SITE):

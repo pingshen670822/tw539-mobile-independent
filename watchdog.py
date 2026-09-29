@@ -127,14 +127,14 @@ if bool(backtest.get('ranking_direction_valid'))!=bool(health.get('ranking_direc
 if backtest.get('rank10_15_avg_hits')!=health.get('rank10_15_avg_hits') or backtest.get('top9_capture_rate')!=health.get('top9_capture_rate') or bool(backtest.get('boundary_control_valid'))!=bool(health.get('boundary_control_valid')): errors.append('公開結果與健康檔的前9邊界狀態不同步')
 if backtest.get('next_signed_weights')!=result.get('production_weights') or result.get('audit_weights')!=result.get('production_weights'): errors.append('公開主選與方向模型隔離回測權重不同')
 rolling=result.get('rolling_weight_adjustment') or {}
-if rolling.get('production_weights')!=result.get('production_weights') or rolling.get('production_ensemble_weights')!=ensemble or rolling.get('anchor_ensemble_weights')!=selection.get('ensemble_members') or rolling.get('updates')!=360 or rolling.get('method')!='five_member_consensus_with_direct_hit_single_repeat_and_data_change_front9' or rolling.get('strategy_candidate_count')!=30 or rolling.get('strategy_selection_window')!=360 or rolling.get('strategy_consensus_member_count')!=5: errors.append('最新開獎錯誤沒有觸發五組方向共識、直接命中、單碼冷卻與資料變化校正')
+if rolling.get('production_weights')!=result.get('production_weights') or rolling.get('production_ensemble_weights')!=ensemble or rolling.get('anchor_ensemble_weights')!=selection.get('ensemble_members') or rolling.get('updates')!=360 or rolling.get('method')!='full_history_consensus_with_35pct_direct_hit_and_shadow_change' or rolling.get('strategy_candidate_count')!=30 or rolling.get('strategy_selection_window')!=360 or rolling.get('strategy_consensus_member_count')!=5: errors.append('最新開獎錯誤沒有觸發全歷史方向共識、直接命中、單碼冷卻與資料變化影子驗證')
 direct_gate=bool(backtest.get('direct_hit_full_rank_gate'))
 if (not rolling.get('direct_hit_calibration_enabled') or rolling.get('direct_hit_window')!=360
-        or rolling.get('direct_hit_ridge')!=10.0 or rolling.get('direct_hit_full_rank_blend')!=.15
+        or rolling.get('direct_hit_ridge')!=10.0 or rolling.get('direct_hit_full_rank_blend')!=.35
         or bool(rolling.get('direct_hit_full_rank_gate'))!=direct_gate):
     errors.append('滾動修正未同步直接命中全排序校準')
 if not rolling.get('single_repeat_break_enabled') or not rolling.get('single_repeat_break_gate') or rolling.get('single_repeat_break_current')!=single_break: errors.append('滾動修正未同步單碼重複冷卻與封存狀態')
-if not rolling.get('data_change_enabled') or rolling.get('data_change_window')!=720 or rolling.get('data_change_ridge')!=1.0 or rolling.get('data_change_rank_blend')!=.5 or rolling.get('data_change_preserve_front')!=5 or bool(rolling.get('data_change_gate'))!=bool(backtest.get('data_change_gate')): errors.append('滾動修正未同步每期資料變化校正')
+if not rolling.get('data_change_enabled') or rolling.get('data_change_window')!=720 or rolling.get('data_change_ridge')!=1.0 or rolling.get('data_change_rank_blend')!=0.0 or rolling.get('data_change_preserve_front')!=5 or bool(rolling.get('data_change_gate'))!=bool(backtest.get('data_change_gate')): errors.append('滾動修正未同步每期資料變化影子驗證')
 rate_selection=rolling.get('learning_rate_selection') or {}
 if rate_selection.get('candidate_count')!=30 or rate_selection.get('learning_rate_candidate_count')!=6 or rate_selection.get('boundary_blend_candidate_count')!=5 or not rate_selection.get('holdout_not_used'): errors.append('舊邊界診斷未保持隔離')
 if backtest.get('next_signed_weights')!=result.get('production_weights') or backtest.get('rolling_update_count')!=360: errors.append('隔離回測沒有重演方向模型逐期選擇')
@@ -142,10 +142,10 @@ if backtest.get('strategy_candidate_count')!=30 or backtest.get('strategy_select
 if health.get('polarity_selection_window')!=360 or health.get('polarity_consensus_member_count')!=5: errors.append('公開健康檔未同步三百六十期五組權重共識')
 direct_baseline=backtest.get('direct_hit_baseline') or {}
 if (not backtest.get('direct_hit_calibration_enabled') or backtest.get('direct_hit_window')!=360
-        or backtest.get('direct_hit_ridge')!=10.0 or backtest.get('direct_hit_full_rank_blend')!=.15):
+        or backtest.get('direct_hit_ridge')!=10.0 or backtest.get('direct_hit_full_rank_blend')!=.35):
     errors.append('直接命中全排序校準參數錯誤')
 if not backtest.get('single_repeat_break_enabled') or backtest.get('single_repeat_break_cooldown')!=1 or not backtest.get('single_repeat_break_gate'): errors.append('單碼重複冷卻參數或上線守門錯誤')
-if not backtest.get('data_change_enabled') or backtest.get('data_change_window')!=720 or backtest.get('data_change_ridge')!=1.0 or backtest.get('data_change_rank_blend')!=.5 or backtest.get('data_change_preserve_front')!=5: errors.append('每期資料變化校正參數錯誤')
+if not backtest.get('data_change_enabled') or backtest.get('data_change_window')!=720 or backtest.get('data_change_ridge')!=1.0 or backtest.get('data_change_rank_blend')!=0.0 or backtest.get('data_change_preserve_front')!=5: errors.append('每期資料變化影子驗證參數錯誤')
 if not backtest.get('data_change_gate'): warnings.append('每期資料變化校正未通過上線守門，正式排序已自動停用此模組')
 for after,before in (('single_repeat_break_hits','single_repeat_break_baseline_hits'),('single_repeat_break_recent_54_hits','single_repeat_break_recent_54_baseline_hits'),('single_repeat_break_recent_120_hits','single_repeat_break_recent_120_baseline_hits')):
     if backtest.get(after,0)<backtest.get(before,0): errors.append('單碼重複冷卻拖累隔離命中')
@@ -162,11 +162,11 @@ if direct_gate!=(not direct_regressions):
 elif not direct_gate:
     warnings.append('直接命中全排序校準未通過上線守門，已自動回退五組方向共識：'+','.join(direct_regressions))
 if (not health.get('direct_hit_calibration_enabled') or health.get('direct_hit_window')!=360
-        or health.get('direct_hit_ridge')!=10.0 or health.get('direct_hit_full_rank_blend')!=.15
+        or health.get('direct_hit_ridge')!=10.0 or health.get('direct_hit_full_rank_blend')!=.35
         or bool(health.get('direct_hit_full_rank_gate'))!=direct_gate):
     errors.append('公開健康檔未同步直接命中全排序校準')
 if not health.get('single_repeat_break_enabled') or not health.get('single_repeat_break_gate') or health.get('single_repeat_break_current')!=single_break: errors.append('公開健康檔未同步單碼重複冷卻')
-if not health.get('data_change_enabled') or health.get('data_change_window')!=720 or health.get('data_change_ridge')!=1.0 or health.get('data_change_rank_blend')!=.5 or health.get('data_change_preserve_front')!=5 or bool(health.get('data_change_gate'))!=bool(backtest.get('data_change_gate')): errors.append('公開健康檔未同步每期資料變化校正')
+if not health.get('data_change_enabled') or health.get('data_change_window')!=720 or health.get('data_change_ridge')!=1.0 or health.get('data_change_rank_blend')!=0.0 or health.get('data_change_preserve_front')!=5 or bool(health.get('data_change_gate'))!=bool(backtest.get('data_change_gate')): errors.append('公開健康檔未同步每期資料變化影子驗證')
 stability=backtest.get('anchor_stability') or {}
 if stability.get('selected') not in ('穩定冠軍','每日挑戰者') or rolling.get('anchor_stability')!=stability or health.get('anchor_stability')!=stability or rolling.get('anchor_weights')!=result.get('production_anchor_weights') or health.get('production_anchor_weights')!=result.get('production_anchor_weights'): errors.append('穩定冠軍與每日挑戰模型守門未完整同步')
 if not backtest.get('catastrophic_guard_enabled'): errors.append('公開結果未啟用災難失準保護')
@@ -219,9 +219,9 @@ if ('本期唯一最強獨支' not in home or '唯一最強獨支完整運算來
         or '唯一性與產生流程' not in home or '單碼重複冷卻' not in home or '1中1' not in home
         or (ranked and f'{int(ranked[0]):02}' not in home)):
     errors.append('本期預測頁未完整顯示唯一最強獨支、運算來源或單碼冷卻狀態')
-if any(term in home for term in ('最新一期命中結算','最後360期隔離回測','全歷史運算範圍','鐵律守門')): errors.append('本期預測頁混入其他分類資料')
+if any(term in home for term in ('最新一期命中結算','最後360期逐期走步回測','全歷史運算範圍','鐵律守門')): errors.append('本期預測頁混入其他分類資料')
 if '最新一期命中結算' not in review_page or '開獎前前5正式預測' not in review_page or '前5命中資料' not in review_page or '錯誤模組與前9邊界逐項檢討' not in review_page or '第10至15名命中' not in review_page or '開獎後滾動權重重算' not in review_page or '禁止開獎後換號或補號' not in review_page: errors.append('開獎檢討分頁內容不完整')
-if '最後360期隔離回測' not in backtest_page or '直接命中全排序校準' not in backtest_page or '前9集合允許修正' not in backtest_page or '單碼重複冷卻' not in backtest_page or '每期資料變化校正' not in backtest_page or '最近54期獨立觀察' not in backtest_page or '全歷史逐期一致性掃描' not in backtest_page: errors.append('回測驗證分頁內容不完整')
+if '最後360期逐期走步回測' not in backtest_page or '直接命中全排序校準' not in backtest_page or '前5與前9任一關鍵區段退化即自動回退' not in backtest_page or '資料變化影子驗證' not in backtest_page or '單碼重複冷卻' not in backtest_page or '最近54期獨立觀察' not in backtest_page or '全歷史逐期一致性掃描' not in backtest_page: errors.append('回測驗證分頁內容不完整')
 if ('歷史資料完整度' not in history_page or '尚缺官方資料' not in history_page or '官方期別' not in history_page
         or '開獎前封存實戰紀錄' not in history_page or '前5命中資料' not in history_page
         or '錯誤模組與前9邊界逐項檢討' in history_page): errors.append('歷史封存分頁內容不完整或混入逐項檢討')

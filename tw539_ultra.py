@@ -248,10 +248,12 @@ POLARITY_CONSENSUS_MEMBERS = 5
 POLARITY_WARMUP = 60
 DIRECT_HIT_WINDOW = 360
 DIRECT_HIT_RIDGE = 10.0
-DIRECT_HIT_FULL_RANK_BLEND = .15
+# 五個連續360期區段重組測試後，35%是兼顧最近54期前5／前9與長區間穩定度的正式比例。
+DIRECT_HIT_FULL_RANK_BLEND = .35
 DATA_CHANGE_WINDOW = 720
 DATA_CHANGE_RIDGE = 1.0
-DATA_CHANGE_RANK_BLEND = .50
+# 增量模型在最近區段不穩定；保留完整影子回測，但正式排序占比歸零，直到跨區段守門通過。
+DATA_CHANGE_RANK_BLEND = .00
 DATA_CHANGE_PRESERVE_FRONT = 5
 SINGLE_REPEAT_BREAK_COOLDOWN = 1
 SINGLE_SPECIALIST_WINDOW = 30
@@ -1086,7 +1088,9 @@ def adaptive_polarity_backtest(
         "catastrophic_guard_unguarded_recent_54":unguarded_recent_result,
         "rolling_update_count":n,"rolling_learning_rate":0.0,"rolling_boundary_blend":0.0,
         "rolling_path_sha256":stable_payload_sha256(path),
-        "method":"five_member_consensus_with_direct_hit_single_repeat_and_data_change_front9",
+        "rebuild_generation":"full_history_recalibration_v3",
+        "data_change_mode":"shadow_only_until_cross_window_gate",
+        "method":"full_history_consensus_with_35pct_direct_hit_and_shadow_change",
     })
     return result
 
