@@ -225,8 +225,8 @@ if '最後360期逐期走步回測' not in backtest_page or '直接命中全排�
 if ('歷史資料完整度' not in history_page or '尚缺官方資料' not in history_page or '官方期別' not in history_page
         or '開獎前封存實戰紀錄' not in history_page or '前5命中資料' not in history_page
         or '錯誤模組與前9邊界逐項檢討' in history_page): errors.append('歷史封存分頁內容不完整或混入逐項檢討')
-if '正式方向模型' not in models_page or '全系統重組' not in models_page or '五組正式權重共識' not in models_page or '直接命中全排序校準' not in models_page or '單碼重複冷卻' not in models_page or '每期資料變化校正' not in models_page or '穩定冠軍與每日挑戰模型' not in models_page or '連莊資格驗算規格' not in models_page or '全歷史連莊率不低於12.82%' not in models_page: errors.append('模型說明分頁內容不完整')
-if '鐵律守門' not in health_page or '五組權重共識' not in health_page or '直接命中全排序校準' not in health_page or '單碼重複冷卻' not in health_page or '每期資料變化校正' not in health_page or '手機同步' not in health_page or '開獎後更新與自主修復' not in health_page or '兩小時修復期限' not in health_page: errors.append('系統健康分頁內容不完整')
+if '正式方向模型' not in models_page or '全系統重組' not in models_page or '五組正式權重共識' not in models_page or '直接命中全排序校準' not in models_page or '單碼重複冷卻' not in models_page or '資料變化影子驗證' not in models_page or '穩定冠軍與每日挑戰模型' not in models_page or '連莊資格驗算規格' not in models_page or '全歷史連莊率不低於12.82%' not in models_page: errors.append('模型說明分頁內容不完整')
+if '鐵律守門' not in health_page or '五組權重共識' not in health_page or '直接命中全排序校準' not in health_page or '單碼重複冷卻' not in health_page or '資料變化影子驗證' not in health_page or '手機同步' not in health_page or '開獎後更新與自主修復' not in health_page or '兩小時修復期限' not in health_page: errors.append('系統健康分頁內容不完整')
 if any('低機率' in visible or '當期預測前九' in visible for visible in visible_pages.values()): errors.append('公開分頁仍含易誤解標示或事後回算內容')
 expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'
 if expected_direction not in backtest_page or expected_direction not in health_page: errors.append('回測或健康分頁未照實顯示排序方向')
