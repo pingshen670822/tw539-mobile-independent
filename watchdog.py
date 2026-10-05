@@ -70,7 +70,7 @@ for name in ('icon-180.png','icon-192.png','icon-512.png','maskable-512.png'):
     public_icons[name]=(status,content_type,body[:24])
 errors=[]
 warnings=[]
-if download_status!=200 or len(download_body)<100000 or download_type not in ('application/zip','application/octet-stream'):
+if download_status!=200 or len(download_body)<100000 or download_type not in ('application/zip','application/x-zip-compressed','application/octet-stream'):
     errors.append('主程式完整壓縮包缺失或內容不完整')
 now=datetime.now(TAIPEI)
 deadline_active=now.time()>=clock_time(21,30) or now.time()<clock_time(6,0)
