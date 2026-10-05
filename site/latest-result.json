@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-06T07:32:04+08:00",
+  "generated_at": "2026-10-06T07:43:58+08:00",
   "based_on_period": "115000241",
   "target_draw_date": "2026-10-06",
   "recalculation_fingerprint": "1827f7c71f3f1836",
@@ -15807,10 +15807,10 @@
     "direct_hit_full_rank_blend": 0.35,
     "direct_hit_full_rank_gate": false,
     "direct_hit_weights": {
-      "full_frequency_balance": 0.3619431247889631,
-      "full_transition_correction": 0.37178551088912914,
-      "full_signature_correction": -0.07762260428695027,
-      "full_overdue_correction": 0.18864876003495745
+      "full_frequency_balance": 0.36194312478896323,
+      "full_transition_correction": 0.3717855108891292,
+      "full_signature_correction": -0.07762260428695028,
+      "full_overdue_correction": 0.1886487600349573
     },
     "data_change_enabled": true,
     "data_change_window": 720,
@@ -15819,14 +15819,14 @@
     "data_change_preserve_front": 5,
     "data_change_gate": false,
     "data_change_weights": [
-      0.20762431810455326,
-      0.27121179545044133,
-      -0.054268690144468605,
-      0.07296581719333302,
-      0.014229289124511985,
-      0.21854328761947905,
+      0.20762431810455328,
+      0.2712117954504414,
+      -0.05426869014446861,
+      0.07296581719333298,
+      0.014229289124511988,
+      0.21854328761947908,
       0.15579790129805396,
-      -0.0053589010651588
+      -0.0053589010651586555
     ],
     "selected_next_strategy": {
       "method": "five_member_signed_weight_consensus",
@@ -21175,10 +21175,10 @@
     "direct_hit_full_rank_blend": 0.35,
     "direct_hit_full_rank_gate": false,
     "direct_hit_weights": {
-      "full_frequency_balance": 0.3619431247889631,
-      "full_transition_correction": 0.37178551088912914,
-      "full_signature_correction": -0.07762260428695027,
-      "full_overdue_correction": 0.18864876003495745
+      "full_frequency_balance": 0.36194312478896323,
+      "full_transition_correction": 0.3717855108891292,
+      "full_signature_correction": -0.07762260428695028,
+      "full_overdue_correction": 0.1886487600349573
     },
     "direct_hit_baseline": {
       "samples": 360,
@@ -21345,14 +21345,14 @@
       "delta_full_overdue_correction"
     ],
     "data_change_weights": [
-      0.20762431810455326,
-      0.27121179545044133,
-      -0.054268690144468605,
-      0.07296581719333302,
-      0.014229289124511985,
-      0.21854328761947905,
+      0.20762431810455328,
+      0.2712117954504414,
+      -0.05426869014446861,
+      0.07296581719333298,
+      0.014229289124511988,
+      0.21854328761947908,
       0.15579790129805396,
-      -0.0053589010651588
+      -0.0053589010651586555
     ],
     "data_change_baseline": {
       "samples": 360,
@@ -21695,11 +21695,11 @@
       "22": -0.33080288684422665,
       "12": -0.36904172836211513,
       "26": -0.4705594210005049,
-      "10": -0.47844481505017283,
+      "10": -0.478444815050173,
       "18": -0.4917669938908923,
       "38": -0.6050561294457938,
       "35": -0.6396064656175562,
-      "27": -0.7255916463531138,
+      "27": -0.7255916463531139,
       "23": -0.7884314884936167,
       "11": -0.8601737387121288,
       "36": -1.0866750474621625,
@@ -21716,7 +21716,7 @@
       "7": 0.11046999082422117,
       "8": 0.7886626981255028,
       "9": -0.2546325829912114,
-      "10": -0.4784448149688351,
+      "10": -0.4784448149688353,
       "11": -0.8601737386139625,
       "12": -0.3690417282863869,
       "13": 0.8547275506969471,
@@ -21733,7 +21733,7 @@
       "24": 0.5570766616690166,
       "25": -1.102624905312725,
       "26": -0.47055942092197195,
-      "27": -0.725591646260557,
+      "27": -0.7255916462605572,
       "28": 0.44315055340531784,
       "29": 0.7919928241432864,
       "30": 0.5253367670011486,
@@ -23046,10 +23046,10 @@
       "boundary_control_valid": false,
       "ranking_direction_valid": false,
       "backtest_weights": {
-        "full_frequency_balance": 0.16212362307768793,
-        "full_transition_correction": 0.18405870782936726,
-        "full_signature_correction": 0.1445070375215061,
-        "full_overdue_correction": 0.5093106315714387
+        "full_frequency_balance": 0.16212362307768788,
+        "full_transition_correction": 0.18405870782936737,
+        "full_signature_correction": 0.14450703752150593,
+        "full_overdue_correction": 0.5093106315714389
       },
       "anchor_weights": {
         "full_frequency_balance": 0.10000000000000002,
@@ -23058,10 +23058,10 @@
         "full_overdue_correction": 0.3666666666666667
       },
       "end_weights": {
-        "full_frequency_balance": 0.16212362307768793,
-        "full_transition_correction": 0.18405870782936726,
-        "full_signature_correction": 0.1445070375215061,
-        "full_overdue_correction": 0.5093106315714387
+        "full_frequency_balance": 0.16212362307768788,
+        "full_transition_correction": 0.18405870782936737,
+        "full_signature_correction": 0.14450703752150593,
+        "full_overdue_correction": 0.5093106315714389
       },
       "anchor_ensemble_weights": [
         {
@@ -23085,22 +23085,22 @@
       ],
       "end_ensemble_weights": [
         {
-          "full_frequency_balance": 0.1816577948915569,
-          "full_transition_correction": 0.1676925362068605,
-          "full_signature_correction": 0.09347263311750265,
-          "full_overdue_correction": 0.55717703578408
+          "full_frequency_balance": 0.18165779489155678,
+          "full_transition_correction": 0.16769253620686075,
+          "full_signature_correction": 0.09347263311750235,
+          "full_overdue_correction": 0.5571770357840801
         },
         {
-          "full_frequency_balance": 0.04308290442781799,
-          "full_transition_correction": 0.24486613684351766,
-          "full_signature_correction": 0.17402341698272034,
-          "full_overdue_correction": 0.538027541745944
+          "full_frequency_balance": 0.04308290442781802,
+          "full_transition_correction": 0.24486613684351777,
+          "full_signature_correction": 0.17402341698272009,
+          "full_overdue_correction": 0.5380275417459441
         },
         {
           "full_frequency_balance": 0.26163016991368887,
           "full_transition_correction": 0.13961745043772358,
-          "full_signature_correction": 0.16602506246429535,
-          "full_overdue_correction": 0.43272731718429225
+          "full_signature_correction": 0.1660250624642953,
+          "full_overdue_correction": 0.4327273171842923
         }
       ],
       "rolling_update_count": 360,
