@@ -26,7 +26,7 @@ from tw539_ultra import (FORMAL_FEATURE_KEYS, GLOBAL_HISTORY_BLEND, MAX_ANCHOR_M
                          adaptive_polarity_backtest,
                          apply_catastrophic_guard, apply_single_repeat_break,
                          apply_repeat_qualification, average_weights, build_number_diagnostics,
-                         build_single_explanation, build_strict_publication_gate,
+                         build_single_explanation, build_single_supermodel, build_strict_publication_gate,
                          candidate_grid_sha256, ensemble_scores_from_features, evaluation_cases,
                          fast_case_ranking, formal_history_state, load_draws, rank_numbers,
                          ranking_direction_metrics, rolling_ensemble_direction_metrics, scores,
@@ -201,7 +201,6 @@ if stability.get('selected') not in ('穩定冠軍','每日挑戰者') or bool(s
 if (result.get('rolling_calibration') or {}).get('anchor_stability')!=stability or (result.get('rolling_weight_adjustment') or {}).get('anchor_stability')!=stability: fail('穩定模型守門未同步封存')
 if len(ranked_all)!=39 or set(ranked_all)!=set(range(1,40)) or ranked!=ranked_all[:15]: fail('開獎前完整39碼排序缺失或前15不同步')
 if len(ranked)!=15 or len(set(ranked))!=15 or any(not 1<=int(n)<=39 for n in ranked): fail('前十五名資料錯誤')
-elif result.get('single_candidate')!=ranked[0]: fail('內部首位候選未固定產出')
 pre_single_break=list(
     (recalculated_holdout.get('next_pre_single_break_ranked')
      if recalculated_holdout.get('direct_hit_full_rank_gate')
@@ -255,21 +254,28 @@ recalculated_ranking=expected_current_ranking
 if ranked_all!=recalculated_ranking: fail('連莊資格後完整39碼排名與公開排名不同')
 recalculated_number_diagnostics=build_number_diagnostics(recalculated_ranking,qualified_scores,raw_current,current_features,weights)
 if result.get('number_diagnostics')!=recalculated_number_diagnostics: fail('開獎前39碼模組貢獻無法重現')
+recalculated_supermodel=build_single_supermodel(draws)
+if result.get('single_supermodel')!=recalculated_supermodel or backtest.get('single_supermodel')!=recalculated_supermodel: fail('超級獨支多時間窗模型無法重現')
+if result.get('single_candidate')!=recalculated_supermodel.get('candidate'): fail('正式獨支候選與超級獨支模型不同步')
 recalculated_strict=build_strict_publication_gate(
-    recalculated_ranking,recalculated_number_diagnostics,recalculated_repeat,latest['nums'],backtest)
+    recalculated_ranking,recalculated_number_diagnostics,recalculated_repeat,latest['nums'],backtest,recalculated_supermodel)
 strict=result.get('strict_publication_gate') or {}
 if strict!=recalculated_strict or strict!=backtest.get('strict_publication_gate'): fail('嚴格發布守門無法由開獎前資料重現')
 strict_tiers=strict.get('tiers') or {};qualified_numbers=list(strict.get('qualified_numbers') or [])
 expected_single=(strict_tiers.get('single') or [None])[0]
 if result.get('single_published')!=expected_single or result.get('published_predictions')!=strict_tiers: fail('正式發布號碼含未達標號碼或分級不同步')
 if not strict.get('no_padding') or any((strict_tiers.get(key) or [])!=qualified_numbers[:size]
-        for key,size in (strict.get('requested_sizes') or {}).items()): fail('嚴格發布未遵守不足不補位')
-if result.get('single_selection_evidence')!=recalculated_number_diagnostics[0]: fail('最強獨隻缺少可重現的模組證據')
-recalculated_single_explanation=build_single_explanation(
+        for key,size in (strict.get('requested_sizes') or {}).items() if key!='single'): fail('嚴格發布未遵守不足不補位')
+if result.get('single_selection_evidence')!=recalculated_supermodel: fail('超級獨支缺少可重現的完整證據')
+single_explanation=result.get('single_explanation') or {}
+if (single_explanation.get('candidate')!=recalculated_supermodel.get('candidate')
+        or single_explanation.get('walk_forward')!=recalculated_supermodel.get('walk_forward')
+        or not single_explanation.get('derived_from_pre_draw_seal')):
+    fail('超級獨支完整解釋無法由開獎前資料重現')
+recalculated_formal_explanation=build_single_explanation(
     recalculated_ranking,recalculated_number_diagnostics,weights,
     (result.get('backtest') or {}).get('single_module_consensus') or [],draws,result.get('backtest') or {})
-if result.get('single_explanation')!=recalculated_single_explanation:
-    fail('唯一最強獨支完整解釋無法由開獎前資料重現')
+if result.get('formal_ranking_first_explanation')!=recalculated_formal_explanation: fail('內部全排序首位解釋無法重現')
 repeat_by_number={x.get('number'):x for x in (result.get('repeat_qualification') or [])}
 for n in set(ranked[:9])&set(latest['nums']):
     if not (repeat_by_number.get(n) or {}).get('qualified'): fail(f'上一期號碼{n:02}未通過連莊資格卻列入前9')
@@ -285,6 +291,7 @@ if seal.get('algorithm')!='sha256' or seal.get('sha256')!=seal_hash or not seal.
 if sealed_payload.get('based_on_period')!=latest['period'] or sealed_payload.get('target_draw_date')!=target.isoformat(): fail('開獎前封存期別日期錯誤')
 if sealed_payload.get('history_database_sha256')!=coverage.get('database_sha256') or sealed_payload.get('ranked_all')!=ranked_all or sealed_payload.get('number_diagnostics')!=result.get('number_diagnostics'): fail('開獎前封存內容與公開結果不同步')
 if sealed_payload.get('strict_publication_gate')!=strict: fail('開獎前封存缺少嚴格發布守門')
+if sealed_payload.get('single_supermodel')!=recalculated_supermodel: fail('開獎前封存缺少超級獨支完整證據')
 if sealed_payload.get('production_ensemble_weights')!=ensemble_weights: fail('開獎前封存缺少三模型終點權重')
 if sealed_payload.get('production_anchor_weights')!=result.get('production_anchor_weights'): fail('開獎前封存缺少穩定模型錨定權重')
 if sealed_payload.get('rolling_learning_rate')!=(result.get('rolling_weight_adjustment') or {}).get('learning_rate'): fail('開獎前封存缺少正式模型學習幅度')
@@ -393,10 +400,10 @@ if version.get('latest_period')!=latest['period'] or version.get('latest_draw_da
 
 page_rules={
     'index.html':{
-        'required':('第1名候選完整運算來源','嚴格發布守門','四項來源、權重與加減分','完整加總算式','唯一性與產生流程','最強號碼多邏輯總結','單碼重複冷卻','強烈推薦守門','失準事件監測','本期分級正式發布','1中1','2中1～2','3中1～3','5中2～3','9中3～5','內部前十五診斷（非正式推薦）','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不足不補位'),
+        'required':('本期最強超級獨支','超級獨支完整運算來源','嚴格發布守門','目前模型選擇證據','六段時間隔離競賽','隔離結果總表','最強號碼多邏輯總結','強烈推薦守門','失準事件監測','本期分級正式發布','1中1','2中1～2','3中1～3','5中2～3','9中3～5','內部前十五診斷（非正式推薦）','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不足不補位'),
         'forbidden':('最新一期命中結算','最後360期逐期走步回測','全歷史運算範圍','鐵律守門')},
     'backtest.html':{
-        'required':('最後360期逐期走步回測','直接命中全排序校準','前5與前9任一關鍵區段退化即自動回退','資料變化影子驗證','單碼重複冷卻','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),
+        'required':('超級獨支多時間窗隔離驗證','最近14期逐段隔離','最後360期逐期走步回測','直接命中全排序校準','前5與前9任一關鍵區段退化即自動回退','資料變化影子驗證','單碼重複冷卻','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),
         'forbidden':('本期正式預測','最新一期命中結算','開獎前封存實戰紀錄','正式方向模型')},
     'review.html':{
         'required':('最新一期命中結算','開獎前前5正式預測','前5命中資料','本期重大瑕疵結論','實際開獎號碼原始排名','錯誤模組與前9邊界逐項檢討','第10至15名命中','開獎後滾動權重重算','禁止開獎後換號或補號'),
@@ -405,10 +412,10 @@ page_rules={
         'required':('開獎前封存實戰紀錄','開獎前1中1','開獎前前5','前5命中資料','開獎前前9','主選結果','第10至15名命中'),
         'forbidden':('本期正式預測','錯誤模組與前9邊界逐項檢討','最後360期逐期走步回測','正式方向模型')},
     'models.html':{
-        'required':('全歷史運算範圍','全歷史核心占比','正式方向模型','全系統重組','五組正式權重共識','直接命中全排序校準','單碼重複冷卻','多模組校正規格','權重共識','連莊資格驗算規格','相對指數至少75','全歷史連莊率不低於12.82%','不做補位'),
+        'required':('全歷史運算範圍','全歷史核心占比','超級獨支獨立模型','正式方向模型','全系統重組','五組正式權重共識','直接命中全排序校準','單碼重複冷卻','多模組校正規格','權重共識','連莊資格驗算規格','相對指數至少75','全歷史連莊率不低於12.82%','不做補位'),
         'forbidden':('本期正式預測','最新一期命中結算','最後360期逐期走步回測','開獎前封存實戰紀錄')},
     'health.html':{
-        'required':('目前資料狀態','開獎後更新與自主修復','兩小時修復期限','自主修復狀態','鐵律守門','五組權重共識','直接命中全排序校準','單碼重複冷卻','模型健康與公開狀態','自動重新運算','手機同步'),
+        'required':('目前資料狀態','開獎後更新與自主修復','兩小時修復期限','自主修復狀態','鐵律守門','超級獨支模型','五組權重共識','直接命中全排序校準','單碼重複冷卻','模型健康與公開狀態','自動重新運算','手機同步'),
         'forbidden':('本期正式預測','最新一期命中結算','最後360期逐期走步回測','正式方向模型')},
 }
 nav_files=set(page_rules)
@@ -434,7 +441,7 @@ for folder in (REPORTS,SITE):
                 if term not in page: fail(f'{folder.name}/{filename} 缺少手機安裝條件：{term}')
 legacy=visible_text(REPORTS/'最新539科學預測戰報.html')
 if legacy!=visible_text(REPORTS/'index.html'): fail('相容戰報入口與本期預測頁不同步')
-if ranked and f'{int(ranked[0]):02}' not in visible_text(SITE/'index.html'): fail('本期預測頁未顯示當期1中1主選')
+if result.get('single_published') is not None and f"{int(result['single_published']):02}" not in visible_text(SITE/'index.html'): fail('本期預測頁未顯示當期1中1主選')
 generated_visible=str(result.get('generated_at',''))[:16].replace('T',' ')
 if generated_visible and generated_visible not in visible_text(SITE/'index.html'): fail('本期預測頁產生時間未同步台灣時區')
 expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'

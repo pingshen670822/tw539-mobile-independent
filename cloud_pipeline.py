@@ -240,9 +240,10 @@ def enrich_settlement(item, prediction, latest):
         'unguarded_single':unguarded_single,
         'unguarded_single_hit':bool(unguarded_single in actual),
         'catastrophic_guard_was_active':bool((prediction.get('backtest') or {}).get('catastrophic_guard_current_trigger')),
-        'catastrophic_guard_single_effect':('removed_hit' if prediction.get('single_published') is not None
+        'catastrophic_guard_single_effect':('not_applicable_super_single' if prediction.get('single_supermodel') else
+                                           ('removed_hit' if prediction.get('single_published') is not None
                                            and unguarded_single in actual and prediction.get('single_published') not in actual
-                                           else 'preserved_or_no_hit'),
+                                           else 'preserved_or_no_hit')),
         'top5_hits':sorted(actual.intersection(top5)),'top9_hits':sorted(actual.intersection(top9)),
         'rank10_15_hits':sorted(boundary_hits),'false_top9':false_top9,
         'boundary_review_status':'triggered_and_recalculated' if boundary_hits else 'checked_no_rank_10_15_hit',
@@ -527,11 +528,16 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
         'last_self_repair_at':checked_at.isoformat(timespec='seconds') if repair_run else previous_health.get('last_self_repair_at'),
         'last_public_verification_at':checked_at.isoformat(timespec='seconds'),
         'mobile_open_sync':'開啟、回到前景、重新連網均立即核對版本',
-        'model_release_allowed':bool((current.get('strict_publication_gate') or {}).get('qualified_numbers')),
+        'model_release_allowed':bool(current.get('single_published') is not None
+                                     or (current.get('strict_publication_gate') or {}).get('qualified_numbers')),
         'single_release_allowed':current.get('single_published') is not None,
         'strict_publication_policy':(current.get('strict_publication_gate') or {}).get('policy'),
         'strict_publication_no_padding':bool((current.get('strict_publication_gate') or {}).get('no_padding')),
         'strict_publication_qualified_count':len((current.get('strict_publication_gate') or {}).get('qualified_numbers') or []),
+        'single_supermodel_policy':(current.get('single_supermodel') or {}).get('policy'),
+        'single_supermodel_candidate':(current.get('single_supermodel') or {}).get('candidate'),
+        'single_supermodel_release_gate':bool((current.get('single_supermodel') or {}).get('release_gate_passed')),
+        'single_supermodel_walk_forward':(current.get('single_supermodel') or {}).get('walk_forward'),
         'single_edge_verified':bool((current.get('backtest') or {}).get('single_release_allowed')),
         'ranking_direction_valid':direction_ok,
         'top1_hits':backtest.get('single_hits'),'bottom1_hits':backtest.get('bottom1_hits'),
@@ -650,14 +656,14 @@ def verify_publication(latest):
         if str(data.get('period'))!=str(latest['period']) or data.get('date')!=latest['draw_date']:
             errors.append(f'{label}未對應官方最新期別')
         ranked=item.get('ranked_top15') or []
-        if not ranked or item.get('single_candidate')!=ranked[0]:
-            errors.append(f'{label}缺少完整內部首位候選')
+        if not ranked or item.get('single_candidate')!=(item.get('single_supermodel') or {}).get('candidate'):
+            errors.append(f'{label}缺少可重現的超級獨支候選')
             continue
         strict=item.get('strict_publication_gate') or {}
         expected=build_strict_publication_gate(
             item.get('ranked_all') or [],item.get('number_diagnostics') or [],
             item.get('repeat_qualification') or [],(item.get('data_latest') or {}).get('nums') or [],
-            item.get('backtest') or {})
+            item.get('backtest') or {},item.get('single_supermodel') or {})
         if strict!=expected or strict!=(item.get('backtest') or {}).get('strict_publication_gate'):
             errors.append(f'{label}的嚴格發布守門無法重現')
         tiers=strict.get('tiers') or {};qualified=list(strict.get('qualified_numbers') or [])
@@ -665,7 +671,7 @@ def verify_publication(latest):
         if item.get('single_published')!=expected_single or item.get('published_predictions')!=tiers:
             errors.append(f'{label}仍有未達標號碼或分級發布不同步')
         if not strict.get('no_padding') or any((tiers.get(key) or [])!=qualified[:size]
-                for key,size in (strict.get('requested_sizes') or {}).items()):
+                for key,size in (strict.get('requested_sizes') or {}).items() if key!='single'):
             errors.append(f'{label}未遵守不足不補位鐵律')
         excluded=set(range(1,40))-set(qualified)
         if set(item.get('forced_ticket_exclusions') or [])!=excluded or any(

@@ -269,6 +269,11 @@ STRICT_PUBLICATION_MIN_RELATIVE_INDEX = 75.0
 STRICT_PUBLICATION_MIN_POSITIVE_MODULES = 2
 STRICT_PUBLICATION_MODULE_SUPPORT_RANK = 15
 STRICT_PUBLICATION_MIN_MODULE_SUPPORT = 2
+SINGLE_SUPER_WINDOWS = (90,120,180,240,360,540,720,1200)
+SINGLE_SUPER_GLOBAL_BLENDS = (.05,.10,.20,.35,.50)
+SINGLE_SUPER_SELECTION_SPANS = (720,360,240,120,54)
+SINGLE_SUPER_HOLDOUT_BLOCK = 120
+SINGLE_SUPER_HOLDOUT_BLOCKS = 6
 STABILITY_CHAMPION_ANCHOR = {
     "full_frequency_balance": 1/30,
     "full_transition_correction": 8/30,
@@ -1098,6 +1103,7 @@ def adaptive_polarity_backtest(
         "data_change_mode":"shadow_only_until_cross_window_gate",
         "method":"full_history_consensus_with_35pct_direct_hit_and_shadow_change",
     })
+    result["single_supermodel"]=build_single_supermodel(draws)
     return result
 
 
@@ -1777,8 +1783,132 @@ def build_number_diagnostics(ranked: list[int], score: dict[int, float], raw_sco
     return result
 
 
+def build_single_supermodel(draws: list[dict]) -> dict:
+    """全歷史基準與多時間窗頻率的單碼專家；參數只用預測點以前成績選擇。"""
+    total_draws=len(draws)
+    if total_draws < max(SINGLE_SUPER_WINDOWS)+max(SINGLE_SUPER_SELECTION_SPANS):
+        raise ValueError("超級獨支需要足夠的全歷史資料")
+    count_prefix=[[0]*40]
+    for draw in draws:
+        row=count_prefix[-1][:]
+        for number in draw["nums"]: row[number]+=1
+        count_prefix.append(row)
+    parameters=[(window,blend) for window in SINGLE_SUPER_WINDOWS for blend in SINGLE_SUPER_GLOBAL_BLENDS]
+    rankings=[];hit_prefixes=[]
+    for window,global_blend in parameters:
+        model_rankings=[[]]
+        hit_prefix=[0]
+        for index in range(1,total_draws):
+            width=min(window,index)
+            model_score={
+                number:(1-global_blend)*(count_prefix[index][number]-count_prefix[index-width][number])/width
+                       +global_blend*count_prefix[index][number]/index
+                for number in range(1,40)
+            }
+            ranked=rank_numbers(model_score,draws[index-1]["period"])
+            model_rankings.append(ranked)
+            hit_prefix.append(hit_prefix[-1]+int(ranked[0] in set(draws[index]["nums"])))
+        # 對齊索引：hit_prefix[cutoff] 等於 cutoff 以前已知的單碼命中數。
+        rankings.append(model_rankings)
+        hit_prefixes.append(hit_prefix)
+    def select_at(cutoff: int) -> tuple[int,dict]:
+        candidates=[]
+        for model_index,(window,global_blend) in enumerate(parameters):
+            evidence=[]
+            for span in SINGLE_SUPER_SELECTION_SPANS:
+                actual_span=min(span,cutoff-1)
+                hits=(hit_prefixes[model_index][cutoff-1]
+                      -hit_prefixes[model_index][cutoff-1-actual_span])
+                expected=actual_span*5/39
+                excess=(hits-expected)/math.sqrt(max(1,actual_span))
+                evidence.append({"span":actual_span,"hits":hits,"expected":round(expected,6),
+                                 "standardized_excess":round(excess,9)})
+            robust=min(item["standardized_excess"] for item in evidence)
+            total_hits=sum(item["hits"] for item in evidence)
+            candidates.append((robust,total_hits,-abs(window-240),-abs(global_blend-.35),-model_index,
+                               model_index,evidence))
+        selected=max(candidates)
+        model_index=selected[-2]
+        window,global_blend=parameters[model_index]
+        return model_index,{"window":window,"global_history_blend":global_blend,
+                            "robust_score":round(selected[0],9),"selection_evidence":selected[-1]}
+    holdout_start=total_draws-SINGLE_SUPER_HOLDOUT_BLOCK*SINGLE_SUPER_HOLDOUT_BLOCKS
+    walk_rows=[];folds=[]
+    for block_start in range(holdout_start,total_draws,SINGLE_SUPER_HOLDOUT_BLOCK):
+        model_index,selection=select_at(block_start)
+        block_end=min(total_draws,block_start+SINGLE_SUPER_HOLDOUT_BLOCK)
+        hits=0
+        for index in range(block_start,block_end):
+            ranked=rankings[model_index][index];actual=set(draws[index]["nums"])
+            positions={number:position+1 for position,number in enumerate(ranked)}
+            hit=int(ranked[0] in actual);hits+=hit
+            walk_rows.append({"index":index,"ranked":ranked,"actual":actual,"single_hit":hit,
+                              "top5_hits":len(actual.intersection(ranked[:5])),
+                              "top9_hits":len(actual.intersection(ranked[:9])),
+                              "average_actual_rank":sum(positions[number] for number in actual)/5})
+        folds.append({"first_date":draws[block_start]["date"],"last_date":draws[block_end-1]["date"],
+                      "samples":block_end-block_start,"single_hits":hits,**selection})
+    def summarize(rows: list[dict]) -> dict:
+        samples=len(rows);single_hits=sum(item["single_hit"] for item in rows)
+        expected=samples*5/39
+        return {"samples":samples,"single_hits":single_hits,
+                "single_rate":round(single_hits/max(1,samples),6),
+                "random_expected_hits":round(expected,6),
+                "excess_hits":round(single_hits-expected,6),
+                "top5_avg_hits":round(sum(item["top5_hits"] for item in rows)/max(1,samples),6),
+                "top9_avg_hits":round(sum(item["top9_hits"] for item in rows)/max(1,samples),6),
+                "average_actual_rank":round(sum(item["average_actual_rank"] for item in rows)/max(1,samples),6)}
+    walk_forward={"full":summarize(walk_rows),"recent_360":summarize(walk_rows[-360:]),
+                  "recent_240":summarize(walk_rows[-240:]),"recent_120":summarize(walk_rows[-120:]),
+                  "recent_54":summarize(walk_rows[-54:]),"recent_33":summarize(walk_rows[-33:]),
+                  "recent_14":summarize(walk_rows[-14:]),"folds":folds}
+    selected_index,current_selection=select_at(total_draws)
+    window,global_blend=parameters[selected_index];width=min(window,total_draws)
+    current_score={
+        number:(1-global_blend)*(count_prefix[total_draws][number]-count_prefix[total_draws-width][number])/width
+               +global_blend*count_prefix[total_draws][number]/total_draws
+        for number in range(1,40)
+    }
+    current_ranked=rank_numbers(current_score,draws[-1]["period"])
+    candidate=current_ranked[0]
+    candidate_consensus=[]
+    for model_index,(candidate_window,candidate_blend) in enumerate(parameters):
+        candidate_width=min(candidate_window,total_draws)
+        scores={
+            number:(1-candidate_blend)*(count_prefix[total_draws][number]-count_prefix[total_draws-candidate_width][number])/candidate_width
+                   +candidate_blend*count_prefix[total_draws][number]/total_draws
+            for number in range(1,40)
+        }
+        if rank_numbers(scores,draws[-1]["period"])[0]==candidate:
+            candidate_consensus.append({"window":candidate_window,"global_history_blend":candidate_blend})
+    gate_conditions={
+        "七百二十期逐段隔離高於隨機":walk_forward["full"]["single_hits"]>walk_forward["full"]["random_expected_hits"],
+        "最近三百六十期高於隨機":walk_forward["recent_360"]["single_hits"]>walk_forward["recent_360"]["random_expected_hits"],
+        "最近二百四十期高於隨機":walk_forward["recent_240"]["single_hits"]>walk_forward["recent_240"]["random_expected_hits"],
+        "最近一百二十期高於隨機":walk_forward["recent_120"]["single_hits"]>walk_forward["recent_120"]["random_expected_hits"],
+        "最近五十四期不低於隨機":walk_forward["recent_54"]["single_hits"]>=math.ceil(walk_forward["recent_54"]["random_expected_hits"]),
+        "至少十二組參數同選一碼":len(candidate_consensus)>=12,
+        "至少四種時間窗同選一碼":len({item["window"] for item in candidate_consensus})>=4,
+    }
+    return {
+        "policy":"all_history_multi_horizon_single_v1","candidate":candidate,
+        "candidate_ranked":current_ranked,"current_score":{str(number):round(value,12) for number,value in current_score.items()},
+        "selected_window":window,"selected_global_history_blend":global_blend,
+        "recent_history_blend":round(1-global_blend,6),"full_history_draws":total_draws,
+        "candidate_recent_hits":count_prefix[total_draws][candidate]-count_prefix[total_draws-width][candidate],
+        "candidate_recent_samples":width,"candidate_full_hits":count_prefix[total_draws][candidate],
+        "candidate_full_samples":total_draws,"candidate_consensus":candidate_consensus,
+        "candidate_consensus_count":len(candidate_consensus),"current_selection":current_selection,
+        "parameter_count":len(parameters),"selection_spans":list(SINGLE_SUPER_SELECTION_SPANS),
+        "walk_forward":walk_forward,"gate_conditions":gate_conditions,
+        "release_gate_passed":all(gate_conditions.values()),
+        "no_post_draw_substitution":True,"uses_all_history":True,
+    }
+
+
 def build_strict_publication_gate(ranked: list[int], diagnostics: list[dict], repeat_audit: list[dict],
-                                  previous_numbers: tuple[int, ...] | list[int], backtest: dict) -> dict:
+                                  previous_numbers: tuple[int, ...] | list[int], backtest: dict,
+                                  single_supermodel: dict | None = None) -> dict:
     """逐號執行正式發布門檻；只刪除不合格號碼，永遠不補位。"""
     if len(ranked) != 39 or len(set(ranked)) != 39 or len(diagnostics) != 39:
         raise ValueError("嚴格發布守門需要完整且不重複的三十九碼診斷")
@@ -1827,8 +1957,19 @@ def build_strict_publication_gate(ranked: list[int], diagnostics: list[dict], re
             "is_previous_draw_number":number in previous,"repeat_qualified":repeat_ok,
             "checks":checks,"failure_reasons":[failure_labels[key] for key,value in checks.items() if not value],
         })
+    supermodel=single_supermodel or {}
+    super_candidate=supermodel.get("candidate")
+    super_repeat_ok=(bool((repeat_by_number.get(int(super_candidate)) or {}).get("qualified"))
+                     if super_candidate is not None and int(super_candidate) in previous else True)
+    single_gate={"candidate":super_candidate,"model_gate_passed":bool(supermodel.get("release_gate_passed")),
+                 "repeat_qualification":super_repeat_ok,
+                 "qualified":bool(super_candidate is not None and supermodel.get("release_gate_passed") and super_repeat_ok),
+                 "failure_reasons":[]}
+    if not single_gate["model_gate_passed"]: single_gate["failure_reasons"].append("超級獨支跨時間窗隔離守門未通過")
+    if not super_repeat_ok: single_gate["failure_reasons"].append("上一期號碼未通過連莊資格")
     requested={"single":1,"two":2,"three":3,"five":5,"nine":9}
-    tiers={key:qualified[:size] for key,size in requested.items()}
+    tiers={"single":[int(super_candidate)] if single_gate["qualified"] else [],
+           "two":qualified[:2],"three":qualified[:3],"five":qualified[:5],"nine":qualified[:9]}
     tier_status={key:("full" if len(tiers[key])==size else "insufficient_no_padding")
                  for key,size in requested.items()}
     return {
@@ -1842,7 +1983,7 @@ def build_strict_publication_gate(ranked: list[int], diagnostics: list[dict], re
             "direct_hit_gate_required":True,"repeat_qualification_required_for_previous_draw_numbers":True,
         },
         "qualified_numbers":qualified,"qualified_count":len(qualified),
-        "requested_sizes":requested,"tiers":tiers,"tier_status":tier_status,"details":details,
+        "single_gate":single_gate,"requested_sizes":requested,"tiers":tiers,"tier_status":tier_status,"details":details,
     }
 
 
@@ -1922,7 +2063,8 @@ def prediction_seal_payload(based_on_period: str, target_draw_date: str, history
                              production_learning_rate: float = 0.0,
                              production_boundary_blend: float = 0.0,
                              production_anchor_weights: dict | None = None,
-                             strict_publication_gate: dict | None = None) -> dict:
+                             strict_publication_gate: dict | None = None,
+                             single_supermodel: dict | None = None) -> dict:
     return {
         "based_on_period": based_on_period,
         "target_draw_date": target_draw_date,
@@ -1941,6 +2083,7 @@ def prediction_seal_payload(based_on_period: str, target_draw_date: str, history
         "rolling_learning_rate_selection_window": selection["learning_rate_selection"]["selection_window"],
         "adaptive_polarity": selection.get("adaptive_polarity") or {},
         "strict_publication_gate": strict_publication_gate or {},
+        "single_supermodel": single_supermodel or {},
     }
 
 
@@ -2214,25 +2357,19 @@ def main() -> None:
             "contribution":round(module_score[single_number],9),
         })
     consensus_votes=sum(item["supports"] for item in module_consensus)
-    strong_conditions={
-        "重複單碼冷卻回測未造成拖累":bool(bt.get("single_repeat_break_gate")),
-        "正式排序方向通過":bool(bt.get("ranking_direction_valid")),
-        "最近五十四期方向通過":bool((bt.get("recent_54") or {}).get("ranking_direction_valid")),
-        "前九邊界通過":bool(bt.get("boundary_control_valid")),
-        "至少三項正式邏輯同向":consensus_votes>=3,
-        "單碼信賴下限高於隨機基準":bool(bt.get("single_release_allowed")),
-    }
+    single_supermodel=bt.get("single_supermodel") or {}
+    strong_conditions=dict(single_supermodel.get("gate_conditions") or {})
     bt["single_module_consensus"]=module_consensus
     bt["single_consensus_votes"]=consensus_votes
     bt["single_strong_conditions"]=strong_conditions
     bt["single_strong_recommendation"]=all(strong_conditions.values())
-    bt["single_confidence_label"]=("超高信心強烈推薦" if bt["single_strong_recommendation"]
-                                   else "本期綜合最強")
+    bt["single_confidence_label"]=("跨時間窗守門通過的最強獨支" if bt["single_strong_recommendation"]
+                                   else "本期最強觀察候選")
     number_diagnostics = build_number_diagnostics(ranked, sc, raw_sc, current_features, weights)
-    single_explanation = build_single_explanation(
+    formal_single_explanation = build_single_explanation(
         ranked, number_diagnostics, weights, module_consensus, draws, bt)
     strict_publication_gate=build_strict_publication_gate(
-        ranked,number_diagnostics,repeat_audit,draws[-1]["nums"],bt)
+        ranked,number_diagnostics,repeat_audit,draws[-1]["nums"],bt,single_supermodel)
     bt["strict_publication_gate"]=strict_publication_gate
     qualified_numbers=list(strict_publication_gate["qualified_numbers"])
     qualified_set=set(qualified_numbers)
@@ -2246,7 +2383,7 @@ def main() -> None:
         draws[-1]["period"], target.isoformat(), history_hash, ranked,
         number_diagnostics, weights, selection, production_ensemble,
         bt["rolling_learning_rate"], bt["rolling_boundary_blend"],
-        production_anchor_weights,strict_publication_gate)
+        production_anchor_weights,strict_publication_gate,single_supermodel)
     seal_sha256 = hashlib.sha256(json.dumps(seal_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     fingerprint = seal_sha256[:16]
     generated_at_iso = datetime.now(TAIPEI).isoformat(timespec="seconds")
@@ -2348,6 +2485,7 @@ def main() -> None:
         "ranked_all": ranked,
         "ranked_top15": ranked[:15],
         "number_diagnostics": number_diagnostics,
+        "single_supermodel": single_supermodel,
         "strict_publication_gate": strict_publication_gate,
         "published_predictions": strict_publication_gate["tiers"],
         "qualified_numbers": qualified_numbers,
@@ -2360,12 +2498,22 @@ def main() -> None:
             "full_previous_draw_copied_into_top9": set(draws[-1]["nums"]).issubset(ranked[:9]),
         },
         "repeat_qualification": repeat_audit,
-        "single_candidate": ranked[0],
+        "single_candidate": single_supermodel.get("candidate"),
         "single_published": (strict_publication_gate["tiers"]["single"][0]
                              if strict_publication_gate["tiers"]["single"] else None),
         "single_repeat_break": bt["single_repeat_break_current"],
-        "single_selection_evidence": number_diagnostics[0],
-        "single_explanation": single_explanation,
+        "single_selection_evidence": single_supermodel,
+        "single_explanation": {
+            "label":"本期超級獨支","candidate":single_supermodel.get("candidate"),"unique":True,
+            "method":"全歷史基準與多時間窗單碼專家逐段隔離競賽",
+            "selected_window":single_supermodel.get("selected_window"),
+            "selected_global_history_blend":single_supermodel.get("selected_global_history_blend"),
+            "full_history_draws":single_supermodel.get("full_history_draws"),
+            "walk_forward":single_supermodel.get("walk_forward"),
+            "gate_conditions":single_supermodel.get("gate_conditions"),
+            "derived_from_pre_draw_seal":True,
+        },
+        "formal_ranking_first_explanation": formal_single_explanation,
         "single_recommendation": {
             "label": ("本期唯一最強獨支" if strict_publication_gate["tiers"]["single"]
                       else "嚴格守門未達標，本期獨支不發布"),
@@ -2375,10 +2523,10 @@ def main() -> None:
             "module_count": len(module_consensus),
             "conditions": strong_conditions,
             "module_consensus": module_consensus,
-            "isolated_hits": bt["single_specialist_hits"],
-            "isolated_samples": bt["samples"],
+            "isolated_hits": (single_supermodel.get("walk_forward") or {}).get("full",{}).get("single_hits"),
+            "isolated_samples": (single_supermodel.get("walk_forward") or {}).get("full",{}).get("samples"),
             "baseline_hits_before_specialist": bt["single_specialist_baseline_hits"],
-            "recent_54_hits": (bt.get("recent_54") or {}).get("single_hits"),
+            "recent_54_hits": (single_supermodel.get("walk_forward") or {}).get("recent_54",{}).get("single_hits"),
         },
         "release_policy": {
             "official_release_allowed": True,

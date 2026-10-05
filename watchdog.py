@@ -4,7 +4,7 @@ import hashlib, html, json, re, time, urllib.request
 import os
 from datetime import datetime, time as clock_time
 from cloud_pipeline import TAIPEI, expected_latest_date, fetch_latest
-from tw539_ultra import build_strict_publication_gate
+from tw539_ultra import build_single_supermodel, build_strict_publication_gate, load_draws, DATA
 
 PAGE='https://pingshen670822.github.io/tw539-mobile-independent/system-health.json'
 REPORT_ROOT='https://pingshen670822.github.io/tw539-mobile-independent/'
@@ -90,33 +90,35 @@ if not health.get('two_hour_deadline_met',True): warnings.append('本期超過�
 data_latest=result.get('data_latest') or {}
 if str(data_latest.get('period'))!=str(official['period']) or data_latest.get('date')!=official['draw_date']: errors.append('公開結果未對應官方最新期別')
 ranked=result.get('ranked_top15') or []
-if not ranked or result.get('single_candidate')!=ranked[0]: errors.append('公開結果的內部首位候選缺失')
+single_supermodel=result.get('single_supermodel') or {}
+if not ranked or result.get('single_candidate')!=single_supermodel.get('candidate'): errors.append('公開結果的超級獨支候選缺失')
 strict=result.get('strict_publication_gate') or {}
 try:
+    local_supermodel=build_single_supermodel(load_draws(DATA))
+    if single_supermodel!=local_supermodel or single_supermodel!=(result.get('backtest') or {}).get('single_supermodel'): errors.append('超級獨支多時間窗模型無法重現')
     expected_strict=build_strict_publication_gate(
         result.get('ranked_all') or [],result.get('number_diagnostics') or [],
-        result.get('repeat_qualification') or [],data_latest.get('nums') or [],result.get('backtest') or {})
+        result.get('repeat_qualification') or [],data_latest.get('nums') or [],result.get('backtest') or {},single_supermodel)
     if strict!=expected_strict or strict!=(result.get('backtest') or {}).get('strict_publication_gate'): errors.append('嚴格發布守門無法重現')
 except Exception as exc: errors.append('嚴格發布守門重算失敗：'+str(exc))
 tiers=strict.get('tiers') or {};qualified=list(strict.get('qualified_numbers') or [])
 expected_single=(tiers.get('single') or [None])[0]
 if result.get('single_published')!=expected_single or result.get('published_predictions')!=tiers: errors.append('正式發布含未達標號碼或分級不同步')
-if not strict.get('no_padding') or any((tiers.get(key) or [])!=qualified[:size] for key,size in (strict.get('requested_sizes') or {}).items()): errors.append('正式發布違反不足不補位')
+if not strict.get('no_padding') or any((tiers.get(key) or [])!=qualified[:size] for key,size in (strict.get('requested_sizes') or {}).items() if key!='single'): errors.append('正式發布違反不足不補位')
 single_break=result.get('single_repeat_break') or {}
 if not single_break or 'rolling_review_consumed' not in single_break: errors.append('公開結果缺少每期未中檢討與單碼重複冷卻狀態')
-if single_break.get('applied') and (result.get('single_candidate')!=single_break.get('replacement') or single_break.get('original')==single_break.get('replacement')): errors.append('單碼重複冷卻替代號與內部首位不同步')
-if not single_break.get('applied') and result.get('single_candidate')!=single_break.get('original'): errors.append('未啟動單碼冷卻時內部首位被改動')
 ranked_all=result.get('ranked_all') or []
 if len(ranked_all)!=39 or set(ranked_all)!=set(range(1,40)) or ranked!=ranked_all[:15]: errors.append('公開結果缺少開獎前完整39碼排序')
-if len(result.get('number_diagnostics') or [])!=39 or result.get('single_selection_evidence')!=(result.get('number_diagnostics') or [{}])[0]: errors.append('公開結果缺少最強獨隻逐模組證據')
+if len(result.get('number_diagnostics') or [])!=39 or result.get('single_selection_evidence')!=single_supermodel: errors.append('公開結果缺少超級獨支完整證據')
 single_explanation=result.get('single_explanation') or {}
-if (single_explanation.get('candidate')!=result.get('single_candidate') or single_explanation.get('rank')!=1
-        or single_explanation.get('unique') is not True or len(single_explanation.get('module_calculations') or [])!=4
+if (single_explanation.get('candidate')!=result.get('single_candidate')
+        or single_explanation.get('unique') is not True or single_explanation.get('walk_forward')!=single_supermodel.get('walk_forward')
         or not single_explanation.get('derived_from_pre_draw_seal')):
-    errors.append('公開結果缺少唯一最強獨支完整運算來源')
+    errors.append('公開結果缺少超級獨支完整運算來源')
 seal=result.get('pre_draw_seal') or {}; sealed_payload=seal.get('sealed_payload') or {}
 seal_hash=hashlib.sha256(json.dumps(sealed_payload,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 if seal.get('sha256')!=seal_hash or not seal.get('no_post_draw_substitution') or result.get('recalculation_fingerprint')!=seal_hash[:16]: errors.append('開獎前封存雜湊驗證失敗')
+if sealed_payload.get('single_supermodel')!=single_supermodel: errors.append('開獎前封存缺少超級獨支證據')
 selection=(result.get('weight_selection_diagnostics') or [{}])[0]
 ensemble=result.get('production_ensemble_weights') or []
 anchor_ensemble=result.get('anchor_ensemble_weights') or []
@@ -229,20 +231,20 @@ for name,page in pages.items():
     for term in ("rel='manifest'","rel='apple-touch-icon'","mobile-web-app-capable","apple-mobile-web-app-capable","id='install-app-button'",'安裝手機版','mobile-sync.js'):
         if term not in page: errors.append(f'{name} 缺少手機安裝條件：{term}')
 home=visible_pages['index.html']; review_page=visible_pages['review.html']; backtest_page=visible_pages['backtest.html']; history_page=visible_pages['history.html']; models_page=visible_pages['models.html']; health_page=visible_pages['health.html']
-if ('第1名候選完整運算來源' not in home or '嚴格發布守門' not in home
-        or '四項來源、權重與加減分' not in home or '完整加總算式' not in home
-        or '唯一性與產生流程' not in home or '單碼重複冷卻' not in home or '1中1' not in home
+if ('本期最強超級獨支' not in home or '超級獨支完整運算來源' not in home or '嚴格發布守門' not in home
+        or '目前模型選擇證據' not in home or '六段時間隔離競賽' not in home
+        or '隔離結果總表' not in home or '1中1' not in home
         or '不足不補位' not in home or '內部前十五診斷（非正式推薦）' not in home
-        or (ranked and f'{int(ranked[0]):02}' not in home)):
+        or (result.get('single_candidate') and f"{int(result['single_candidate']):02}" not in home)):
     errors.append('本期預測頁未完整顯示嚴格發布、運算來源或單碼冷卻狀態')
 if any(term in home for term in ('最新一期命中結算','最後360期逐期走步回測','全歷史運算範圍','鐵律守門')): errors.append('本期預測頁混入其他分類資料')
 if '最新一期命中結算' not in review_page or '開獎前前5正式預測' not in review_page or '前5命中資料' not in review_page or '錯誤模組與前9邊界逐項檢討' not in review_page or '第10至15名命中' not in review_page or '開獎後滾動權重重算' not in review_page or '禁止開獎後換號或補號' not in review_page: errors.append('開獎檢討分頁內容不完整')
-if '最後360期逐期走步回測' not in backtest_page or '直接命中全排序校準' not in backtest_page or '前5與前9任一關鍵區段退化即自動回退' not in backtest_page or '資料變化影子驗證' not in backtest_page or '單碼重複冷卻' not in backtest_page or '最近54期獨立觀察' not in backtest_page or '全歷史逐期一致性掃描' not in backtest_page: errors.append('回測驗證分頁內容不完整')
+if '超級獨支多時間窗隔離驗證' not in backtest_page or '最近14期逐段隔離' not in backtest_page or '最後360期逐期走步回測' not in backtest_page or '直接命中全排序校準' not in backtest_page or '前5與前9任一關鍵區段退化即自動回退' not in backtest_page or '資料變化影子驗證' not in backtest_page or '單碼重複冷卻' not in backtest_page or '最近54期獨立觀察' not in backtest_page or '全歷史逐期一致性掃描' not in backtest_page: errors.append('回測驗證分頁內容不完整')
 if ('歷史資料完整度' not in history_page or '尚缺官方資料' not in history_page or '官方期別' not in history_page
         or '開獎前封存實戰紀錄' not in history_page or '前5命中資料' not in history_page
         or '錯誤模組與前9邊界逐項檢討' in history_page): errors.append('歷史封存分頁內容不完整或混入逐項檢討')
-if '正式方向模型' not in models_page or '全系統重組' not in models_page or '五組正式權重共識' not in models_page or '直接命中全排序校準' not in models_page or '單碼重複冷卻' not in models_page or '資料變化影子驗證' not in models_page or '穩定冠軍與每日挑戰模型' not in models_page or '連莊資格驗算規格' not in models_page or '嚴格發布規格' not in models_page or '全歷史連莊率不低於12.82%' not in models_page: errors.append('模型說明分頁內容不完整')
-if '鐵律守門' not in health_page or '五組權重共識' not in health_page or '直接命中全排序校準' not in health_page or '單碼重複冷卻' not in health_page or '資料變化影子驗證' not in health_page or '手機同步' not in health_page or '開獎後更新與自主修復' not in health_page or '兩小時修復期限' not in health_page: errors.append('系統健康分頁內容不完整')
+if '超級獨支獨立模型' not in models_page or '正式方向模型' not in models_page or '全系統重組' not in models_page or '五組正式權重共識' not in models_page or '直接命中全排序校準' not in models_page or '單碼重複冷卻' not in models_page or '資料變化影子驗證' not in models_page or '穩定冠軍與每日挑戰模型' not in models_page or '連莊資格驗算規格' not in models_page or '嚴格發布規格' not in models_page or '全歷史連莊率不低於12.82%' not in models_page: errors.append('模型說明分頁內容不完整')
+if '超級獨支模型' not in health_page or '鐵律守門' not in health_page or '五組權重共識' not in health_page or '直接命中全排序校準' not in health_page or '單碼重複冷卻' not in health_page or '資料變化影子驗證' not in health_page or '手機同步' not in health_page or '開獎後更新與自主修復' not in health_page or '兩小時修復期限' not in health_page: errors.append('系統健康分頁內容不完整')
 if any('低機率' in visible or '當期預測前九' in visible for visible in visible_pages.values()): errors.append('公開分頁仍含易誤解標示或事後回算內容')
 expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'
 if expected_direction not in backtest_page or expected_direction not in health_page: errors.append('回測或健康分頁未照實顯示排序方向')
