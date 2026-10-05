@@ -19,7 +19,7 @@ permissions:
 jobs:
   verify-and-repair:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     concurrency:
       group: tw539-watchdog
       # 新巡檢接手舊巡檢；已觸發的主更新在另一個雲端工作中繼續執行，避免故障時堆積整天的等待佇列。
@@ -28,6 +28,11 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with: {python-version: '3.12'}
+      - name: 主流程失敗強制修復
+        id: upstream_failure
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success'
+        continue-on-error: true
+        run: exit 1
       - name: 立即比較官方與手機公開頁
         id: fast_check
         continue-on-error: true
@@ -42,21 +47,21 @@ jobs:
         timeout-minutes: 4
         run: python watchdog.py
       - name: 落後時自動重跑主流程
-        if: steps.fast_check.outcome == 'failure' || steps.full_check.outcome == 'failure'
+        if: steps.upstream_failure.outcome == 'failure' || steps.fast_check.outcome == 'failure' || steps.full_check.outcome == 'failure'
         timeout-minutes: 2
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for attempt in 1 2 3; do
-            gh workflow run auto-update.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}" -f repair=true && exit 0
+          for attempt in 1 2 3 4 5; do
+            gh workflow run auto-update.yml --repo "${{ github.repository }}" --ref master -f repair=true && exit 0
             sleep $((attempt * 3))
           done
           exit 1
       - name: 修復後再次驗證
-        if: steps.fast_check.outcome == 'failure' || steps.full_check.outcome == 'failure'
-        timeout-minutes: 8
+        if: steps.upstream_failure.outcome == 'failure' || steps.fast_check.outcome == 'failure' || steps.full_check.outcome == 'failure'
+        timeout-minutes: 12
         run: |
-          for i in {1..24}; do
+          for i in {1..40}; do
             python watchdog.py && exit 0
             sleep 15
           done

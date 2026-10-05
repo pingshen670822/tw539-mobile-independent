@@ -499,7 +499,7 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
     same_period=str(previous_health.get('latest_period'))==str(latest['period'])
     sync_completed_at=(previous_health.get('sync_completed_at') if same_period else None) or checked_at.isoformat(timespec='seconds')
     draw_at=datetime.strptime(latest['draw_date']+' 20:30','%Y-%m-%d %H:%M').replace(tzinfo=TAIPEI)
-    repair_deadline=draw_at+timedelta(hours=2)
+    repair_deadline=draw_at+timedelta(hours=1)
     sync_delay=max(0,round((datetime.fromisoformat(sync_completed_at)-draw_at).total_seconds()/60))
     repair_count=int(previous_health.get('self_repair_count') or 0)+(1 if repair_run else 0)
     health={
@@ -510,19 +510,23 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
         'backfill_complete':bool(pipeline_meta.get('backfill_complete',True)),
         'backfill_draw_count':int(pipeline_meta.get('backfill_draw_count') or 0),
         'history_repair_pending':bool(pipeline_meta.get('history_repair_pending')),
-        'pipeline_version':'continuous-update-v2','update_retry_policy':'三次重試、雙官方端點、缺期逐月補齊',
+        'pipeline_version':'持續更新第三版','update_retry_policy':'五次重試、雙官方端點、缺期逐月補齊、失敗強制重跑',
         'stability_monitor':'每次更新後立即驗證、開獎時段每五分鐘、全天每小時巡檢',
         'cloud_independent_update':True,
         'local_computer_required':False,
         'cloud_update_schedule':'開獎時段每五分鐘核對、主流程每十分鐘重算、全天每小時巡檢',
+        'update_start_deadline_minutes':10,
+        'completion_deadline_minutes':60,
+        'watchdog_interval_minutes':5,
+        'upstream_failure_forces_repair':True,
         'desktop_mobile_sync':True,
         'desktop_mobile_shared_version':version_stamp,
         'desktop_mobile_source':'電腦版與手機版共用同一次正式運算、同一結果檔與同一組分頁',
         'official_draw_time':draw_at.isoformat(timespec='minutes'),
         'sync_completed_at':sync_completed_at,
         'sync_delay_minutes':sync_delay,
-        'two_hour_repair_deadline':repair_deadline.isoformat(timespec='minutes'),
-        'two_hour_deadline_met':datetime.fromisoformat(sync_completed_at)<=repair_deadline,
+        'one_hour_repair_deadline':repair_deadline.isoformat(timespec='minutes'),
+        'one_hour_deadline_met':datetime.fromisoformat(sync_completed_at)<=repair_deadline,
         'self_repair_status':'本次自修完成' if repair_run else '雲端待命',
         'self_repair_count':repair_count,
         'last_self_repair_at':checked_at.isoformat(timespec='seconds') if repair_run else previous_health.get('last_self_repair_at'),
@@ -538,6 +542,8 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
         'single_supermodel_candidate':(current.get('single_supermodel') or {}).get('candidate'),
         'single_supermodel_release_gate':bool((current.get('single_supermodel') or {}).get('release_gate_passed')),
         'single_supermodel_walk_forward':(current.get('single_supermodel') or {}).get('walk_forward'),
+        'single_global_fusion':(current.get('single_supermodel') or {}).get('global_fusion'),
+        'single_statistical_validation':(current.get('single_supermodel') or {}).get('statistical_validation'),
         'single_edge_verified':bool((current.get('backtest') or {}).get('single_release_allowed')),
         'ranking_direction_valid':direction_ok,
         'top1_hits':backtest.get('single_hits'),'bottom1_hits':backtest.get('bottom1_hits'),

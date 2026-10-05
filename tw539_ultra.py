@@ -274,6 +274,13 @@ SINGLE_SUPER_GLOBAL_BLENDS = (.05,.10,.20,.35,.50)
 SINGLE_SUPER_SELECTION_SPANS = (720,360,240,120,54)
 SINGLE_SUPER_HOLDOUT_BLOCK = 120
 SINGLE_SUPER_HOLDOUT_BLOCKS = 6
+SINGLE_FUSION_SELECTION_SPANS = (1440,720,360,240,120,54)
+SINGLE_FUSION_FREQUENCY_WINDOWS = (60,90,120,180,240,360,540,720,1200)
+SINGLE_FUSION_FREQUENCY_BLENDS = (0.0,.10,.25,.50,.75)
+SINGLE_FUSION_EWMA_HALF_LIVES = (15,30,60,120,240,480,960)
+SINGLE_FUSION_EWMA_BLENDS = (0.0,.10,.25,.50)
+SINGLE_FUSION_MIN_ACCEPTED_MODELS = 24
+SINGLE_FUSION_MIN_FAMILY_SUPPORT = 2
 STABILITY_CHAMPION_ANCHOR = {
     "full_frequency_balance": 1/30,
     "full_transition_correction": 8/30,
@@ -1783,6 +1790,198 @@ def build_number_diagnostics(ranked: list[int], score: dict[int, float], raw_sco
     return result
 
 
+def build_global_single_fusion_audit(draws: list[dict], count_prefix: list[list[int]],
+                                     primary_candidate: int) -> dict:
+    """多家族單碼稽核；所有模型均只用預測點以前資料，失穩家族自動淘汰。"""
+    total_draws=len(draws)
+    universe=range(1,40)
+    models=[]
+
+    def top_number(values: list[float], seed: str) -> int:
+        best=max(values[1:])
+        tied=[number for number in universe if abs(values[number]-best)<=1e-15]
+        if len(tied)==1:
+            return tied[0]
+        return max(tied,key=lambda number:hashlib.sha256(f"{seed}:{number}".encode()).hexdigest())
+
+    def register(family: str, label: str, picks: list[int]) -> None:
+        hit_prefix=[0]
+        for index in range(1,total_draws):
+            hit_prefix.append(hit_prefix[-1]+int(picks[index] in set(draws[index]["nums"])))
+        models.append({"family":family,"label":label,"picks":picks,"hit_prefix":hit_prefix})
+
+    for window in SINGLE_FUSION_FREQUENCY_WINDOWS:
+        for blend in SINGLE_FUSION_FREQUENCY_BLENDS:
+            picks=[0]*(total_draws+1)
+            for index in range(1,total_draws+1):
+                width=min(window,index)
+                values=[0.0]*40
+                for number in universe:
+                    values[number]=((1-blend)*(count_prefix[index][number]-count_prefix[index-width][number])/width
+                                    +blend*count_prefix[index][number]/index)
+                picks[index]=top_number(values,f"頻率:{window}:{blend}:{draws[index-1]['period']}")
+            register("多時間窗頻率",f"{window}期與全歷史混合{blend:.2f}",picks)
+
+    for half_life in SINGLE_FUSION_EWMA_HALF_LIVES:
+        alpha=math.exp(math.log(.5)/half_life)
+        states=[];state=[0.0]*40
+        for index in range(total_draws+1):
+            if index:
+                for number in universe:
+                    state[number]*=alpha
+                for number in draws[index-1]["nums"]:
+                    state[number]+=1.0
+            states.append(state[:])
+        for blend in SINGLE_FUSION_EWMA_BLENDS:
+            picks=[0]*(total_draws+1)
+            for index in range(1,total_draws+1):
+                values=[0.0]*40
+                for number in universe:
+                    values[number]=(1-blend)*states[index][number]+blend*count_prefix[index][number]/index
+                picks[index]=top_number(values,f"衰減:{half_life}:{blend}:{draws[index-1]['period']}")
+            register("指數時間衰減",f"半衰期{half_life}期與全歷史混合{blend:.2f}",picks)
+
+    for short_window,long_window in ((15,60),(30,120),(60,240),(90,360),(120,720)):
+        for polarity in (1,-1):
+            for blend in (.10,.35):
+                picks=[0]*(total_draws+1)
+                for index in range(1,total_draws+1):
+                    short_width=min(short_window,index);long_width=min(long_window,index)
+                    values=[0.0]*40
+                    for number in universe:
+                        short_rate=(count_prefix[index][number]-count_prefix[index-short_width][number])/short_width
+                        long_rate=(count_prefix[index][number]-count_prefix[index-long_width][number])/long_width
+                        values[number]=polarity*(short_rate-long_rate)+blend*count_prefix[index][number]/index
+                    picks[index]=top_number(values,f"趨勢:{short_window}:{long_window}:{polarity}:{blend}:{draws[index-1]['period']}")
+                register("動量與反轉",f"{short_window}對{long_window}期方向{polarity}混合{blend:.2f}",picks)
+
+    gap_parameters=[(polarity,blend) for polarity in (1,-1) for blend in (0.0,.10,.35)]
+    gap_picks=[[0]*(total_draws+1) for _ in gap_parameters]
+    last_seen=[-1]*40;gap_sum=[0.0]*40;gap_count=[0]*40
+    for index in range(1,total_draws+1):
+        for number in draws[index-1]["nums"]:
+            if last_seen[number]>=0:
+                gap_sum[number]+=index-1-last_seen[number];gap_count[number]+=1
+            last_seen[number]=index-1
+        base=[0.0]*40
+        for number in universe:
+            current_gap=index-last_seen[number]
+            mean_gap=gap_sum[number]/gap_count[number] if gap_count[number] else 39/5
+            base[number]=math.log1p(current_gap/max(.1,mean_gap))
+        for parameter_index,(polarity,blend) in enumerate(gap_parameters):
+            values=[0.0]*40
+            for number in universe:
+                values[number]=polarity*base[number]+blend*count_prefix[index][number]/index
+            gap_picks[parameter_index][index]=top_number(values,f"間隔:{polarity}:{blend}:{draws[index-1]['period']}")
+    for parameter_index,(polarity,blend) in enumerate(gap_parameters):
+        register("間隔風險",f"方向{polarity}與全歷史混合{blend:.2f}",gap_picks[parameter_index])
+
+    transition_parameters=[(polarity,blend) for polarity in (1,-1) for blend in (0.0,.10,.35)]
+    transition_picks=[[0]*(total_draws+1) for _ in transition_parameters]
+    transition=[[0]*40 for _ in range(40)];exposure=[0]*40
+    for index in range(1,total_draws+1):
+        if index>=2:
+            for source in draws[index-2]["nums"]:
+                exposure[source]+=1
+                for destination in draws[index-1]["nums"]:
+                    transition[source][destination]+=1
+        last=draws[index-1]["nums"]
+        base=[0.0]*40
+        for number in universe:
+            base[number]=sum((transition[source][number]+1)/(exposure[source]+39) for source in last)
+        for parameter_index,(polarity,blend) in enumerate(transition_parameters):
+            values=[0.0]*40
+            for number in universe:
+                values[number]=polarity*base[number]+blend*count_prefix[index][number]/index
+            transition_picks[parameter_index][index]=top_number(values,f"轉移:{polarity}:{blend}:{draws[index-1]['period']}")
+    for parameter_index,(polarity,blend) in enumerate(transition_parameters):
+        register("前期條件轉移",f"方向{polarity}與全歷史混合{blend:.2f}",transition_picks[parameter_index])
+
+    weekday_parameters=[(polarity,blend) for polarity in (1,-1) for blend in (0.0,.10,.35)]
+    weekday_picks=[[0]*(total_draws+1) for _ in weekday_parameters]
+    weekday_counts=[[0]*40 for _ in range(7)];weekday_total=[0]*7
+    target=datetime.strptime(draws[-1]["date"],"%Y-%m-%d").date()+timedelta(days=1)
+    while target.weekday()==6:
+        target+=timedelta(days=1)
+    for index in range(1,total_draws+1):
+        previous_weekday=datetime.strptime(draws[index-1]["date"],"%Y-%m-%d").date().weekday()
+        weekday_total[previous_weekday]+=1
+        for number in draws[index-1]["nums"]:
+            weekday_counts[previous_weekday][number]+=1
+        target_weekday=(datetime.strptime(draws[index]["date"],"%Y-%m-%d").date().weekday()
+                        if index<total_draws else target.weekday())
+        base=[0.0]*40
+        for number in universe:
+            base[number]=(weekday_counts[target_weekday][number]+1)/(weekday_total[target_weekday]+39)
+        for parameter_index,(polarity,blend) in enumerate(weekday_parameters):
+            values=[0.0]*40
+            for number in universe:
+                values[number]=polarity*base[number]+blend*count_prefix[index][number]/index
+            weekday_picks[parameter_index][index]=top_number(values,f"開獎日:{polarity}:{blend}:{draws[index-1]['period']}")
+    for parameter_index,(polarity,blend) in enumerate(weekday_parameters):
+        register("開獎日條件",f"方向{polarity}與全歷史混合{blend:.2f}",weekday_picks[parameter_index])
+
+    def evidence(model: dict) -> list[dict]:
+        rows=[]
+        for span in SINGLE_FUSION_SELECTION_SPANS:
+            actual_span=min(span,total_draws-1)
+            hits=(model["hit_prefix"][total_draws-1]
+                  -model["hit_prefix"][total_draws-1-actual_span])
+            expected=actual_span*5/39
+            z=(hits-expected)/math.sqrt(max(1e-12,actual_span*(5/39)*(34/39)))
+            rows.append({"span":actual_span,"hits":hits,"expected":round(expected,6),
+                         "standardized_excess":round(z,9)})
+        return rows
+
+    family_rows=defaultdict(list);accepted=[]
+    for model_index,model in enumerate(models):
+        rows=evidence(model);robust=min(row["standardized_excess"] for row in rows)
+        mean_z=sum(row["standardized_excess"] for row in rows)/len(rows)
+        item={"model_index":model_index,"family":model["family"],"label":model["label"],
+              "candidate":model["picks"][total_draws],"robust_score":round(robust,9),
+              "mean_score":round(mean_z,9),"selection_evidence":rows}
+        family_rows[model["family"]].append(item)
+        if robust>0:
+            accepted.append(item)
+    family_champions=[]
+    for family,rows in family_rows.items():
+        champion=max(rows,key=lambda item:(item["robust_score"],item["mean_score"],-item["model_index"]))
+        family_champions.append(champion)
+    family_champions.sort(key=lambda item:(item["robust_score"],item["mean_score"]),reverse=True)
+    vote_rows=[]
+    for candidate in sorted({item["candidate"] for item in accepted}):
+        supporters=[item for item in accepted if item["candidate"]==candidate]
+        vote_rows.append({"candidate":candidate,"accepted_model_votes":len(supporters),
+                          "family_support":len({item["family"] for item in supporters}),
+                          "robust_score_sum":round(sum(item["robust_score"] for item in supporters),9)})
+    vote_rows.sort(key=lambda item:(item["accepted_model_votes"],item["family_support"],
+                                    item["robust_score_sum"],-item["candidate"]),reverse=True)
+    fusion_candidate=vote_rows[0]["candidate"] if vote_rows else None
+    candidate_row=next((item for item in vote_rows if item["candidate"]==primary_candidate),{})
+    positive_family_champions=sum(item["robust_score"]>0 for item in family_champions)
+    gate_conditions={
+        "六類全球方法完成隔離驗證":len(family_rows)==6,
+        "至少二十四組模型跨全部區段高於隨機":len(accepted)>=SINGLE_FUSION_MIN_ACCEPTED_MODELS,
+        "融合最高票與主模型同碼":fusion_candidate==primary_candidate,
+        "至少兩個獨立家族共同支持主碼":candidate_row.get("family_support",0)>=SINGLE_FUSION_MIN_FAMILY_SUPPORT,
+        "至少三個家族冠軍跨區段保持正向":positive_family_champions>=3,
+    }
+    return {
+        "policy":"全球六家族逐期前推融合第二版","module_count":len(models),
+        "family_count":len(family_rows),"selection_spans":list(SINGLE_FUSION_SELECTION_SPANS),
+        "accepted_module_count":len(accepted),"acceptance_rule":"六個檢驗區段標準化超額命中均大於零",
+        "family_champions":[{key:value for key,value in item.items() if key!="model_index"}
+                            for item in family_champions],
+        "accepted_vote_table":vote_rows,"fusion_candidate":fusion_candidate,
+        "primary_candidate":primary_candidate,"primary_candidate_support":candidate_row,
+        "rejected_families":[item["family"] for item in family_champions if item["robust_score"]<=0],
+        "methods":["多時間窗頻率","指數時間衰減","動量與反轉","間隔風險","前期條件轉移","開獎日條件"],
+        "validation":["全歷史擴展訓練","逐期前推驗證","多區段最弱表現守門","模型家族分離驗證","隨機基準比較"],
+        "gate_conditions":gate_conditions,"release_gate_passed":all(gate_conditions.values()),
+        "no_future_data":True,"zero_error_certified":False,
+    }
+
+
 def build_single_supermodel(draws: list[dict]) -> dict:
     """全歷史基準與多時間窗頻率的單碼專家；參數只用預測點以前成績選擇。"""
     total_draws=len(draws)
@@ -1881,6 +2080,30 @@ def build_single_supermodel(draws: list[dict]) -> dict:
         }
         if rank_numbers(scores,draws[-1]["period"])[0]==candidate:
             candidate_consensus.append({"window":candidate_window,"global_history_blend":candidate_blend})
+    global_fusion=build_global_single_fusion_audit(draws,count_prefix,candidate)
+    observed_hits=walk_forward["full"]["single_hits"];samples=len(walk_rows)
+    predicted=[item["ranked"][0] for item in walk_rows]
+    actual_sets=[item["actual"] for item in walk_rows]
+    shifted_hits=[sum(predicted[index] in actual_sets[(index+shift)%samples] for index in range(samples))
+                  for shift in range(1,samples)]
+    permutation_p=(1+sum(hits>=observed_hits for hits in shifted_hits))/(1+len(shifted_hits))
+    random_probability=5/39
+    binomial_p=sum(math.comb(samples,hits)*random_probability**hits*(1-random_probability)**(samples-hits)
+                   for hits in range(observed_hits,samples+1))
+    observed_rate=observed_hits/samples;z_value=1.95996398454
+    denominator=1+z_value*z_value/samples
+    center=(observed_rate+z_value*z_value/(2*samples))/denominator
+    radius=(z_value*math.sqrt(observed_rate*(1-observed_rate)/samples+z_value*z_value/(4*samples*samples))
+            /denominator)
+    statistical_validation={
+        "observed_hits":observed_hits,"samples":samples,"observed_rate":round(observed_rate,9),
+        "random_rate":round(random_probability,9),"exact_binomial_upper_tail_p":round(binomial_p,9),
+        "circular_shift_tests":len(shifted_hits),"circular_shift_mean_hits":round(sum(shifted_hits)/len(shifted_hits),6),
+        "circular_shift_p":round(permutation_p,9),
+        "wilson_95_lower":round(center-radius,9),"wilson_95_upper":round(center+radius,9),
+        "strict_five_percent_significance":binomial_p<=.05 and permutation_p<=.05,
+        "candidate_level_ten_percent_significance":binomial_p<=.10 and permutation_p<=.10,
+    }
     gate_conditions={
         "七百二十期逐段隔離高於隨機":walk_forward["full"]["single_hits"]>walk_forward["full"]["random_expected_hits"],
         "最近三百六十期高於隨機":walk_forward["recent_360"]["single_hits"]>walk_forward["recent_360"]["random_expected_hits"],
@@ -1889,9 +2112,12 @@ def build_single_supermodel(draws: list[dict]) -> dict:
         "最近五十四期不低於隨機":walk_forward["recent_54"]["single_hits"]>=math.ceil(walk_forward["recent_54"]["random_expected_hits"]),
         "至少十二組參數同選一碼":len(candidate_consensus)>=12,
         "至少四種時間窗同選一碼":len({item["window"] for item in candidate_consensus})>=4,
+        "全球六家族融合驗證通過":bool(global_fusion.get("release_gate_passed")),
+        "兩種隨機基準已完成且不得隱藏":bool(statistical_validation["circular_shift_tests"]>=719
+                                            and statistical_validation["exact_binomial_upper_tail_p"]>=0),
     }
     return {
-        "policy":"all_history_multi_horizon_single_v1","candidate":candidate,
+        "policy":"全歷史多時間窗與全球六家族融合第三版","candidate":candidate,
         "candidate_ranked":current_ranked,"current_score":{str(number):round(value,12) for number,value in current_score.items()},
         "selected_window":window,"selected_global_history_blend":global_blend,
         "recent_history_blend":round(1-global_blend,6),"full_history_draws":total_draws,
@@ -1900,9 +2126,10 @@ def build_single_supermodel(draws: list[dict]) -> dict:
         "candidate_full_samples":total_draws,"candidate_consensus":candidate_consensus,
         "candidate_consensus_count":len(candidate_consensus),"current_selection":current_selection,
         "parameter_count":len(parameters),"selection_spans":list(SINGLE_SUPER_SELECTION_SPANS),
-        "walk_forward":walk_forward,"gate_conditions":gate_conditions,
+        "walk_forward":walk_forward,"global_fusion":global_fusion,
+        "statistical_validation":statistical_validation,"gate_conditions":gate_conditions,
         "release_gate_passed":all(gate_conditions.values()),
-        "no_post_draw_substitution":True,"uses_all_history":True,
+        "no_post_draw_substitution":True,"uses_all_history":True,"zero_error_certified":False,
     }
 
 
@@ -2505,11 +2732,13 @@ def main() -> None:
         "single_selection_evidence": single_supermodel,
         "single_explanation": {
             "label":"本期超級獨支","candidate":single_supermodel.get("candidate"),"unique":True,
-            "method":"全歷史基準與多時間窗單碼專家逐段隔離競賽",
+            "method":"全歷史基準、多時間窗單碼專家與全球六家族融合逐段隔離競賽",
             "selected_window":single_supermodel.get("selected_window"),
             "selected_global_history_blend":single_supermodel.get("selected_global_history_blend"),
             "full_history_draws":single_supermodel.get("full_history_draws"),
             "walk_forward":single_supermodel.get("walk_forward"),
+            "global_fusion":single_supermodel.get("global_fusion"),
+            "statistical_validation":single_supermodel.get("statistical_validation"),
             "gate_conditions":single_supermodel.get("gate_conditions"),
             "derived_from_pre_draw_seal":True,
         },

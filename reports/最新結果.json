@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-10-05T11:06:47+08:00",
+  "generated_at": "2026-10-05T15:43:34+08:00",
   "based_on_period": "115000240",
   "target_draw_date": "2026-10-05",
-  "recalculation_fingerprint": "cee96933e4e066f4",
+  "recalculation_fingerprint": "cc69f58fdd060ed0",
   "pre_draw_seal": {
     "algorithm": "sha256",
-    "sha256": "cee96933e4e066f4c0710869054a17e20462a1c1aaa7ff39005c47f93b77c77d",
+    "sha256": "cc69f58fdd060ed02dccc334023618d4a42a857b1ab02fd2baa735ebfb9f2f5c",
     "sealed_payload": {
       "based_on_period": "115000240",
       "target_draw_date": "2026-10-05",
@@ -2389,7 +2389,7 @@
         ]
       },
       "single_supermodel": {
-        "policy": "all_history_multi_horizon_single_v1",
+        "policy": "全歷史多時間窗與全球六家族融合第三版",
         "candidate": 8,
         "candidate_ranked": [
           8,
@@ -2945,6 +2945,365 @@
             }
           ]
         },
+        "global_fusion": {
+          "policy": "全球六家族逐期前推融合第二版",
+          "module_count": 111,
+          "family_count": 6,
+          "selection_spans": [
+            1440,
+            720,
+            360,
+            240,
+            120,
+            54
+          ],
+          "accepted_module_count": 32,
+          "acceptance_rule": "六個檢驗區段標準化超額命中均大於零",
+          "family_champions": [
+            {
+              "family": "多時間窗頻率",
+              "label": "540期與全歷史混合0.00",
+              "candidate": 8,
+              "robust_score": 0.976205891,
+              "mean_score": 1.556201131,
+              "selection_evidence": [
+                {
+                  "span": 1440,
+                  "hits": 197,
+                  "expected": 184.615385,
+                  "standardized_excess": 0.976205891
+                },
+                {
+                  "span": 720,
+                  "hits": 102,
+                  "expected": 92.307692,
+                  "standardized_excess": 1.080441086
+                },
+                {
+                  "span": 360,
+                  "hits": 53,
+                  "expected": 46.153846,
+                  "standardized_excess": 1.079283531
+                },
+                {
+                  "span": 240,
+                  "hits": 40,
+                  "expected": 30.769231,
+                  "standardized_excess": 1.782265577
+                },
+                {
+                  "span": 120,
+                  "hits": 24,
+                  "expected": 15.384615,
+                  "standardized_excess": 2.352470541
+                },
+                {
+                  "span": 54,
+                  "hits": 12,
+                  "expected": 6.923077,
+                  "standardized_excess": 2.066540161
+                }
+              ]
+            },
+            {
+              "family": "指數時間衰減",
+              "label": "半衰期60期與全歷史混合0.00",
+              "candidate": 8,
+              "robust_score": 0.845402793,
+              "mean_score": 1.460117304,
+              "selection_evidence": [
+                {
+                  "span": 1440,
+                  "hits": 198,
+                  "expected": 184.615385,
+                  "standardized_excess": 1.055029969
+                },
+                {
+                  "span": 720,
+                  "hits": 106,
+                  "expected": 92.307692,
+                  "standardized_excess": 1.526337408
+                },
+                {
+                  "span": 360,
+                  "hits": 56,
+                  "expected": 46.153846,
+                  "standardized_excess": 1.552228
+                },
+                {
+                  "span": 240,
+                  "hits": 41,
+                  "expected": 30.769231,
+                  "standardized_excess": 1.975344348
+                },
+                {
+                  "span": 120,
+                  "hits": 22,
+                  "expected": 15.384615,
+                  "standardized_excess": 1.806361308
+                },
+                {
+                  "span": 54,
+                  "hits": 9,
+                  "expected": 6.923077,
+                  "standardized_excess": 0.845402793
+                }
+              ]
+            },
+            {
+              "family": "動量與反轉",
+              "label": "15對60期方向1混合0.10",
+              "candidate": 30,
+              "robust_score": 0.523070685,
+              "mean_score": 0.999596405,
+              "selection_evidence": [
+                {
+                  "span": 1440,
+                  "hits": 197,
+                  "expected": 184.615385,
+                  "standardized_excess": 0.976205891
+                },
+                {
+                  "span": 720,
+                  "hits": 97,
+                  "expected": 92.307692,
+                  "standardized_excess": 0.523070685
+                },
+                {
+                  "span": 360,
+                  "hits": 52,
+                  "expected": 46.153846,
+                  "standardized_excess": 0.921635375
+                },
+                {
+                  "span": 240,
+                  "hits": 37,
+                  "expected": 30.769231,
+                  "standardized_excess": 1.203029265
+                },
+                {
+                  "span": 120,
+                  "hits": 18,
+                  "expected": 15.384615,
+                  "standardized_excess": 0.714142843
+                },
+                {
+                  "span": 54,
+                  "hits": 11,
+                  "expected": 6.923077,
+                  "standardized_excess": 1.659494371
+                }
+              ]
+            },
+            {
+              "family": "開獎日條件",
+              "label": "方向-1與全歷史混合0.10",
+              "candidate": 21,
+              "robust_score": -0.341600902,
+              "mean_score": -0.014344412,
+              "selection_evidence": [
+                {
+                  "span": 1440,
+                  "hits": 183,
+                  "expected": 184.615385,
+                  "standardized_excess": -0.127331203
+                },
+                {
+                  "span": 720,
+                  "hits": 97,
+                  "expected": 92.307692,
+                  "standardized_excess": 0.523070685
+                },
+                {
+                  "span": 360,
+                  "hits": 44,
+                  "expected": 46.153846,
+                  "standardized_excess": -0.339549875
+                },
+                {
+                  "span": 240,
+                  "hits": 29,
+                  "expected": 30.769231,
+                  "standardized_excess": -0.341600902
+                },
+                {
+                  "span": 120,
+                  "hits": 16,
+                  "expected": 15.384615,
+                  "standardized_excess": 0.16803361
+                },
+                {
+                  "span": 54,
+                  "hits": 7,
+                  "expected": 6.923077,
+                  "standardized_excess": 0.031311215
+                }
+              ]
+            },
+            {
+              "family": "間隔風險",
+              "label": "方向-1與全歷史混合0.35",
+              "candidate": 33,
+              "robust_score": -0.375734575,
+              "mean_score": 0.554382287,
+              "selection_evidence": [
+                {
+                  "span": 1440,
+                  "hits": 200,
+                  "expected": 184.615385,
+                  "standardized_excess": 1.212678125
+                },
+                {
+                  "span": 720,
+                  "hits": 101,
+                  "expected": 92.307692,
+                  "standardized_excess": 0.968967006
+                },
+                {
+                  "span": 360,
+                  "hits": 52,
+                  "expected": 46.153846,
+                  "standardized_excess": 0.921635375
+                },
+                {
+                  "span": 240,
+                  "hits": 33,
+                  "expected": 30.769231,
+                  "standardized_excess": 0.430714181
+                },
+                {
+                  "span": 120,
+                  "hits": 16,
+                  "expected": 15.384615,
+                  "standardized_excess": 0.16803361
+                },
+                {
+                  "span": 54,
+                  "hits": 6,
+                  "expected": 6.923077,
+                  "standardized_excess": -0.375734575
+                }
+              ]
+            },
+            {
+              "family": "前期條件轉移",
+              "label": "方向1與全歷史混合0.00",
+              "candidate": 37,
+              "robust_score": -2.152307244,
+              "mean_score": -1.190891358,
+              "selection_evidence": [
+                {
+                  "span": 1440,
+                  "hits": 180,
+                  "expected": 184.615385,
+                  "standardized_excess": -0.363803438
+                },
+                {
+                  "span": 720,
+                  "hits": 73,
+                  "expected": 92.307692,
+                  "standardized_excess": -2.152307244
+                },
+                {
+                  "span": 360,
+                  "hits": 37,
+                  "expected": 46.153846,
+                  "standardized_excess": -1.443086969
+                },
+                {
+                  "span": 240,
+                  "hits": 21,
+                  "expected": 30.769231,
+                  "standardized_excess": -1.886231069
+                },
+                {
+                  "span": 120,
+                  "hits": 12,
+                  "expected": 15.384615,
+                  "standardized_excess": -0.924184855
+                },
+                {
+                  "span": 54,
+                  "hits": 6,
+                  "expected": 6.923077,
+                  "standardized_excess": -0.375734575
+                }
+              ]
+            }
+          ],
+          "accepted_vote_table": [
+            {
+              "candidate": 8,
+              "accepted_model_votes": 14,
+              "family_support": 2,
+              "robust_score_sum": 5.931498324
+            },
+            {
+              "candidate": 12,
+              "accepted_model_votes": 10,
+              "family_support": 2,
+              "robust_score_sum": 1.295746159
+            },
+            {
+              "candidate": 30,
+              "accepted_model_votes": 8,
+              "family_support": 2,
+              "robust_score_sum": 4.404107526
+            }
+          ],
+          "fusion_candidate": 8,
+          "primary_candidate": 8,
+          "primary_candidate_support": {
+            "candidate": 8,
+            "accepted_model_votes": 14,
+            "family_support": 2,
+            "robust_score_sum": 5.931498324
+          },
+          "rejected_families": [
+            "開獎日條件",
+            "間隔風險",
+            "前期條件轉移"
+          ],
+          "methods": [
+            "多時間窗頻率",
+            "指數時間衰減",
+            "動量與反轉",
+            "間隔風險",
+            "前期條件轉移",
+            "開獎日條件"
+          ],
+          "validation": [
+            "全歷史擴展訓練",
+            "逐期前推驗證",
+            "多區段最弱表現守門",
+            "模型家族分離驗證",
+            "隨機基準比較"
+          ],
+          "gate_conditions": {
+            "六類全球方法完成隔離驗證": true,
+            "至少二十四組模型跨全部區段高於隨機": true,
+            "融合最高票與主模型同碼": true,
+            "至少兩個獨立家族共同支持主碼": true,
+            "至少三個家族冠軍跨區段保持正向": true
+          },
+          "release_gate_passed": true,
+          "no_future_data": true,
+          "zero_error_certified": false
+        },
+        "statistical_validation": {
+          "observed_hits": 107,
+          "samples": 720,
+          "observed_rate": 0.148611111,
+          "random_rate": 0.128205128,
+          "exact_binomial_upper_tail_p": 0.05902206,
+          "circular_shift_tests": 719,
+          "circular_shift_mean_hits": 99.446453,
+          "circular_shift_p": 0.2125,
+          "wilson_95_lower": 0.124496034,
+          "wilson_95_upper": 0.176455861,
+          "strict_five_percent_significance": false,
+          "candidate_level_ten_percent_significance": false
+        },
         "gate_conditions": {
           "七百二十期逐段隔離高於隨機": true,
           "最近三百六十期高於隨機": true,
@@ -2952,11 +3311,14 @@
           "最近一百二十期高於隨機": true,
           "最近五十四期不低於隨機": true,
           "至少十二組參數同選一碼": true,
-          "至少四種時間窗同選一碼": true
+          "至少四種時間窗同選一碼": true,
+          "全球六家族融合驗證通過": true,
+          "兩種隨機基準已完成且不得隱藏": true
         },
         "release_gate_passed": true,
         "no_post_draw_substitution": true,
-        "uses_all_history": true
+        "uses_all_history": true,
+        "zero_error_certified": false
       }
     },
     "no_post_draw_substitution": true
@@ -15446,10 +15808,10 @@
     "direct_hit_full_rank_blend": 0.35,
     "direct_hit_full_rank_gate": false,
     "direct_hit_weights": {
-      "full_frequency_balance": 0.41916678781799216,
-      "full_transition_correction": 0.3574861331844341,
-      "full_signature_correction": -0.05853360692741005,
-      "full_overdue_correction": 0.16481347207016372
+      "full_frequency_balance": 0.41916678781799205,
+      "full_transition_correction": 0.35748613318443406,
+      "full_signature_correction": -0.058533606927410047,
+      "full_overdue_correction": 0.16481347207016386
     },
     "data_change_enabled": true,
     "data_change_window": 720,
@@ -15458,14 +15820,14 @@
     "data_change_preserve_front": 5,
     "data_change_gate": false,
     "data_change_weights": [
-      0.1997234567423397,
-      0.27453644569346214,
-      -0.06204161420343401,
-      0.06507487523700074,
-      0.014812425226436096,
-      0.21438071306918596,
-      0.15425109639141046,
-      -0.015179373436730818
+      0.19972345674233968,
+      0.2745364456934621,
+      -0.062041614203433994,
+      0.06507487523700078,
+      0.014812425226436093,
+      0.21438071306918594,
+      0.15425109639141044,
+      -0.01517937343673097
     ],
     "selected_next_strategy": {
       "method": "five_member_signed_weight_consensus",
@@ -16384,7 +16746,7 @@
     }
   ],
   "single_supermodel": {
-    "policy": "all_history_multi_horizon_single_v1",
+    "policy": "全歷史多時間窗與全球六家族融合第三版",
     "candidate": 8,
     "candidate_ranked": [
       8,
@@ -16940,6 +17302,365 @@
         }
       ]
     },
+    "global_fusion": {
+      "policy": "全球六家族逐期前推融合第二版",
+      "module_count": 111,
+      "family_count": 6,
+      "selection_spans": [
+        1440,
+        720,
+        360,
+        240,
+        120,
+        54
+      ],
+      "accepted_module_count": 32,
+      "acceptance_rule": "六個檢驗區段標準化超額命中均大於零",
+      "family_champions": [
+        {
+          "family": "多時間窗頻率",
+          "label": "540期與全歷史混合0.00",
+          "candidate": 8,
+          "robust_score": 0.976205891,
+          "mean_score": 1.556201131,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 197,
+              "expected": 184.615385,
+              "standardized_excess": 0.976205891
+            },
+            {
+              "span": 720,
+              "hits": 102,
+              "expected": 92.307692,
+              "standardized_excess": 1.080441086
+            },
+            {
+              "span": 360,
+              "hits": 53,
+              "expected": 46.153846,
+              "standardized_excess": 1.079283531
+            },
+            {
+              "span": 240,
+              "hits": 40,
+              "expected": 30.769231,
+              "standardized_excess": 1.782265577
+            },
+            {
+              "span": 120,
+              "hits": 24,
+              "expected": 15.384615,
+              "standardized_excess": 2.352470541
+            },
+            {
+              "span": 54,
+              "hits": 12,
+              "expected": 6.923077,
+              "standardized_excess": 2.066540161
+            }
+          ]
+        },
+        {
+          "family": "指數時間衰減",
+          "label": "半衰期60期與全歷史混合0.00",
+          "candidate": 8,
+          "robust_score": 0.845402793,
+          "mean_score": 1.460117304,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 198,
+              "expected": 184.615385,
+              "standardized_excess": 1.055029969
+            },
+            {
+              "span": 720,
+              "hits": 106,
+              "expected": 92.307692,
+              "standardized_excess": 1.526337408
+            },
+            {
+              "span": 360,
+              "hits": 56,
+              "expected": 46.153846,
+              "standardized_excess": 1.552228
+            },
+            {
+              "span": 240,
+              "hits": 41,
+              "expected": 30.769231,
+              "standardized_excess": 1.975344348
+            },
+            {
+              "span": 120,
+              "hits": 22,
+              "expected": 15.384615,
+              "standardized_excess": 1.806361308
+            },
+            {
+              "span": 54,
+              "hits": 9,
+              "expected": 6.923077,
+              "standardized_excess": 0.845402793
+            }
+          ]
+        },
+        {
+          "family": "動量與反轉",
+          "label": "15對60期方向1混合0.10",
+          "candidate": 30,
+          "robust_score": 0.523070685,
+          "mean_score": 0.999596405,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 197,
+              "expected": 184.615385,
+              "standardized_excess": 0.976205891
+            },
+            {
+              "span": 720,
+              "hits": 97,
+              "expected": 92.307692,
+              "standardized_excess": 0.523070685
+            },
+            {
+              "span": 360,
+              "hits": 52,
+              "expected": 46.153846,
+              "standardized_excess": 0.921635375
+            },
+            {
+              "span": 240,
+              "hits": 37,
+              "expected": 30.769231,
+              "standardized_excess": 1.203029265
+            },
+            {
+              "span": 120,
+              "hits": 18,
+              "expected": 15.384615,
+              "standardized_excess": 0.714142843
+            },
+            {
+              "span": 54,
+              "hits": 11,
+              "expected": 6.923077,
+              "standardized_excess": 1.659494371
+            }
+          ]
+        },
+        {
+          "family": "開獎日條件",
+          "label": "方向-1與全歷史混合0.10",
+          "candidate": 21,
+          "robust_score": -0.341600902,
+          "mean_score": -0.014344412,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 183,
+              "expected": 184.615385,
+              "standardized_excess": -0.127331203
+            },
+            {
+              "span": 720,
+              "hits": 97,
+              "expected": 92.307692,
+              "standardized_excess": 0.523070685
+            },
+            {
+              "span": 360,
+              "hits": 44,
+              "expected": 46.153846,
+              "standardized_excess": -0.339549875
+            },
+            {
+              "span": 240,
+              "hits": 29,
+              "expected": 30.769231,
+              "standardized_excess": -0.341600902
+            },
+            {
+              "span": 120,
+              "hits": 16,
+              "expected": 15.384615,
+              "standardized_excess": 0.16803361
+            },
+            {
+              "span": 54,
+              "hits": 7,
+              "expected": 6.923077,
+              "standardized_excess": 0.031311215
+            }
+          ]
+        },
+        {
+          "family": "間隔風險",
+          "label": "方向-1與全歷史混合0.35",
+          "candidate": 33,
+          "robust_score": -0.375734575,
+          "mean_score": 0.554382287,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 200,
+              "expected": 184.615385,
+              "standardized_excess": 1.212678125
+            },
+            {
+              "span": 720,
+              "hits": 101,
+              "expected": 92.307692,
+              "standardized_excess": 0.968967006
+            },
+            {
+              "span": 360,
+              "hits": 52,
+              "expected": 46.153846,
+              "standardized_excess": 0.921635375
+            },
+            {
+              "span": 240,
+              "hits": 33,
+              "expected": 30.769231,
+              "standardized_excess": 0.430714181
+            },
+            {
+              "span": 120,
+              "hits": 16,
+              "expected": 15.384615,
+              "standardized_excess": 0.16803361
+            },
+            {
+              "span": 54,
+              "hits": 6,
+              "expected": 6.923077,
+              "standardized_excess": -0.375734575
+            }
+          ]
+        },
+        {
+          "family": "前期條件轉移",
+          "label": "方向1與全歷史混合0.00",
+          "candidate": 37,
+          "robust_score": -2.152307244,
+          "mean_score": -1.190891358,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 180,
+              "expected": 184.615385,
+              "standardized_excess": -0.363803438
+            },
+            {
+              "span": 720,
+              "hits": 73,
+              "expected": 92.307692,
+              "standardized_excess": -2.152307244
+            },
+            {
+              "span": 360,
+              "hits": 37,
+              "expected": 46.153846,
+              "standardized_excess": -1.443086969
+            },
+            {
+              "span": 240,
+              "hits": 21,
+              "expected": 30.769231,
+              "standardized_excess": -1.886231069
+            },
+            {
+              "span": 120,
+              "hits": 12,
+              "expected": 15.384615,
+              "standardized_excess": -0.924184855
+            },
+            {
+              "span": 54,
+              "hits": 6,
+              "expected": 6.923077,
+              "standardized_excess": -0.375734575
+            }
+          ]
+        }
+      ],
+      "accepted_vote_table": [
+        {
+          "candidate": 8,
+          "accepted_model_votes": 14,
+          "family_support": 2,
+          "robust_score_sum": 5.931498324
+        },
+        {
+          "candidate": 12,
+          "accepted_model_votes": 10,
+          "family_support": 2,
+          "robust_score_sum": 1.295746159
+        },
+        {
+          "candidate": 30,
+          "accepted_model_votes": 8,
+          "family_support": 2,
+          "robust_score_sum": 4.404107526
+        }
+      ],
+      "fusion_candidate": 8,
+      "primary_candidate": 8,
+      "primary_candidate_support": {
+        "candidate": 8,
+        "accepted_model_votes": 14,
+        "family_support": 2,
+        "robust_score_sum": 5.931498324
+      },
+      "rejected_families": [
+        "開獎日條件",
+        "間隔風險",
+        "前期條件轉移"
+      ],
+      "methods": [
+        "多時間窗頻率",
+        "指數時間衰減",
+        "動量與反轉",
+        "間隔風險",
+        "前期條件轉移",
+        "開獎日條件"
+      ],
+      "validation": [
+        "全歷史擴展訓練",
+        "逐期前推驗證",
+        "多區段最弱表現守門",
+        "模型家族分離驗證",
+        "隨機基準比較"
+      ],
+      "gate_conditions": {
+        "六類全球方法完成隔離驗證": true,
+        "至少二十四組模型跨全部區段高於隨機": true,
+        "融合最高票與主模型同碼": true,
+        "至少兩個獨立家族共同支持主碼": true,
+        "至少三個家族冠軍跨區段保持正向": true
+      },
+      "release_gate_passed": true,
+      "no_future_data": true,
+      "zero_error_certified": false
+    },
+    "statistical_validation": {
+      "observed_hits": 107,
+      "samples": 720,
+      "observed_rate": 0.148611111,
+      "random_rate": 0.128205128,
+      "exact_binomial_upper_tail_p": 0.05902206,
+      "circular_shift_tests": 719,
+      "circular_shift_mean_hits": 99.446453,
+      "circular_shift_p": 0.2125,
+      "wilson_95_lower": 0.124496034,
+      "wilson_95_upper": 0.176455861,
+      "strict_five_percent_significance": false,
+      "candidate_level_ten_percent_significance": false
+    },
     "gate_conditions": {
       "七百二十期逐段隔離高於隨機": true,
       "最近三百六十期高於隨機": true,
@@ -16947,11 +17668,14 @@
       "最近一百二十期高於隨機": true,
       "最近五十四期不低於隨機": true,
       "至少十二組參數同選一碼": true,
-      "至少四種時間窗同選一碼": true
+      "至少四種時間窗同選一碼": true,
+      "全球六家族融合驗證通過": true,
+      "兩種隨機基準已完成且不得隱藏": true
     },
     "release_gate_passed": true,
     "no_post_draw_substitution": true,
-    "uses_all_history": true
+    "uses_all_history": true,
+    "zero_error_certified": false
   },
   "strict_publication_gate": {
     "policy": "strict_no_padding_v1",
@@ -18534,7 +19258,7 @@
     "source": "開獎前逐日封存預測"
   },
   "single_selection_evidence": {
-    "policy": "all_history_multi_horizon_single_v1",
+    "policy": "全歷史多時間窗與全球六家族融合第三版",
     "candidate": 8,
     "candidate_ranked": [
       8,
@@ -19090,6 +19814,365 @@
         }
       ]
     },
+    "global_fusion": {
+      "policy": "全球六家族逐期前推融合第二版",
+      "module_count": 111,
+      "family_count": 6,
+      "selection_spans": [
+        1440,
+        720,
+        360,
+        240,
+        120,
+        54
+      ],
+      "accepted_module_count": 32,
+      "acceptance_rule": "六個檢驗區段標準化超額命中均大於零",
+      "family_champions": [
+        {
+          "family": "多時間窗頻率",
+          "label": "540期與全歷史混合0.00",
+          "candidate": 8,
+          "robust_score": 0.976205891,
+          "mean_score": 1.556201131,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 197,
+              "expected": 184.615385,
+              "standardized_excess": 0.976205891
+            },
+            {
+              "span": 720,
+              "hits": 102,
+              "expected": 92.307692,
+              "standardized_excess": 1.080441086
+            },
+            {
+              "span": 360,
+              "hits": 53,
+              "expected": 46.153846,
+              "standardized_excess": 1.079283531
+            },
+            {
+              "span": 240,
+              "hits": 40,
+              "expected": 30.769231,
+              "standardized_excess": 1.782265577
+            },
+            {
+              "span": 120,
+              "hits": 24,
+              "expected": 15.384615,
+              "standardized_excess": 2.352470541
+            },
+            {
+              "span": 54,
+              "hits": 12,
+              "expected": 6.923077,
+              "standardized_excess": 2.066540161
+            }
+          ]
+        },
+        {
+          "family": "指數時間衰減",
+          "label": "半衰期60期與全歷史混合0.00",
+          "candidate": 8,
+          "robust_score": 0.845402793,
+          "mean_score": 1.460117304,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 198,
+              "expected": 184.615385,
+              "standardized_excess": 1.055029969
+            },
+            {
+              "span": 720,
+              "hits": 106,
+              "expected": 92.307692,
+              "standardized_excess": 1.526337408
+            },
+            {
+              "span": 360,
+              "hits": 56,
+              "expected": 46.153846,
+              "standardized_excess": 1.552228
+            },
+            {
+              "span": 240,
+              "hits": 41,
+              "expected": 30.769231,
+              "standardized_excess": 1.975344348
+            },
+            {
+              "span": 120,
+              "hits": 22,
+              "expected": 15.384615,
+              "standardized_excess": 1.806361308
+            },
+            {
+              "span": 54,
+              "hits": 9,
+              "expected": 6.923077,
+              "standardized_excess": 0.845402793
+            }
+          ]
+        },
+        {
+          "family": "動量與反轉",
+          "label": "15對60期方向1混合0.10",
+          "candidate": 30,
+          "robust_score": 0.523070685,
+          "mean_score": 0.999596405,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 197,
+              "expected": 184.615385,
+              "standardized_excess": 0.976205891
+            },
+            {
+              "span": 720,
+              "hits": 97,
+              "expected": 92.307692,
+              "standardized_excess": 0.523070685
+            },
+            {
+              "span": 360,
+              "hits": 52,
+              "expected": 46.153846,
+              "standardized_excess": 0.921635375
+            },
+            {
+              "span": 240,
+              "hits": 37,
+              "expected": 30.769231,
+              "standardized_excess": 1.203029265
+            },
+            {
+              "span": 120,
+              "hits": 18,
+              "expected": 15.384615,
+              "standardized_excess": 0.714142843
+            },
+            {
+              "span": 54,
+              "hits": 11,
+              "expected": 6.923077,
+              "standardized_excess": 1.659494371
+            }
+          ]
+        },
+        {
+          "family": "開獎日條件",
+          "label": "方向-1與全歷史混合0.10",
+          "candidate": 21,
+          "robust_score": -0.341600902,
+          "mean_score": -0.014344412,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 183,
+              "expected": 184.615385,
+              "standardized_excess": -0.127331203
+            },
+            {
+              "span": 720,
+              "hits": 97,
+              "expected": 92.307692,
+              "standardized_excess": 0.523070685
+            },
+            {
+              "span": 360,
+              "hits": 44,
+              "expected": 46.153846,
+              "standardized_excess": -0.339549875
+            },
+            {
+              "span": 240,
+              "hits": 29,
+              "expected": 30.769231,
+              "standardized_excess": -0.341600902
+            },
+            {
+              "span": 120,
+              "hits": 16,
+              "expected": 15.384615,
+              "standardized_excess": 0.16803361
+            },
+            {
+              "span": 54,
+              "hits": 7,
+              "expected": 6.923077,
+              "standardized_excess": 0.031311215
+            }
+          ]
+        },
+        {
+          "family": "間隔風險",
+          "label": "方向-1與全歷史混合0.35",
+          "candidate": 33,
+          "robust_score": -0.375734575,
+          "mean_score": 0.554382287,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 200,
+              "expected": 184.615385,
+              "standardized_excess": 1.212678125
+            },
+            {
+              "span": 720,
+              "hits": 101,
+              "expected": 92.307692,
+              "standardized_excess": 0.968967006
+            },
+            {
+              "span": 360,
+              "hits": 52,
+              "expected": 46.153846,
+              "standardized_excess": 0.921635375
+            },
+            {
+              "span": 240,
+              "hits": 33,
+              "expected": 30.769231,
+              "standardized_excess": 0.430714181
+            },
+            {
+              "span": 120,
+              "hits": 16,
+              "expected": 15.384615,
+              "standardized_excess": 0.16803361
+            },
+            {
+              "span": 54,
+              "hits": 6,
+              "expected": 6.923077,
+              "standardized_excess": -0.375734575
+            }
+          ]
+        },
+        {
+          "family": "前期條件轉移",
+          "label": "方向1與全歷史混合0.00",
+          "candidate": 37,
+          "robust_score": -2.152307244,
+          "mean_score": -1.190891358,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 180,
+              "expected": 184.615385,
+              "standardized_excess": -0.363803438
+            },
+            {
+              "span": 720,
+              "hits": 73,
+              "expected": 92.307692,
+              "standardized_excess": -2.152307244
+            },
+            {
+              "span": 360,
+              "hits": 37,
+              "expected": 46.153846,
+              "standardized_excess": -1.443086969
+            },
+            {
+              "span": 240,
+              "hits": 21,
+              "expected": 30.769231,
+              "standardized_excess": -1.886231069
+            },
+            {
+              "span": 120,
+              "hits": 12,
+              "expected": 15.384615,
+              "standardized_excess": -0.924184855
+            },
+            {
+              "span": 54,
+              "hits": 6,
+              "expected": 6.923077,
+              "standardized_excess": -0.375734575
+            }
+          ]
+        }
+      ],
+      "accepted_vote_table": [
+        {
+          "candidate": 8,
+          "accepted_model_votes": 14,
+          "family_support": 2,
+          "robust_score_sum": 5.931498324
+        },
+        {
+          "candidate": 12,
+          "accepted_model_votes": 10,
+          "family_support": 2,
+          "robust_score_sum": 1.295746159
+        },
+        {
+          "candidate": 30,
+          "accepted_model_votes": 8,
+          "family_support": 2,
+          "robust_score_sum": 4.404107526
+        }
+      ],
+      "fusion_candidate": 8,
+      "primary_candidate": 8,
+      "primary_candidate_support": {
+        "candidate": 8,
+        "accepted_model_votes": 14,
+        "family_support": 2,
+        "robust_score_sum": 5.931498324
+      },
+      "rejected_families": [
+        "開獎日條件",
+        "間隔風險",
+        "前期條件轉移"
+      ],
+      "methods": [
+        "多時間窗頻率",
+        "指數時間衰減",
+        "動量與反轉",
+        "間隔風險",
+        "前期條件轉移",
+        "開獎日條件"
+      ],
+      "validation": [
+        "全歷史擴展訓練",
+        "逐期前推驗證",
+        "多區段最弱表現守門",
+        "模型家族分離驗證",
+        "隨機基準比較"
+      ],
+      "gate_conditions": {
+        "六類全球方法完成隔離驗證": true,
+        "至少二十四組模型跨全部區段高於隨機": true,
+        "融合最高票與主模型同碼": true,
+        "至少兩個獨立家族共同支持主碼": true,
+        "至少三個家族冠軍跨區段保持正向": true
+      },
+      "release_gate_passed": true,
+      "no_future_data": true,
+      "zero_error_certified": false
+    },
+    "statistical_validation": {
+      "observed_hits": 107,
+      "samples": 720,
+      "observed_rate": 0.148611111,
+      "random_rate": 0.128205128,
+      "exact_binomial_upper_tail_p": 0.05902206,
+      "circular_shift_tests": 719,
+      "circular_shift_mean_hits": 99.446453,
+      "circular_shift_p": 0.2125,
+      "wilson_95_lower": 0.124496034,
+      "wilson_95_upper": 0.176455861,
+      "strict_five_percent_significance": false,
+      "candidate_level_ten_percent_significance": false
+    },
     "gate_conditions": {
       "七百二十期逐段隔離高於隨機": true,
       "最近三百六十期高於隨機": true,
@@ -19097,17 +20180,20 @@
       "最近一百二十期高於隨機": true,
       "最近五十四期不低於隨機": true,
       "至少十二組參數同選一碼": true,
-      "至少四種時間窗同選一碼": true
+      "至少四種時間窗同選一碼": true,
+      "全球六家族融合驗證通過": true,
+      "兩種隨機基準已完成且不得隱藏": true
     },
     "release_gate_passed": true,
     "no_post_draw_substitution": true,
-    "uses_all_history": true
+    "uses_all_history": true,
+    "zero_error_certified": false
   },
   "single_explanation": {
     "label": "本期超級獨支",
     "candidate": 8,
     "unique": true,
-    "method": "全歷史基準與多時間窗單碼專家逐段隔離競賽",
+    "method": "全歷史基準、多時間窗單碼專家與全球六家族融合逐段隔離競賽",
     "selected_window": 240,
     "selected_global_history_blend": 0.35,
     "full_history_draws": 5984,
@@ -19431,6 +20517,365 @@
         }
       ]
     },
+    "global_fusion": {
+      "policy": "全球六家族逐期前推融合第二版",
+      "module_count": 111,
+      "family_count": 6,
+      "selection_spans": [
+        1440,
+        720,
+        360,
+        240,
+        120,
+        54
+      ],
+      "accepted_module_count": 32,
+      "acceptance_rule": "六個檢驗區段標準化超額命中均大於零",
+      "family_champions": [
+        {
+          "family": "多時間窗頻率",
+          "label": "540期與全歷史混合0.00",
+          "candidate": 8,
+          "robust_score": 0.976205891,
+          "mean_score": 1.556201131,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 197,
+              "expected": 184.615385,
+              "standardized_excess": 0.976205891
+            },
+            {
+              "span": 720,
+              "hits": 102,
+              "expected": 92.307692,
+              "standardized_excess": 1.080441086
+            },
+            {
+              "span": 360,
+              "hits": 53,
+              "expected": 46.153846,
+              "standardized_excess": 1.079283531
+            },
+            {
+              "span": 240,
+              "hits": 40,
+              "expected": 30.769231,
+              "standardized_excess": 1.782265577
+            },
+            {
+              "span": 120,
+              "hits": 24,
+              "expected": 15.384615,
+              "standardized_excess": 2.352470541
+            },
+            {
+              "span": 54,
+              "hits": 12,
+              "expected": 6.923077,
+              "standardized_excess": 2.066540161
+            }
+          ]
+        },
+        {
+          "family": "指數時間衰減",
+          "label": "半衰期60期與全歷史混合0.00",
+          "candidate": 8,
+          "robust_score": 0.845402793,
+          "mean_score": 1.460117304,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 198,
+              "expected": 184.615385,
+              "standardized_excess": 1.055029969
+            },
+            {
+              "span": 720,
+              "hits": 106,
+              "expected": 92.307692,
+              "standardized_excess": 1.526337408
+            },
+            {
+              "span": 360,
+              "hits": 56,
+              "expected": 46.153846,
+              "standardized_excess": 1.552228
+            },
+            {
+              "span": 240,
+              "hits": 41,
+              "expected": 30.769231,
+              "standardized_excess": 1.975344348
+            },
+            {
+              "span": 120,
+              "hits": 22,
+              "expected": 15.384615,
+              "standardized_excess": 1.806361308
+            },
+            {
+              "span": 54,
+              "hits": 9,
+              "expected": 6.923077,
+              "standardized_excess": 0.845402793
+            }
+          ]
+        },
+        {
+          "family": "動量與反轉",
+          "label": "15對60期方向1混合0.10",
+          "candidate": 30,
+          "robust_score": 0.523070685,
+          "mean_score": 0.999596405,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 197,
+              "expected": 184.615385,
+              "standardized_excess": 0.976205891
+            },
+            {
+              "span": 720,
+              "hits": 97,
+              "expected": 92.307692,
+              "standardized_excess": 0.523070685
+            },
+            {
+              "span": 360,
+              "hits": 52,
+              "expected": 46.153846,
+              "standardized_excess": 0.921635375
+            },
+            {
+              "span": 240,
+              "hits": 37,
+              "expected": 30.769231,
+              "standardized_excess": 1.203029265
+            },
+            {
+              "span": 120,
+              "hits": 18,
+              "expected": 15.384615,
+              "standardized_excess": 0.714142843
+            },
+            {
+              "span": 54,
+              "hits": 11,
+              "expected": 6.923077,
+              "standardized_excess": 1.659494371
+            }
+          ]
+        },
+        {
+          "family": "開獎日條件",
+          "label": "方向-1與全歷史混合0.10",
+          "candidate": 21,
+          "robust_score": -0.341600902,
+          "mean_score": -0.014344412,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 183,
+              "expected": 184.615385,
+              "standardized_excess": -0.127331203
+            },
+            {
+              "span": 720,
+              "hits": 97,
+              "expected": 92.307692,
+              "standardized_excess": 0.523070685
+            },
+            {
+              "span": 360,
+              "hits": 44,
+              "expected": 46.153846,
+              "standardized_excess": -0.339549875
+            },
+            {
+              "span": 240,
+              "hits": 29,
+              "expected": 30.769231,
+              "standardized_excess": -0.341600902
+            },
+            {
+              "span": 120,
+              "hits": 16,
+              "expected": 15.384615,
+              "standardized_excess": 0.16803361
+            },
+            {
+              "span": 54,
+              "hits": 7,
+              "expected": 6.923077,
+              "standardized_excess": 0.031311215
+            }
+          ]
+        },
+        {
+          "family": "間隔風險",
+          "label": "方向-1與全歷史混合0.35",
+          "candidate": 33,
+          "robust_score": -0.375734575,
+          "mean_score": 0.554382287,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 200,
+              "expected": 184.615385,
+              "standardized_excess": 1.212678125
+            },
+            {
+              "span": 720,
+              "hits": 101,
+              "expected": 92.307692,
+              "standardized_excess": 0.968967006
+            },
+            {
+              "span": 360,
+              "hits": 52,
+              "expected": 46.153846,
+              "standardized_excess": 0.921635375
+            },
+            {
+              "span": 240,
+              "hits": 33,
+              "expected": 30.769231,
+              "standardized_excess": 0.430714181
+            },
+            {
+              "span": 120,
+              "hits": 16,
+              "expected": 15.384615,
+              "standardized_excess": 0.16803361
+            },
+            {
+              "span": 54,
+              "hits": 6,
+              "expected": 6.923077,
+              "standardized_excess": -0.375734575
+            }
+          ]
+        },
+        {
+          "family": "前期條件轉移",
+          "label": "方向1與全歷史混合0.00",
+          "candidate": 37,
+          "robust_score": -2.152307244,
+          "mean_score": -1.190891358,
+          "selection_evidence": [
+            {
+              "span": 1440,
+              "hits": 180,
+              "expected": 184.615385,
+              "standardized_excess": -0.363803438
+            },
+            {
+              "span": 720,
+              "hits": 73,
+              "expected": 92.307692,
+              "standardized_excess": -2.152307244
+            },
+            {
+              "span": 360,
+              "hits": 37,
+              "expected": 46.153846,
+              "standardized_excess": -1.443086969
+            },
+            {
+              "span": 240,
+              "hits": 21,
+              "expected": 30.769231,
+              "standardized_excess": -1.886231069
+            },
+            {
+              "span": 120,
+              "hits": 12,
+              "expected": 15.384615,
+              "standardized_excess": -0.924184855
+            },
+            {
+              "span": 54,
+              "hits": 6,
+              "expected": 6.923077,
+              "standardized_excess": -0.375734575
+            }
+          ]
+        }
+      ],
+      "accepted_vote_table": [
+        {
+          "candidate": 8,
+          "accepted_model_votes": 14,
+          "family_support": 2,
+          "robust_score_sum": 5.931498324
+        },
+        {
+          "candidate": 12,
+          "accepted_model_votes": 10,
+          "family_support": 2,
+          "robust_score_sum": 1.295746159
+        },
+        {
+          "candidate": 30,
+          "accepted_model_votes": 8,
+          "family_support": 2,
+          "robust_score_sum": 4.404107526
+        }
+      ],
+      "fusion_candidate": 8,
+      "primary_candidate": 8,
+      "primary_candidate_support": {
+        "candidate": 8,
+        "accepted_model_votes": 14,
+        "family_support": 2,
+        "robust_score_sum": 5.931498324
+      },
+      "rejected_families": [
+        "開獎日條件",
+        "間隔風險",
+        "前期條件轉移"
+      ],
+      "methods": [
+        "多時間窗頻率",
+        "指數時間衰減",
+        "動量與反轉",
+        "間隔風險",
+        "前期條件轉移",
+        "開獎日條件"
+      ],
+      "validation": [
+        "全歷史擴展訓練",
+        "逐期前推驗證",
+        "多區段最弱表現守門",
+        "模型家族分離驗證",
+        "隨機基準比較"
+      ],
+      "gate_conditions": {
+        "六類全球方法完成隔離驗證": true,
+        "至少二十四組模型跨全部區段高於隨機": true,
+        "融合最高票與主模型同碼": true,
+        "至少兩個獨立家族共同支持主碼": true,
+        "至少三個家族冠軍跨區段保持正向": true
+      },
+      "release_gate_passed": true,
+      "no_future_data": true,
+      "zero_error_certified": false
+    },
+    "statistical_validation": {
+      "observed_hits": 107,
+      "samples": 720,
+      "observed_rate": 0.148611111,
+      "random_rate": 0.128205128,
+      "exact_binomial_upper_tail_p": 0.05902206,
+      "circular_shift_tests": 719,
+      "circular_shift_mean_hits": 99.446453,
+      "circular_shift_p": 0.2125,
+      "wilson_95_lower": 0.124496034,
+      "wilson_95_upper": 0.176455861,
+      "strict_five_percent_significance": false,
+      "candidate_level_ten_percent_significance": false
+    },
     "gate_conditions": {
       "七百二十期逐段隔離高於隨機": true,
       "最近三百六十期高於隨機": true,
@@ -19438,7 +20883,9 @@
       "最近一百二十期高於隨機": true,
       "最近五十四期不低於隨機": true,
       "至少十二組參數同選一碼": true,
-      "至少四種時間窗同選一碼": true
+      "至少四種時間窗同選一碼": true,
+      "全球六家族融合驗證通過": true,
+      "兩種隨機基準已完成且不得隱藏": true
     },
     "derived_from_pre_draw_seal": true
   },
@@ -19543,7 +20990,9 @@
       "最近一百二十期高於隨機": true,
       "最近五十四期不低於隨機": true,
       "至少十二組參數同選一碼": true,
-      "至少四種時間窗同選一碼": true
+      "至少四種時間窗同選一碼": true,
+      "全球六家族融合驗證通過": true,
+      "兩種隨機基準已完成且不得隱藏": true
     },
     "module_consensus": [
       {
@@ -19723,10 +21172,10 @@
     "direct_hit_full_rank_blend": 0.35,
     "direct_hit_full_rank_gate": false,
     "direct_hit_weights": {
-      "full_frequency_balance": 0.41916678781799216,
-      "full_transition_correction": 0.3574861331844341,
-      "full_signature_correction": -0.05853360692741005,
-      "full_overdue_correction": 0.16481347207016372
+      "full_frequency_balance": 0.41916678781799205,
+      "full_transition_correction": 0.35748613318443406,
+      "full_signature_correction": -0.058533606927410047,
+      "full_overdue_correction": 0.16481347207016386
     },
     "direct_hit_baseline": {
       "samples": 360,
@@ -19893,14 +21342,14 @@
       "delta_full_overdue_correction"
     ],
     "data_change_weights": [
-      0.1997234567423397,
-      0.27453644569346214,
-      -0.06204161420343401,
-      0.06507487523700074,
-      0.014812425226436096,
-      0.21438071306918596,
-      0.15425109639141046,
-      -0.015179373436730818
+      0.19972345674233968,
+      0.2745364456934621,
+      -0.062041614203433994,
+      0.06507487523700078,
+      0.014812425226436093,
+      0.21438071306918594,
+      0.15425109639141044,
+      -0.01517937343673097
     ],
     "data_change_baseline": {
       "samples": 360,
@@ -20215,84 +21664,84 @@
       37
     ],
     "next_score": {
-      "33": 1.3137530370656278,
-      "16": 1.0230620937283783,
+      "33": 1.313753037065628,
+      "16": 1.0230620937283785,
       "13": 0.8293162466590374,
-      "3": 0.7949833887240391,
+      "3": 0.7949833887240392,
       "30": 0.7199032572117277,
-      "9": 0.6671271207236501,
-      "21": 0.6431755725504773,
-      "32": 0.49510357327149473,
-      "6": 0.48041770976807285,
+      "9": 0.6671271207236502,
+      "21": 0.6431755725504774,
+      "32": 0.49510357327149485,
+      "6": 0.48041770976807274,
       "29": 0.4799606134750774,
       "38": 0.4582192749787515,
       "39": 0.45664269419856307,
-      "24": 0.42856318914838315,
+      "24": 0.4285631891483832,
       "20": 0.4181101736703834,
-      "34": 0.33625445909426444,
-      "28": 0.3188161835496684,
+      "34": 0.33625445909426455,
+      "28": 0.3188161835496685,
       "1": 0.15903126154380048,
-      "2": 0.14707008280279327,
-      "15": 0.12567297579112188,
+      "2": 0.14707008280279324,
+      "15": 0.12567297579112185,
       "5": 0.027951955770498506,
-      "8": -0.02554270596612962,
+      "8": -0.025542705966129647,
       "18": -0.03618670797402233,
-      "19": -0.0813299801197335,
-      "7": -0.13833000395743336,
-      "12": -0.14789431369403047,
+      "19": -0.08132998011973347,
+      "7": -0.13833000395743333,
+      "12": -0.14789431369403058,
       "14": -0.21182993554543292,
-      "11": -0.21322434697854123,
-      "10": -0.2411646470864259,
-      "17": -0.2645250056291058,
-      "26": -0.27984152641290194,
+      "11": -0.21322434697854112,
+      "10": -0.24116464708642596,
+      "17": -0.26452500562910575,
+      "26": -0.2798415264129019,
       "22": -0.286526727317914,
-      "31": -0.3380951535322735,
+      "31": -0.33809515353227354,
       "27": -0.7020170943589388,
-      "23": -0.8808088528139343,
-      "4": -1.1277374247770307,
-      "35": -1.152753941474082,
-      "36": -1.1671074583038166,
+      "23": -0.8808088528139344,
+      "4": -1.1277374247770304,
+      "35": -1.1527539414740822,
+      "36": -1.1671074583038168,
       "25": -1.2155917559742226,
-      "37": -1.8126272841265172
+      "37": -1.8126272841265174
     },
     "next_raw_score": {
       "1": 0.15903126159382258,
-      "2": 0.14707008285594173,
+      "2": 0.1470700828559417,
       "3": 0.7199032572242332,
-      "4": -1.1277374246707337,
+      "4": -1.1277374246707335,
       "5": 0.027951955829899733,
       "6": 0.47996061350321484,
-      "7": -0.1383300038855266,
-      "8": -0.02554270590360201,
-      "9": 0.6431755725692356,
-      "10": -0.24116464700201365,
-      "11": -0.21322434689725533,
-      "12": -0.14789431361899735,
-      "13": 0.7949833887334182,
+      "7": -0.13833000388552658,
+      "8": -0.02554270590360204,
+      "9": 0.6431755725692357,
+      "10": -0.2411646470020137,
+      "11": -0.21322434689725522,
+      "12": -0.14789431361899746,
+      "13": 0.7949833887334183,
       "14": -0.2118299354672734,
-      "15": 0.12567297584739673,
+      "15": 0.1256729758473967,
       "16": 0.8293162466652901,
-      "17": -0.26452500554156716,
+      "17": -0.2645250055415671,
       "18": -0.03618670790836834,
-      "19": -0.08132998005095313,
+      "19": -0.0813299800509531,
       "20": 0.4181101737110263,
-      "21": 0.4951035732933794,
+      "21": 0.4951035732933795,
       "22": -0.2865267272241226,
-      "23": -0.8808088527107637,
-      "24": 0.4285631891858997,
+      "23": -0.8808088527107638,
+      "24": 0.42856318918589975,
       "25": -1.2155917558585465,
-      "26": -0.2798415263222369,
+      "26": -0.27984152632223686,
       "27": -0.7020170942588946,
-      "28": 0.3188161835965641,
-      "29": 1.3137530370656278,
-      "30": 0.667127120739282,
-      "31": -0.3380951534353557,
-      "32": 0.4804177097930839,
-      "33": 1.0230620937315047,
-      "34": 0.33625445913803376,
-      "35": -1.1527539413646586,
-      "36": -1.1671074581912668,
-      "37": -1.8126272840077147,
+      "28": 0.3188161835965642,
+      "29": 1.313753037065628,
+      "30": 0.6671271207392822,
+      "31": -0.33809515343535573,
+      "32": 0.4804177097930838,
+      "33": 1.023062093731505,
+      "34": 0.33625445913803387,
+      "35": -1.1527539413646588,
+      "36": -1.167107458191267,
+      "37": -1.812627284007715,
       "38": 0.4582192750100153,
       "39": 0.45664269423295323
     },
@@ -20570,7 +22019,7 @@
     "data_change_mode": "shadow_only_until_cross_window_gate",
     "method": "full_history_consensus_with_35pct_direct_hit_and_shadow_change",
     "single_supermodel": {
-      "policy": "all_history_multi_horizon_single_v1",
+      "policy": "全歷史多時間窗與全球六家族融合第三版",
       "candidate": 8,
       "candidate_ranked": [
         8,
@@ -21126,6 +22575,365 @@
           }
         ]
       },
+      "global_fusion": {
+        "policy": "全球六家族逐期前推融合第二版",
+        "module_count": 111,
+        "family_count": 6,
+        "selection_spans": [
+          1440,
+          720,
+          360,
+          240,
+          120,
+          54
+        ],
+        "accepted_module_count": 32,
+        "acceptance_rule": "六個檢驗區段標準化超額命中均大於零",
+        "family_champions": [
+          {
+            "family": "多時間窗頻率",
+            "label": "540期與全歷史混合0.00",
+            "candidate": 8,
+            "robust_score": 0.976205891,
+            "mean_score": 1.556201131,
+            "selection_evidence": [
+              {
+                "span": 1440,
+                "hits": 197,
+                "expected": 184.615385,
+                "standardized_excess": 0.976205891
+              },
+              {
+                "span": 720,
+                "hits": 102,
+                "expected": 92.307692,
+                "standardized_excess": 1.080441086
+              },
+              {
+                "span": 360,
+                "hits": 53,
+                "expected": 46.153846,
+                "standardized_excess": 1.079283531
+              },
+              {
+                "span": 240,
+                "hits": 40,
+                "expected": 30.769231,
+                "standardized_excess": 1.782265577
+              },
+              {
+                "span": 120,
+                "hits": 24,
+                "expected": 15.384615,
+                "standardized_excess": 2.352470541
+              },
+              {
+                "span": 54,
+                "hits": 12,
+                "expected": 6.923077,
+                "standardized_excess": 2.066540161
+              }
+            ]
+          },
+          {
+            "family": "指數時間衰減",
+            "label": "半衰期60期與全歷史混合0.00",
+            "candidate": 8,
+            "robust_score": 0.845402793,
+            "mean_score": 1.460117304,
+            "selection_evidence": [
+              {
+                "span": 1440,
+                "hits": 198,
+                "expected": 184.615385,
+                "standardized_excess": 1.055029969
+              },
+              {
+                "span": 720,
+                "hits": 106,
+                "expected": 92.307692,
+                "standardized_excess": 1.526337408
+              },
+              {
+                "span": 360,
+                "hits": 56,
+                "expected": 46.153846,
+                "standardized_excess": 1.552228
+              },
+              {
+                "span": 240,
+                "hits": 41,
+                "expected": 30.769231,
+                "standardized_excess": 1.975344348
+              },
+              {
+                "span": 120,
+                "hits": 22,
+                "expected": 15.384615,
+                "standardized_excess": 1.806361308
+              },
+              {
+                "span": 54,
+                "hits": 9,
+                "expected": 6.923077,
+                "standardized_excess": 0.845402793
+              }
+            ]
+          },
+          {
+            "family": "動量與反轉",
+            "label": "15對60期方向1混合0.10",
+            "candidate": 30,
+            "robust_score": 0.523070685,
+            "mean_score": 0.999596405,
+            "selection_evidence": [
+              {
+                "span": 1440,
+                "hits": 197,
+                "expected": 184.615385,
+                "standardized_excess": 0.976205891
+              },
+              {
+                "span": 720,
+                "hits": 97,
+                "expected": 92.307692,
+                "standardized_excess": 0.523070685
+              },
+              {
+                "span": 360,
+                "hits": 52,
+                "expected": 46.153846,
+                "standardized_excess": 0.921635375
+              },
+              {
+                "span": 240,
+                "hits": 37,
+                "expected": 30.769231,
+                "standardized_excess": 1.203029265
+              },
+              {
+                "span": 120,
+                "hits": 18,
+                "expected": 15.384615,
+                "standardized_excess": 0.714142843
+              },
+              {
+                "span": 54,
+                "hits": 11,
+                "expected": 6.923077,
+                "standardized_excess": 1.659494371
+              }
+            ]
+          },
+          {
+            "family": "開獎日條件",
+            "label": "方向-1與全歷史混合0.10",
+            "candidate": 21,
+            "robust_score": -0.341600902,
+            "mean_score": -0.014344412,
+            "selection_evidence": [
+              {
+                "span": 1440,
+                "hits": 183,
+                "expected": 184.615385,
+                "standardized_excess": -0.127331203
+              },
+              {
+                "span": 720,
+                "hits": 97,
+                "expected": 92.307692,
+                "standardized_excess": 0.523070685
+              },
+              {
+                "span": 360,
+                "hits": 44,
+                "expected": 46.153846,
+                "standardized_excess": -0.339549875
+              },
+              {
+                "span": 240,
+                "hits": 29,
+                "expected": 30.769231,
+                "standardized_excess": -0.341600902
+              },
+              {
+                "span": 120,
+                "hits": 16,
+                "expected": 15.384615,
+                "standardized_excess": 0.16803361
+              },
+              {
+                "span": 54,
+                "hits": 7,
+                "expected": 6.923077,
+                "standardized_excess": 0.031311215
+              }
+            ]
+          },
+          {
+            "family": "間隔風險",
+            "label": "方向-1與全歷史混合0.35",
+            "candidate": 33,
+            "robust_score": -0.375734575,
+            "mean_score": 0.554382287,
+            "selection_evidence": [
+              {
+                "span": 1440,
+                "hits": 200,
+                "expected": 184.615385,
+                "standardized_excess": 1.212678125
+              },
+              {
+                "span": 720,
+                "hits": 101,
+                "expected": 92.307692,
+                "standardized_excess": 0.968967006
+              },
+              {
+                "span": 360,
+                "hits": 52,
+                "expected": 46.153846,
+                "standardized_excess": 0.921635375
+              },
+              {
+                "span": 240,
+                "hits": 33,
+                "expected": 30.769231,
+                "standardized_excess": 0.430714181
+              },
+              {
+                "span": 120,
+                "hits": 16,
+                "expected": 15.384615,
+                "standardized_excess": 0.16803361
+              },
+              {
+                "span": 54,
+                "hits": 6,
+                "expected": 6.923077,
+                "standardized_excess": -0.375734575
+              }
+            ]
+          },
+          {
+            "family": "前期條件轉移",
+            "label": "方向1與全歷史混合0.00",
+            "candidate": 37,
+            "robust_score": -2.152307244,
+            "mean_score": -1.190891358,
+            "selection_evidence": [
+              {
+                "span": 1440,
+                "hits": 180,
+                "expected": 184.615385,
+                "standardized_excess": -0.363803438
+              },
+              {
+                "span": 720,
+                "hits": 73,
+                "expected": 92.307692,
+                "standardized_excess": -2.152307244
+              },
+              {
+                "span": 360,
+                "hits": 37,
+                "expected": 46.153846,
+                "standardized_excess": -1.443086969
+              },
+              {
+                "span": 240,
+                "hits": 21,
+                "expected": 30.769231,
+                "standardized_excess": -1.886231069
+              },
+              {
+                "span": 120,
+                "hits": 12,
+                "expected": 15.384615,
+                "standardized_excess": -0.924184855
+              },
+              {
+                "span": 54,
+                "hits": 6,
+                "expected": 6.923077,
+                "standardized_excess": -0.375734575
+              }
+            ]
+          }
+        ],
+        "accepted_vote_table": [
+          {
+            "candidate": 8,
+            "accepted_model_votes": 14,
+            "family_support": 2,
+            "robust_score_sum": 5.931498324
+          },
+          {
+            "candidate": 12,
+            "accepted_model_votes": 10,
+            "family_support": 2,
+            "robust_score_sum": 1.295746159
+          },
+          {
+            "candidate": 30,
+            "accepted_model_votes": 8,
+            "family_support": 2,
+            "robust_score_sum": 4.404107526
+          }
+        ],
+        "fusion_candidate": 8,
+        "primary_candidate": 8,
+        "primary_candidate_support": {
+          "candidate": 8,
+          "accepted_model_votes": 14,
+          "family_support": 2,
+          "robust_score_sum": 5.931498324
+        },
+        "rejected_families": [
+          "開獎日條件",
+          "間隔風險",
+          "前期條件轉移"
+        ],
+        "methods": [
+          "多時間窗頻率",
+          "指數時間衰減",
+          "動量與反轉",
+          "間隔風險",
+          "前期條件轉移",
+          "開獎日條件"
+        ],
+        "validation": [
+          "全歷史擴展訓練",
+          "逐期前推驗證",
+          "多區段最弱表現守門",
+          "模型家族分離驗證",
+          "隨機基準比較"
+        ],
+        "gate_conditions": {
+          "六類全球方法完成隔離驗證": true,
+          "至少二十四組模型跨全部區段高於隨機": true,
+          "融合最高票與主模型同碼": true,
+          "至少兩個獨立家族共同支持主碼": true,
+          "至少三個家族冠軍跨區段保持正向": true
+        },
+        "release_gate_passed": true,
+        "no_future_data": true,
+        "zero_error_certified": false
+      },
+      "statistical_validation": {
+        "observed_hits": 107,
+        "samples": 720,
+        "observed_rate": 0.148611111,
+        "random_rate": 0.128205128,
+        "exact_binomial_upper_tail_p": 0.05902206,
+        "circular_shift_tests": 719,
+        "circular_shift_mean_hits": 99.446453,
+        "circular_shift_p": 0.2125,
+        "wilson_95_lower": 0.124496034,
+        "wilson_95_upper": 0.176455861,
+        "strict_five_percent_significance": false,
+        "candidate_level_ten_percent_significance": false
+      },
       "gate_conditions": {
         "七百二十期逐段隔離高於隨機": true,
         "最近三百六十期高於隨機": true,
@@ -21133,11 +22941,14 @@
         "最近一百二十期高於隨機": true,
         "最近五十四期不低於隨機": true,
         "至少十二組參數同選一碼": true,
-        "至少四種時間窗同選一碼": true
+        "至少四種時間窗同選一碼": true,
+        "全球六家族融合驗證通過": true,
+        "兩種隨機基準已完成且不得隱藏": true
       },
       "release_gate_passed": true,
       "no_post_draw_substitution": true,
-      "uses_all_history": true
+      "uses_all_history": true,
+      "zero_error_certified": false
     },
     "anchor_stability": {
       "selected": "穩定冠軍",
@@ -21231,8 +23042,8 @@
       "backtest_weights": {
         "full_frequency_balance": 0.11433144844634163,
         "full_transition_correction": 0.16939166768267747,
-        "full_signature_correction": 0.17539185657459477,
-        "full_overdue_correction": 0.540885027296386
+        "full_signature_correction": 0.17539185657459475,
+        "full_overdue_correction": 0.5408850272963862
       },
       "anchor_weights": {
         "full_frequency_balance": 0.03333333333333333,
@@ -21243,8 +23054,8 @@
       "end_weights": {
         "full_frequency_balance": 0.11433144844634163,
         "full_transition_correction": 0.16939166768267747,
-        "full_signature_correction": 0.17539185657459477,
-        "full_overdue_correction": 0.540885027296386
+        "full_signature_correction": 0.17539185657459475,
+        "full_overdue_correction": 0.5408850272963862
       },
       "anchor_ensemble_weights": [
         {
@@ -21268,16 +23079,16 @@
       ],
       "end_ensemble_weights": [
         {
-          "full_frequency_balance": 0.222302740651528,
+          "full_frequency_balance": 0.22230274065152794,
           "full_transition_correction": 0.16527888601322335,
           "full_signature_correction": 0.10751753582746465,
-          "full_overdue_correction": 0.5049008375077839
+          "full_overdue_correction": 0.504900837507784
         },
         {
-          "full_frequency_balance": 0.06667561680729626,
-          "full_transition_correction": 0.22478732023519307,
-          "full_signature_correction": 0.1821646878376204,
-          "full_overdue_correction": 0.5263723751198902
+          "full_frequency_balance": 0.06667561680729632,
+          "full_transition_correction": 0.22478732023519313,
+          "full_signature_correction": 0.1821646878376203,
+          "full_overdue_correction": 0.5263723751198903
         },
         {
           "full_frequency_balance": 0.054015987880200615,
@@ -21333,7 +23144,9 @@
       "最近一百二十期高於隨機": true,
       "最近五十四期不低於隨機": true,
       "至少十二組參數同選一碼": true,
-      "至少四種時間窗同選一碼": true
+      "至少四種時間窗同選一碼": true,
+      "全球六家族融合驗證通過": true,
+      "兩種隨機基準已完成且不得隱藏": true
     },
     "single_strong_recommendation": true,
     "single_confidence_label": "跨時間窗守門通過的最強獨支",
