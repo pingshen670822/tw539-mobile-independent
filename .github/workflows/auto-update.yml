@@ -14,10 +14,10 @@ on:
       - '.github/workflows/auto-update.yml'
       - '.github/workflows/watchdog.yml'
   schedule:
-    # 鐵律：台灣時間週一至週六 20:40～23:50 每10分鐘監控。
-    # GitHub 排程可能延遲，因此不能只排三次；任一輪取得新期別即重算並部署。
-    - cron: '40,50 12 * * 1-6'
-    - cron: '0,10,20,30,40,50 13-15 * * 1-6'
+    # 鐵律：台灣時間週一至週六 20:25～23:55 每5分鐘先做輕量期別比對。
+    # 公開頁已同版立即結束；只有官方期別變動才啟動完整重算與部署。
+    - cron: '25,30,35,40,45,50,55 12 * * 1-6'
+    - cron: '*/5 13-15 * * 1-6'
   workflow_dispatch:
     inputs:
       repair:
@@ -32,7 +32,8 @@ permissions:
   issues: write
 concurrency:
   group: tw539-auto-update
-  cancel-in-progress: false
+  # 新一輪接管卡住的舊輪次，避免舊工作持續佔住更新佇列。
+  cancel-in-progress: true
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -48,9 +49,26 @@ jobs:
           git branch --set-upstream-to=origin/master master
       - uses: actions/setup-python@v7
         with: {python-version: '3.12'}
+      - name: 排程同版快速結束
+        id: schedule_gate
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          TW539_WATCHDOG_FAST: 1
+        run: |
+          if python watchdog.py; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+            echo "官方與公開頁同版，本輪不重算、不重部署"
+          else
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            echo "偵測到新期別或公開頁落後，立即完整重算"
+          fi
       - name: 鐵律完整性檢查
+        if: steps.schedule_gate.outputs.current != 'true'
         run: python ironlaw_guard.py --structure-only
       - name: 取得官方開獎並重算
+        if: steps.schedule_gate.outputs.current != 'true'
         timeout-minutes: 18
         env:
           TW539_SELF_REPAIR: ${{ inputs.repair || false }}
@@ -69,9 +87,11 @@ jobs:
           done
           exit 1
       - name: 發布核心驗收
+        if: steps.schedule_gate.outputs.current != 'true'
         timeout-minutes: 3
         run: python cloud_pipeline.py --verify-only --strict-freshness
       - name: 保存最新資料與戰報
+        if: steps.schedule_gate.outputs.current != 'true'
         timeout-minutes: 5
         run: |
           git config user.name "tw539-auto-update"
@@ -93,14 +113,19 @@ jobs:
           done
           exit 1
       - uses: actions/configure-pages@v6
+        if: steps.schedule_gate.outputs.current != 'true'
       - uses: actions/upload-pages-artifact@v5
+        if: steps.schedule_gate.outputs.current != 'true'
         with: {path: site}
       - uses: actions/deploy-pages@v5
+        if: steps.schedule_gate.outputs.current != 'true'
 
       - name: 鐵律最終驗證
+        if: steps.schedule_gate.outputs.current != 'true'
         run: python cloud_pipeline.py --verify-only --strict-freshness
 
       - name: 部署後深度模型與版面診斷
+        if: steps.schedule_gate.outputs.current != 'true'
         timeout-minutes: 8
         id: deep_audit
         continue-on-error: true
@@ -109,7 +134,7 @@ jobs:
           python system_audit.py
 
       - name: 深度診斷異常記錄
-        if: steps.deep_audit.outcome == 'failure'
+        if: steps.schedule_gate.outputs.current != 'true' && steps.deep_audit.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

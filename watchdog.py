@@ -206,7 +206,7 @@ else:
         if not single_break.get('rolling_review_consumed'): errors.append('已有開獎前封存檢討，但單碼重複冷卻未讀取該檢討')
         if len(review.get('actual_rankings') or [])!=5 or len(review.get('module_review') or [])!=len(result.get('production_weights') or {}): errors.append('最新命中檢討缺少實際排名或錯誤模組分析')
         expected_top5_hits=sorted(set(review.get('actual_numbers') or []).intersection(review.get('top5_published') or []))
-        strict_review=review.get('publication_policy')=='strict_no_padding_v1'
+        strict_review=review.get('publication_policy') in ('strict_no_padding_v1','mandatory_computed_single_strict_no_padding_v2')
         if ((strict_review and (not review.get('publication_no_padding') or len(review.get('top5_published') or [])>5))
                 or (not strict_review and len(review.get('top5_published') or [])!=5)
                 or sorted(review.get('top5_hits') or [])!=expected_top5_hits): errors.append('最新命中檢討缺少、補位或算錯前5命中資料')
@@ -238,7 +238,8 @@ for name,page in pages.items():
     for term in ("rel='manifest'","rel='apple-touch-icon'","mobile-web-app-capable","apple-mobile-web-app-capable","id='install-app-button'",'安裝手機版','mobile-sync.js'):
         if term not in page: errors.append(f'{name} 缺少手機安裝條件：{term}')
 home=visible_pages['index.html']; review_page=visible_pages['review.html']; backtest_page=visible_pages['backtest.html']; history_page=visible_pages['history.html']; models_page=visible_pages['models.html']; health_page=visible_pages['health.html']
-if ('本期最強超級獨支' not in home or '超級獨支完整運算來源' not in home or '嚴格發布守門' not in home
+if (not any(term in home for term in ('本期最強超級獨支','本期完整運算最強獨支'))
+        or '本期唯一最強獨支' not in home or '超級獨支完整運算來源' not in home or '嚴格發布守門' not in home
         or '目前模型選擇證據' not in home or '六段時間隔離競賽' not in home
         or '隔離結果總表' not in home or '全球六家族融合複驗' not in home or '雙重隨機基準' not in home or '1中1' not in home
         or '不足不補位' not in home or '內部前十五診斷（非正式推薦）' not in home

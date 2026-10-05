@@ -401,7 +401,7 @@ if version.get('latest_period')!=latest['period'] or version.get('latest_draw_da
 
 page_rules={
     'index.html':{
-        'required':('本期最強超級獨支','超級獨支完整運算來源','全球六家族融合複驗','雙重隨機基準','嚴格發布守門','目前模型選擇證據','六段時間隔離競賽','隔離結果總表','最強號碼多邏輯總結','強烈推薦守門','失準事件監測','本期分級正式發布','1中1','2中1～2','3中1～3','5中2～3','9中3～5','內部前十五診斷（非正式推薦）','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不足不補位'),
+        'required':('本期唯一最強獨支','本期完整運算最強獨支','超級獨支完整運算來源','全球六家族融合複驗','雙重隨機基準','嚴格發布守門','目前模型選擇證據','六段時間隔離競賽','隔離結果總表','最強號碼多邏輯總結','強烈推薦守門','失準事件監測','本期分級正式發布','1中1','2中1～2','3中1～3','5中2～3','9中3～5','內部前十五診斷（非正式推薦）','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不足不補位'),
         'forbidden':('最新一期命中結算','最後360期逐期走步回測','全歷史運算範圍','鐵律守門')},
     'backtest.html':{
         'required':('超級獨支多時間窗隔離驗證','全球融合與隨機基準複驗','最近14期逐段隔離','最後360期逐期走步回測','直接命中全排序校準','前5與前9任一關鍵區段退化即自動回退','資料變化影子驗證','單碼重複冷卻','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),
@@ -515,7 +515,7 @@ else:
                         or len(str(item.get('review_evidence_sha256') or ''))!=64):
                     fail('停擺缺口紀錄不完整或含事後補造預測')
                 continue
-            if item.get('publication_policy')=='strict_no_padding_v1':
+            if item.get('publication_policy') in ('strict_no_padding_v1','mandatory_computed_single_strict_no_padding_v2'):
                 if not item.get('publication_no_padding') or len(item.get('top5_published') or [])>5 or len(item.get('top9_published') or [])>9: fail('嚴格發布結算紀錄發生補位或超額')
                 if item.get('single_published') is None and item.get('single_hit') is not None: fail('未發布獨支仍被計入命中率')
                 if item.get('single_published') is not None and item.get('single_hit') not in (True,False): fail('已發布獨支缺少命中結算')

@@ -42,7 +42,8 @@ jobs:
         run: python watchdog.py
       - name: 完整穩定性巡檢
         id: full_check
-        if: steps.fast_check.outcome == 'success'
+        # 五分鐘排程只做快速期別比對；主流程完成後與整點巡檢才做完整深掃。
+        if: steps.fast_check.outcome == 'success' && (github.event_name != 'schedule' || github.event.schedule == '17 * * * *')
         continue-on-error: true
         timeout-minutes: 4
         run: python watchdog.py
@@ -58,14 +59,21 @@ jobs:
           done
           exit 1
       - name: 修復後再次驗證
+        id: repair_freshness
         if: steps.upstream_failure.outcome == 'failure' || steps.fast_check.outcome == 'failure' || steps.full_check.outcome == 'failure'
-        timeout-minutes: 12
+        timeout-minutes: 8
+        env:
+          TW539_WATCHDOG_FAST: 1
         run: |
-          for i in {1..40}; do
+          for i in {1..60}; do
             python watchdog.py && exit 0
-            sleep 15
+            sleep 5
           done
           exit 1
+      - name: 修復後完整內容驗收
+        if: (steps.upstream_failure.outcome == 'failure' || steps.fast_check.outcome == 'failure' || steps.full_check.outcome == 'failure') && steps.repair_freshness.outcome == 'success'
+        timeout-minutes: 4
+        run: python watchdog.py
       - name: 修復失敗建立告警
         if: failure()
         env:

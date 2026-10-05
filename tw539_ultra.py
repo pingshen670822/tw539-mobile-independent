@@ -2136,7 +2136,7 @@ def build_single_supermodel(draws: list[dict]) -> dict:
 def build_strict_publication_gate(ranked: list[int], diagnostics: list[dict], repeat_audit: list[dict],
                                   previous_numbers: tuple[int, ...] | list[int], backtest: dict,
                                   single_supermodel: dict | None = None) -> dict:
-    """逐號執行正式發布門檻；只刪除不合格號碼，永遠不補位。"""
+    """每期必列唯一運算獨支；其餘分級只刪除不合格號碼，永遠不補位。"""
     if len(ranked) != 39 or len(set(ranked)) != 39 or len(diagnostics) != 39:
         raise ValueError("嚴格發布守門需要完整且不重複的三十九碼診斷")
     diagnostic_by_number={int(item["number"]):item for item in diagnostics}
@@ -2188,19 +2188,26 @@ def build_strict_publication_gate(ranked: list[int], diagnostics: list[dict], re
     super_candidate=supermodel.get("candidate")
     super_repeat_ok=(bool((repeat_by_number.get(int(super_candidate)) or {}).get("qualified"))
                      if super_candidate is not None and int(super_candidate) in previous else True)
-    single_gate={"candidate":super_candidate,"model_gate_passed":bool(supermodel.get("release_gate_passed")),
+    single_gate={"candidate":super_candidate,"computed":super_candidate is not None,
+                 "model_gate_passed":bool(supermodel.get("release_gate_passed")),
                  "repeat_qualification":super_repeat_ok,
                  "qualified":bool(super_candidate is not None and supermodel.get("release_gate_passed") and super_repeat_ok),
                  "failure_reasons":[]}
     if not single_gate["model_gate_passed"]: single_gate["failure_reasons"].append("超級獨支跨時間窗隔離守門未通過")
     if not super_repeat_ok: single_gate["failure_reasons"].append("上一期號碼未通過連莊資格")
     requested={"single":1,"two":2,"three":3,"five":5,"nine":9}
-    tiers={"single":[int(super_candidate)] if single_gate["qualified"] else [],
+    # 獨支是完整模型的唯一最高順位，不是拿其他號碼補位。驗證守門只決定證據標示，
+    # 不得再把已完成的唯一運算結果隱藏；多碼分級仍嚴守不足不補位。
+    tiers={"single":[int(super_candidate)] if super_candidate is not None else [],
            "two":qualified[:2],"three":qualified[:3],"five":qualified[:5],"nine":qualified[:9]}
     tier_status={key:("full" if len(tiers[key])==size else "insufficient_no_padding")
                  for key,size in requested.items()}
+    if tiers["single"]:
+        tier_status["single"]=("full_validated" if single_gate["qualified"]
+                               else "full_computed_validation_warning")
     return {
-        "policy":"strict_no_padding_v1","no_padding":True,
+        "policy":"mandatory_computed_single_strict_no_padding_v2","no_padding":True,
+        "single_always_computed":True,
         "thresholds":{
             "maximum_internal_rank":STRICT_PUBLICATION_MAX_RANK,
             "minimum_relative_index":STRICT_PUBLICATION_MIN_RELATIVE_INDEX,
@@ -2274,7 +2281,7 @@ def build_single_explanation(ranked: list[int], diagnostics: list[dict], weights
             "未通過上線守門的校準模組自動回退",
             "套用連莊資格與單碼重複冷卻",
             "一至三十九依最終分數排序，同分以期號封存碼固定先後",
-            "第1名仍須逐項通過嚴格發布守門；未達標就不發布、不補位",
+            "每期必須公布完整運算的唯一最強獨支；守門未達標時照實標示驗證警示，不得隱藏或另碼補位",
         ],
         "tie_break_rule":"同分時使用依據期號與號碼產生的穩定封存碼固定排序，禁止人工挑選",
         "direct_hit_gate_passed":bool(backtest.get("direct_hit_full_rank_gate")),
@@ -2744,9 +2751,9 @@ def main() -> None:
         },
         "formal_ranking_first_explanation": formal_single_explanation,
         "single_recommendation": {
-            "label": ("本期唯一最強獨支" if strict_publication_gate["tiers"]["single"]
-                      else "嚴格守門未達標，本期獨支不發布"),
+            "label": "本期唯一最強獨支",
             "evidence_label": bt["single_confidence_label"],
+            "validation_qualified": bool(strict_publication_gate["single_gate"]["qualified"]),
             "strong": bt["single_strong_recommendation"],
             "consensus_votes": consensus_votes,
             "module_count": len(module_consensus),
@@ -2759,7 +2766,7 @@ def main() -> None:
         },
         "release_policy": {
             "official_release_allowed": True,
-            "single": "strict_gate_or_withheld",
+            "single": "mandatory_unique_computed_single_with_validation_label",
             "single_edge_verified": bool(bt["single_release_allowed"]),
             "top5": "strict_gate_no_padding",
             "top9": "strict_gate_no_padding",

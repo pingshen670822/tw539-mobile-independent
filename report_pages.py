@@ -88,6 +88,8 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
     tiers=strict.get("tiers") or {"single":[],"two":[],"three":[],"five":[],"nine":[]}
     requested=strict.get("requested_sizes") or {"single":1,"two":2,"three":3,"five":5,"nine":9}
     single_formal=(tiers.get("single") or [None])[0]
+    single_gate=strict.get("single_gate") or {}
+    single_validated=bool(single_gate.get("qualified"))
     rank_rows = []
     for rank, number in enumerate(ranking[:15], 1):
         index = 100 * (score[number] - minimum) / spread
@@ -159,10 +161,13 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
     else:
         guard_note="條件未成立；監測器只記錄，不得改動正式排序。"
     if single_formal is not None:
-        single_head=(f"<div class='badge'>本期最強超級獨支</div><h2>本期最強超級獨支</h2>"
+        failed="、".join(single_gate.get("failure_reasons") or [])
+        validation_note=("完整驗證守門已通過。" if single_validated else
+                         f"完整運算已完成；驗證警示：{failed or '部分守門條件未通過'}。")
+        single_head=(f"<div class='badge'>{'本期最強超級獨支' if single_validated else '本期完整運算最強獨支'}</div><h2>本期唯一最強獨支</h2>"
                      f"<div class='number'>{single_formal:02}</div><p><b>40組主模型加上{global_fusion.get('module_count',0)}組全球六家族模型完成逐期前推驗證後，"
-                     f"選用前{supermodel.get('selected_window',0)}期動態層＋{100*supermodel.get('selected_global_history_blend',0):.0f}%全歷史基準；全部開獎前守門已通過。</b></p>"
-                     f"<p class='note'>證據等級：{evidence_label}。這是目前模型中相對最強的統計候選，不宣稱必中或保證獲利。</p>")
+                     f"選用前{supermodel.get('selected_window',0)}期動態層＋{100*supermodel.get('selected_global_history_blend',0):.0f}%全歷史基準，唯一最高順位為 {single_formal:02}。{validation_note}</b></p>"
+                     f"<p class='note'>鐵律：每期必須完整運算並公布唯一最強獨支；不得空白、沿用前期或臨時補號。證據等級：{evidence_label}。這是目前模型中相對最強的統計候選，不宣稱必中或保證獲利。</p>")
     else:
         failed="、".join((strict.get("single_gate") or {}).get("failure_reasons") or ["嚴格條件未全部通過"])
         single_head=("<div class='badge'>本期獨支不發布</div><h2>嚴格守門未達標</h2>"
@@ -173,7 +178,7 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
         f"<tr><td><b>{tier_labels[key]}</b></td><td class='number-line'>{_fmt(tiers.get(key) or []) or '未發布'}</td>"
         f"<td>{len(tiers.get(key) or [])}／{requested[key]}</td>"
         f"<td class='{'ok' if len(tiers.get(key) or [])==requested[key] else 'bad'}'>"
-        f"{'足額通過' if len(tiers.get(key) or [])==requested[key] else '不足不補位'}</td></tr>"
+        f"{(('完整運算・驗證通過' if single_validated else '完整運算・附驗證警示') if key=='single' else ('足額通過' if len(tiers.get(key) or [])==requested[key] else '不足不補位'))}</td></tr>"
         for key in ("single","two","three","five","nine")
     )
     strict_detail_rows="".join(
@@ -187,7 +192,7 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
 <div class='band {'strong' if single_formal is not None and strong else 'primary'}'>{single_head}</div>
 <div class='band strong'><h2>超級獨支完整運算來源</h2><div class='grid'><div class='card'><div class='label'>唯一候選</div><div class='value'>{super_candidate:02}</div></div><div class='card'><div class='label'>正式發布</div><div class='value'>{f'{single_formal:02}' if single_formal is not None else '未達標'}</div></div><div class='card'><div class='label'>參數候選</div><div class='value'>{supermodel.get('parameter_count',0)}組</div></div><div class='card'><div class='label'>選定動態窗</div><div class='value'>{supermodel.get('selected_window',0)}期</div></div><div class='card'><div class='label'>全歷史基準</div><div class='value'>{100*supermodel.get('selected_global_history_blend',0):.0f}%</div></div><div class='card'><div class='label'>使用完整歷史</div><div class='value'>{supermodel.get('full_history_draws',0):,}期</div></div><div class='card'><div class='label'>近期出現</div><div class='value'>{supermodel.get('candidate_recent_hits',0)}／{supermodel.get('candidate_recent_samples',0)}</div></div><div class='card'><div class='label'>全歷史出現</div><div class='value'>{supermodel.get('candidate_full_hits',0)}／{supermodel.get('candidate_full_samples',0)}</div></div><div class='card'><div class='label'>同碼參數共識</div><div class='value'>{supermodel.get('candidate_consensus_count',0)}／{supermodel.get('parameter_count',0)}</div></div></div><h3>目前模型選擇證據</h3><div class='table-wrap'><table><thead><tr><th>驗證區間</th><th>命中</th><th>隨機期望</th><th>標準化超額</th></tr></thead><tbody>{calculation_rows}</tbody></table></div><h3>六段時間隔離競賽</h3><div class='table-wrap'><table><thead><tr><th>預測區段</th><th>當時選定時間窗</th><th>全歷史占比</th><th>獨支命中</th></tr></thead><tbody>{fold_rows}</tbody></table></div><h3>隔離結果總表</h3><div class='table-wrap'><table><thead><tr><th>區間</th><th>實際命中</th><th>隨機期望</th><th>超額命中</th></tr></thead><tbody>{metric_rows}</tbody></table></div><p class='note'>每個區段開始前先用更早資料選定模型，之後整段鎖定，禁止用該段答案反選參數。所有號碼都保留全歷史基準，動態窗只負責追蹤近期偏移；開獎前完整封存，禁止事後換號。</p></div>
 <div class='band strong'><h2>全球六家族融合複驗</h2><div class='grid'><div class='card'><div class='label'>總模組數</div><div class='value'>{global_fusion.get('module_count',0)}組</div></div><div class='card'><div class='label'>模型家族</div><div class='value'>{global_fusion.get('family_count',0)}類</div></div><div class='card'><div class='label'>跨區段合格</div><div class='value'>{global_fusion.get('accepted_module_count',0)}組</div></div><div class='card'><div class='label'>融合最高票</div><div class='value'>{int(global_fusion.get('fusion_candidate') or 0):02}</div></div><div class='card'><div class='label'>主碼支持票</div><div class='value'>{(global_fusion.get('primary_candidate_support') or {}).get('accepted_model_votes',0)}組</div></div><div class='card'><div class='label'>獨立家族支持</div><div class='value'>{(global_fusion.get('primary_candidate_support') or {}).get('family_support',0)}類</div></div></div><h3>各家族冠軍</h3><div class='table-wrap'><table><thead><tr><th>模型家族</th><th>最穩參數</th><th>本期首選</th><th>最弱區段分數</th><th>判定</th></tr></thead><tbody>{fusion_family_rows}</tbody></table></div><h3>合格模型票數</h3><div class='table-wrap'><table><thead><tr><th>候選號碼</th><th>合格模型票</th><th>支持家族</th><th>穩健分數總和</th></tr></thead><tbody>{fusion_vote_rows}</tbody></table></div><h3>雙重隨機基準</h3><div class='grid'><div class='card'><div class='label'>隔離命中</div><div class='value'>{statistical_validation.get('observed_hits',0)}／{statistical_validation.get('samples',0)}</div></div><div class='card'><div class='label'>固定隨機尾端值</div><div class='value'>{100*statistical_validation.get('exact_binomial_upper_tail_p',0):.2f}%</div></div><div class='card'><div class='label'>循環錯位尾端值</div><div class='value'>{100*statistical_validation.get('circular_shift_p',0):.2f}%</div></div><div class='card'><div class='label'>嚴格統計證明</div><div class='value'>{'通過' if statistical_validation.get('strict_five_percent_significance') else '尚未通過'}</div></div></div><p class='note'>不穩定家族直接淘汰，不以模型數量灌票。循環錯位檢驗尚未達嚴格顯著時仍照實顯示；08是目前全部合格模型的最高票候選，不等於零誤差或必中證明。</p></div>
-<div class='band strong'><h2>嚴格發布守門</h2><p><b>獨支必須通過七百二十、三百六十、二百四十、一百二十、五十四期跨時間窗隔離守門，以及參數共識與連莊資格；其他分級號碼仍須通過內部前九、分數、相對指數、模組支持與直接命中校準。</b></p><p class='note'>本期分級合格 {_fmt(qualified) or '零顆'}，共 {len(qualified)} 顆；獨支由獨立單碼專家另行守門。任何層級不足都直接少列，不補號、不塞號。</p><div class='table-wrap'><table><thead><tr><th>內部名次</th><th>號碼</th><th>相對指數</th><th>正貢獻模組</th><th>模組前十五支持</th><th>分級發布判定</th></tr></thead><tbody>{strict_detail_rows}</tbody></table></div></div>
+<div class='band strong'><h2>嚴格發布守門</h2><p><b>獨支每期必須由全歷史與多模組完整運算產生唯一最高順位；跨時間窗、參數共識與連莊資格只決定驗證標示，不得把結果隱藏或換碼。其他分級號碼仍須通過內部前九、分數、相對指數、模組支持與直接命中校準。</b></p><p class='note'>本期分級合格 {_fmt(qualified) or '零顆'}，共 {len(qualified)} 顆；多碼層級不足都直接少列，不補號、不塞號。獨支固定列出完整運算第一名並同步揭露驗證警示。</p><div class='table-wrap'><table><thead><tr><th>內部名次</th><th>號碼</th><th>相對指數</th><th>正貢獻模組</th><th>模組前十五支持</th><th>分級發布判定</th></tr></thead><tbody>{strict_detail_rows}</tbody></table></div></div>
 <div class='band'><h2>最強號碼多邏輯總結</h2><div class='grid'><div class='card'><div class='label'>逐段隔離命中</div><div class='value'>{(walk.get('full') or {}).get('single_hits',0)}／{(walk.get('full') or {}).get('samples',0)}</div></div><div class='card'><div class='label'>最近120期</div><div class='value'>{(walk.get('recent_120') or {}).get('single_hits',0)}中</div></div><div class='card'><div class='label'>最近33期</div><div class='value'>{(walk.get('recent_33') or {}).get('single_hits',0)}中</div></div></div><h3>強烈推薦守門</h3><div class='table-wrap'><table><thead><tr><th>必要條件</th><th>結果</th></tr></thead><tbody>{condition_rows}</tbody></table></div></div>
 <div class='band'><h2>本期資料</h2><div class='grid'>
 <div class='card'><div class='label'>預測目標日</div><div class='value'>{target_date}</div></div>
