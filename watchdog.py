@@ -236,11 +236,12 @@ for name,page in pages.items():
     if english: errors.append(f'{name} 可見文字含英文：'+','.join(english))
     links=set(re.findall(r"href=['\"]\./([^'\"]+\.html)['\"]",page))
     if links!=set(REPORT_PAGES): errors.append(f'{name} 分頁導覽不完整')
-    for term in ("rel='manifest'","rel='apple-touch-icon'","mobile-web-app-capable","apple-mobile-web-app-capable","id='install-app-button'",'安裝手機版','mobile-sync.js'):
+    for term in ("rel='manifest'","rel='apple-touch-icon'","mobile-web-app-capable","apple-mobile-web-app-capable","id='install-app-button'",'安裝手機版',"id='manual-update-button'",'手動更新最新',"id='emergency-repair-button'",'當機立即修復','mobile-sync.js'):
         if term not in page: errors.append(f'{name} 缺少手機安裝條件：{term}')
 home=visible_pages['index.html']; review_page=visible_pages['review.html']; backtest_page=visible_pages['backtest.html']; history_page=visible_pages['history.html']; models_page=visible_pages['models.html']; health_page=visible_pages['health.html']
-if (not any(term in home for term in ('本期最強超級獨支','本期完整運算最強獨支'))
-        or '本期唯一最強獨支' not in home or '超級獨支完整運算來源' not in home or '嚴格發布守門' not in home
+if ('本期最強終極獨支' not in home or '本期其他鐵律號碼' not in home
+        or '查看獨支強烈驗證與完整運算' not in home or '查看資料、排名、排除與連莊診斷' not in home
+        or '超級獨支完整運算來源' not in home or '嚴格發布守門' not in home
         or '目前模型選擇證據' not in home or '六段時間隔離競賽' not in home
         or '隔離結果總表' not in home or '全球六家族融合複驗' not in home or '雙重隨機基準' not in home or '1中1' not in home
         or '終極獨支強烈驗證摘要' not in home or '不合格連莊前置排除' not in home
@@ -265,7 +266,7 @@ if not {'192x192','512x512'}.issubset({item.get('sizes') for item in manifest_ic
     errors.append('公開手機安裝清單缺少必要圖示')
 for name,(status,content_type,raw) in public_icons.items():
     if status!=200 or content_type!='image/png' or raw[:8]!=b'\x89PNG\r\n\x1a\n': errors.append(f'公開手機安裝圖示無效：{name}')
-for term in ('tw539-mobile-ironlaw-v7','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
+for term in ('tw539-mobile-ironlaw-v8','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
     if term not in worker: errors.append(f'公開離線安裝快取缺少：{term}')
 for term in ('beforeinstallprompt','appinstalled','install-app-button','手機版已安裝','AbortController','SYNC_TIMEOUT_MS=10000','syncInFlight'):
     if term not in sync: errors.append(f'公開手機安裝流程缺少：{term}')

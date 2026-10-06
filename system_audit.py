@@ -401,7 +401,7 @@ if version.get('latest_period')!=latest['period'] or version.get('latest_draw_da
 
 page_rules={
     'index.html':{
-        'required':('本期唯一最強獨支','終極獨支強烈驗證摘要','不合格連莊前置排除','超級獨支完整運算來源','全球六家族融合複驗','雙重隨機基準','嚴格發布守門','目前模型選擇證據','六段時間隔離競賽','隔離結果總表','最強號碼多邏輯總結','強烈推薦守門','失準事件監測','本期分級正式發布','1中1','2中1～2','3中1～3','5中2～3','9中3～5','內部前十五診斷（非正式推薦）','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不足不補位'),
+        'required':('本期最強終極獨支','本期其他鐵律號碼','終極獨支強烈驗證摘要','不合格連莊前置排除','超級獨支完整運算來源','全球六家族融合複驗','雙重隨機基準','嚴格發布守門','目前模型選擇證據','六段時間隔離競賽','隔離結果總表','最強號碼多邏輯總結','強烈推薦守門','失準事件監測','1中1','2中1～2','3中1～3','5中2～3','9中3～5','內部前十五診斷（非正式推薦）','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不足不補位','查看獨支強烈驗證與完整運算','查看資料、排名、排除與連莊診斷'),
         'forbidden':('最新一期命中結算','最後360期逐期走步回測','全歷史運算範圍','鐵律守門')},
     'backtest.html':{
         'required':('超級獨支多時間窗隔離驗證','全球融合與隨機基準複驗','最近14期逐段隔離','最後360期逐期走步回測','直接命中全排序校準','前5與前9任一關鍵區段退化即自動回退','資料變化影子驗證','單碼重複冷卻','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),
@@ -438,7 +438,7 @@ for folder in (REPORTS,SITE):
         if links!=nav_files: fail(f'{folder.name}/{filename} 分頁導覽不完整')
         if '低機率' in visible or '當期預測前九' in visible: fail(f'{folder.name}/{filename} 仍含易誤解標示或事後回算內容')
         if folder==SITE:
-            for term in ("rel='manifest'","rel='apple-touch-icon'","mobile-web-app-capable","apple-mobile-web-app-capable","id='install-app-button'","安裝手機版","mobile-sync.js"):
+            for term in ("rel='manifest'","rel='apple-touch-icon'","mobile-web-app-capable","apple-mobile-web-app-capable","id='install-app-button'","安裝手機版","id='manual-update-button'","手動更新最新","id='emergency-repair-button'","當機立即修復","mobile-sync.js"):
                 if term not in page: fail(f'{folder.name}/{filename} 缺少手機安裝條件：{term}')
 legacy=visible_text(REPORTS/'最新539科學預測戰報.html')
 if legacy!=visible_text(REPORTS/'index.html'): fail('相容戰報入口與本期預測頁不同步')
@@ -466,7 +466,7 @@ if not {'192x192','512x512'}.issubset(icon_sizes) or not any('maskable' in item.
 for name,size in (('icon-180.png',(180,180)),('icon-192.png',(192,192)),('icon-512.png',(512,512)),('maskable-512.png',(512,512))):
     path=SITE/'icons'/name
     if not path.exists() or png_size(path)!=size: fail(f'手機安裝圖示不完整：{name}')
-for term in ('tw539-mobile-ironlaw-v7','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
+for term in ('tw539-mobile-ironlaw-v8','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
     if term not in service: fail(f'離線安裝快取缺少：{term}')
 for term in ('beforeinstallprompt','appinstalled','install-app-button','手機版已安裝','AbortController','SYNC_TIMEOUT_MS=10000','syncInFlight'):
     if term not in sync: fail(f'手機安裝流程缺少：{term}')

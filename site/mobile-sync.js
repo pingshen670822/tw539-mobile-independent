@@ -2,6 +2,10 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-wor
 const installButton=document.getElementById('install-app-button');
 const installStatus=document.getElementById('install-app-status');
 const installHelp=document.getElementById('install-app-help');
+const cloudControlStatus=document.getElementById('cloud-control-status');
+document.querySelectorAll('.cloud-button').forEach(button=>button.addEventListener('click',()=>{
+  if(cloudControlStatus)cloudControlStatus.textContent=button.id==='emergency-repair-button'?'已開啟當機修復控制頁':'已開啟最新資料更新控制頁';
+}));
 let installPrompt=null;
 const installedMode=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 function showInstallState(){
