@@ -101,7 +101,8 @@ single_supermodel=result.get('single_supermodel') or {}
 if not ranked or result.get('single_candidate')!=single_supermodel.get('candidate'): errors.append('公開結果的超級獨支候選缺失')
 strict=result.get('strict_publication_gate') or {}
 try:
-    local_supermodel=build_single_supermodel(load_draws(DATA))
+    local_supermodel=build_single_supermodel(
+        load_draws(DATA),result.get('repeat_qualification') or [],data_latest.get('nums') or [])
     if single_supermodel!=local_supermodel or single_supermodel!=(result.get('backtest') or {}).get('single_supermodel'): errors.append('超級獨支多時間窗模型無法重現')
     expected_strict=build_strict_publication_gate(
         result.get('ranked_all') or [],result.get('number_diagnostics') or [],
@@ -242,6 +243,7 @@ if (not any(term in home for term in ('本期最強超級獨支','本期完整�
         or '本期唯一最強獨支' not in home or '超級獨支完整運算來源' not in home or '嚴格發布守門' not in home
         or '目前模型選擇證據' not in home or '六段時間隔離競賽' not in home
         or '隔離結果總表' not in home or '全球六家族融合複驗' not in home or '雙重隨機基準' not in home or '1中1' not in home
+        or '終極獨支強烈驗證摘要' not in home or '不合格連莊前置排除' not in home
         or '不足不補位' not in home or '內部前十五診斷（非正式推薦）' not in home
         or (result.get('single_candidate') and f"{int(result['single_candidate']):02}" not in home)):
     errors.append('本期預測頁未完整顯示嚴格發布、運算來源或單碼冷卻狀態')

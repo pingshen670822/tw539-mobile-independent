@@ -30,13 +30,17 @@ checks[ROOT/'tw539_ultra.py'].extend(['DIRECT_HIT_WINDOW = 360','DIRECT_HIT_RIDG
                                      'single_repeat_break_gate',
                                      'full_history_consensus_with_35pct_direct_hit_and_shadow_change',
                                      'build_single_explanation','build_single_supermodel','SINGLE_SUPER_WINDOWS',
-                                     '全歷史多時間窗與全球六家族融合第三版','build_global_single_fusion_audit',
+                                     '全歷史多時間窗、全球六家族與連莊前置排除第四版','build_global_single_fusion_audit',
+                                     'repeat_qualification_enforced_before_selection',
+                                     'repeat_qualification_enforced_before_voting',
+                                     'blocked_unqualified_repeat_numbers',
                                      'SINGLE_FUSION_SELECTION_SPANS','circular_shift_p','"single_supermodel": single_supermodel',
                                      '本期超級獨支','每期必須公布完整運算的唯一最強獨支'])
 checks[ROOT/'report_pages.py'].remove('本期最強1顆')
 checks[ROOT/'report_pages.py'].extend(['直接命中全排序校準','前5與前9任一關鍵區段退化即自動回退','單碼重複冷卻','資料變化影子驗證','本機關機','照常更新'])
 checks[ROOT/'report_pages.py'].extend(['本期最強超級獨支','超級獨支完整運算來源','嚴格發布守門',
                                       '目前模型選擇證據','六段時間隔離競賽','隔離結果總表',
+                                      '終極獨支強烈驗證摘要','不合格連莊前置排除',
                                       '全球六家族融合複驗','全球六家族融合架構','全球方法查證來源',
                                       '雙重隨機基準','一小時修復期限','主程式完整壓縮包','主程式下載',
                                       '電腦手機同步','同一版號'])

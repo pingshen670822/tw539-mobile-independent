@@ -1110,7 +1110,7 @@ def adaptive_polarity_backtest(
         "data_change_mode":"shadow_only_until_cross_window_gate",
         "method":"full_history_consensus_with_35pct_direct_hit_and_shadow_change",
     })
-    result["single_supermodel"]=build_single_supermodel(draws)
+    result["single_supermodel"]=build_single_supermodel(draws,repeat_audit,draws[-1]["nums"])
     return result
 
 
@@ -1791,15 +1791,20 @@ def build_number_diagnostics(ranked: list[int], score: dict[int, float], raw_sco
 
 
 def build_global_single_fusion_audit(draws: list[dict], count_prefix: list[list[int]],
-                                     primary_candidate: int) -> dict:
+                                     primary_candidate: int,
+                                     blocked_current_numbers: set[int] | None = None) -> dict:
     """多家族單碼稽核；所有模型均只用預測點以前資料，失穩家族自動淘汰。"""
     total_draws=len(draws)
     universe=range(1,40)
     models=[]
+    blocked_current_numbers=set(blocked_current_numbers or ())
 
-    def top_number(values: list[float], seed: str) -> int:
-        best=max(values[1:])
-        tied=[number for number in universe if abs(values[number]-best)<=1e-15]
+    def top_number(values: list[float], seed: str, excluded: set[int] | None = None) -> int:
+        eligible=[number for number in universe if number not in (excluded or set())]
+        if not eligible:
+            raise ValueError("全球融合候選不得全部遭到連莊資格排除")
+        best=max(values[number] for number in eligible)
+        tied=[number for number in eligible if abs(values[number]-best)<=1e-15]
         if len(tied)==1:
             return tied[0]
         return max(tied,key=lambda number:hashlib.sha256(f"{seed}:{number}".encode()).hexdigest())
@@ -1819,7 +1824,8 @@ def build_global_single_fusion_audit(draws: list[dict], count_prefix: list[list[
                 for number in universe:
                     values[number]=((1-blend)*(count_prefix[index][number]-count_prefix[index-width][number])/width
                                     +blend*count_prefix[index][number]/index)
-                picks[index]=top_number(values,f"頻率:{window}:{blend}:{draws[index-1]['period']}")
+                picks[index]=top_number(values,f"頻率:{window}:{blend}:{draws[index-1]['period']}",
+                                        blocked_current_numbers if index==total_draws else None)
             register("多時間窗頻率",f"{window}期與全歷史混合{blend:.2f}",picks)
 
     for half_life in SINGLE_FUSION_EWMA_HALF_LIVES:
@@ -1838,7 +1844,8 @@ def build_global_single_fusion_audit(draws: list[dict], count_prefix: list[list[
                 values=[0.0]*40
                 for number in universe:
                     values[number]=(1-blend)*states[index][number]+blend*count_prefix[index][number]/index
-                picks[index]=top_number(values,f"衰減:{half_life}:{blend}:{draws[index-1]['period']}")
+                picks[index]=top_number(values,f"衰減:{half_life}:{blend}:{draws[index-1]['period']}",
+                                        blocked_current_numbers if index==total_draws else None)
             register("指數時間衰減",f"半衰期{half_life}期與全歷史混合{blend:.2f}",picks)
 
     for short_window,long_window in ((15,60),(30,120),(60,240),(90,360),(120,720)):
@@ -1852,7 +1859,8 @@ def build_global_single_fusion_audit(draws: list[dict], count_prefix: list[list[
                         short_rate=(count_prefix[index][number]-count_prefix[index-short_width][number])/short_width
                         long_rate=(count_prefix[index][number]-count_prefix[index-long_width][number])/long_width
                         values[number]=polarity*(short_rate-long_rate)+blend*count_prefix[index][number]/index
-                    picks[index]=top_number(values,f"趨勢:{short_window}:{long_window}:{polarity}:{blend}:{draws[index-1]['period']}")
+                    picks[index]=top_number(values,f"趨勢:{short_window}:{long_window}:{polarity}:{blend}:{draws[index-1]['period']}",
+                                            blocked_current_numbers if index==total_draws else None)
                 register("動量與反轉",f"{short_window}對{long_window}期方向{polarity}混合{blend:.2f}",picks)
 
     gap_parameters=[(polarity,blend) for polarity in (1,-1) for blend in (0.0,.10,.35)]
@@ -1872,7 +1880,8 @@ def build_global_single_fusion_audit(draws: list[dict], count_prefix: list[list[
             values=[0.0]*40
             for number in universe:
                 values[number]=polarity*base[number]+blend*count_prefix[index][number]/index
-            gap_picks[parameter_index][index]=top_number(values,f"間隔:{polarity}:{blend}:{draws[index-1]['period']}")
+            gap_picks[parameter_index][index]=top_number(values,f"間隔:{polarity}:{blend}:{draws[index-1]['period']}",
+                                                         blocked_current_numbers if index==total_draws else None)
     for parameter_index,(polarity,blend) in enumerate(gap_parameters):
         register("間隔風險",f"方向{polarity}與全歷史混合{blend:.2f}",gap_picks[parameter_index])
 
@@ -1893,7 +1902,8 @@ def build_global_single_fusion_audit(draws: list[dict], count_prefix: list[list[
             values=[0.0]*40
             for number in universe:
                 values[number]=polarity*base[number]+blend*count_prefix[index][number]/index
-            transition_picks[parameter_index][index]=top_number(values,f"轉移:{polarity}:{blend}:{draws[index-1]['period']}")
+            transition_picks[parameter_index][index]=top_number(values,f"轉移:{polarity}:{blend}:{draws[index-1]['period']}",
+                                                                blocked_current_numbers if index==total_draws else None)
     for parameter_index,(polarity,blend) in enumerate(transition_parameters):
         register("前期條件轉移",f"方向{polarity}與全歷史混合{blend:.2f}",transition_picks[parameter_index])
 
@@ -1917,7 +1927,8 @@ def build_global_single_fusion_audit(draws: list[dict], count_prefix: list[list[
             values=[0.0]*40
             for number in universe:
                 values[number]=polarity*base[number]+blend*count_prefix[index][number]/index
-            weekday_picks[parameter_index][index]=top_number(values,f"開獎日:{polarity}:{blend}:{draws[index-1]['period']}")
+            weekday_picks[parameter_index][index]=top_number(values,f"開獎日:{polarity}:{blend}:{draws[index-1]['period']}",
+                                                             blocked_current_numbers if index==total_draws else None)
     for parameter_index,(polarity,blend) in enumerate(weekday_parameters):
         register("開獎日條件",f"方向{polarity}與全歷史混合{blend:.2f}",weekday_picks[parameter_index])
 
@@ -1974,6 +1985,8 @@ def build_global_single_fusion_audit(draws: list[dict], count_prefix: list[list[
                             for item in family_champions],
         "accepted_vote_table":vote_rows,"fusion_candidate":fusion_candidate,
         "primary_candidate":primary_candidate,"primary_candidate_support":candidate_row,
+        "blocked_unqualified_repeat_numbers":sorted(blocked_current_numbers),
+        "repeat_qualification_enforced_before_voting":True,
         "rejected_families":[item["family"] for item in family_champions if item["robust_score"]<=0],
         "methods":["多時間窗頻率","指數時間衰減","動量與反轉","間隔風險","前期條件轉移","開獎日條件"],
         "validation":["全歷史擴展訓練","逐期前推驗證","多區段最弱表現守門","模型家族分離驗證","隨機基準比較"],
@@ -1982,11 +1995,16 @@ def build_global_single_fusion_audit(draws: list[dict], count_prefix: list[list[
     }
 
 
-def build_single_supermodel(draws: list[dict]) -> dict:
+def build_single_supermodel(draws: list[dict], repeat_audit: list[dict] | None = None,
+                            previous_numbers: tuple[int, ...] | list[int] | None = None) -> dict:
     """全歷史基準與多時間窗頻率的單碼專家；參數只用預測點以前成績選擇。"""
     total_draws=len(draws)
     if total_draws < max(SINGLE_SUPER_WINDOWS)+max(SINGLE_SUPER_SELECTION_SPANS):
         raise ValueError("超級獨支需要足夠的全歷史資料")
+    repeat_by_number={int(item["number"]):item for item in (repeat_audit or [])}
+    previous=set(int(number) for number in (previous_numbers or []))
+    blocked_repeat_numbers={number for number in previous
+                            if not bool((repeat_by_number.get(number) or {}).get("qualified"))}
     count_prefix=[[0]*40]
     for draw in draws:
         row=count_prefix[-1][:]
@@ -2068,7 +2086,9 @@ def build_single_supermodel(draws: list[dict]) -> dict:
                +global_blend*count_prefix[total_draws][number]/total_draws
         for number in range(1,40)
     }
-    current_ranked=rank_numbers(current_score,draws[-1]["period"])
+    unconstrained_ranked=rank_numbers(current_score,draws[-1]["period"])
+    current_ranked=([number for number in unconstrained_ranked if number not in blocked_repeat_numbers]
+                    +[number for number in unconstrained_ranked if number in blocked_repeat_numbers])
     candidate=current_ranked[0]
     candidate_consensus=[]
     for model_index,(candidate_window,candidate_blend) in enumerate(parameters):
@@ -2078,9 +2098,12 @@ def build_single_supermodel(draws: list[dict]) -> dict:
                    +candidate_blend*count_prefix[total_draws][number]/total_draws
             for number in range(1,40)
         }
-        if rank_numbers(scores,draws[-1]["period"])[0]==candidate:
+        parameter_ranked=rank_numbers(scores,draws[-1]["period"])
+        parameter_ranked=([number for number in parameter_ranked if number not in blocked_repeat_numbers]
+                          +[number for number in parameter_ranked if number in blocked_repeat_numbers])
+        if parameter_ranked[0]==candidate:
             candidate_consensus.append({"window":candidate_window,"global_history_blend":candidate_blend})
-    global_fusion=build_global_single_fusion_audit(draws,count_prefix,candidate)
+    global_fusion=build_global_single_fusion_audit(draws,count_prefix,candidate,blocked_repeat_numbers)
     observed_hits=walk_forward["full"]["single_hits"];samples=len(walk_rows)
     predicted=[item["ranked"][0] for item in walk_rows]
     actual_sets=[item["actual"] for item in walk_rows]
@@ -2112,13 +2135,17 @@ def build_single_supermodel(draws: list[dict]) -> dict:
         "最近五十四期不低於隨機":walk_forward["recent_54"]["single_hits"]>=math.ceil(walk_forward["recent_54"]["random_expected_hits"]),
         "至少十二組參數同選一碼":len(candidate_consensus)>=12,
         "至少四種時間窗同選一碼":len({item["window"] for item in candidate_consensus})>=4,
+        "不合格連莊號碼已在候選排序前排除":candidate not in blocked_repeat_numbers,
         "全球六家族融合驗證通過":bool(global_fusion.get("release_gate_passed")),
         "兩種隨機基準已完成且不得隱藏":bool(statistical_validation["circular_shift_tests"]>=719
                                             and statistical_validation["exact_binomial_upper_tail_p"]>=0),
     }
     return {
-        "policy":"全歷史多時間窗與全球六家族融合第三版","candidate":candidate,
+        "policy":"全歷史多時間窗、全球六家族與連莊前置排除第四版","candidate":candidate,
         "candidate_ranked":current_ranked,"current_score":{str(number):round(value,12) for number,value in current_score.items()},
+        "unconstrained_candidate":unconstrained_ranked[0],
+        "blocked_unqualified_repeat_numbers":sorted(blocked_repeat_numbers),
+        "repeat_qualification_enforced_before_selection":True,
         "selected_window":window,"selected_global_history_blend":global_blend,
         "recent_history_blend":round(1-global_blend,6),"full_history_draws":total_draws,
         "candidate_recent_hits":count_prefix[total_draws][candidate]-count_prefix[total_draws-width][candidate],

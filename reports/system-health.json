@@ -1,13 +1,13 @@
 {
   "status": "healthy",
-  "checked_at": "2026-10-06T07:43:59+08:00",
+  "checked_at": "2026-10-06T08:12:05+08:00",
   "latest_period": "115000241",
   "latest_draw_date": "2026-10-05",
   "expected_latest_date": "2026-10-05",
   "freshness_ok": true,
   "calendar_freshness_ok": true,
   "data_changed": false,
-  "official_source": "taiwanlottery_latest_result",
+  "official_source": null,
   "source_failover_used": false,
   "backfill_complete": true,
   "backfill_draw_count": 0,
@@ -23,7 +23,7 @@
   "watchdog_interval_minutes": 5,
   "upstream_failure_forces_repair": true,
   "desktop_mobile_sync": true,
-  "desktop_mobile_shared_version": "20261006074359",
+  "desktop_mobile_shared_version": "20261006081205",
   "desktop_mobile_source": "電腦版與手機版共用同一次正式運算、同一結果檔與同一組分頁",
   "official_draw_time": "2026-10-05T20:30+08:00",
   "sync_completed_at": "2026-10-06T00:07:59+08:00",
@@ -33,15 +33,15 @@
   "self_repair_status": "雲端待命",
   "self_repair_count": 15,
   "last_self_repair_at": "2026-10-06T00:07:59+08:00",
-  "last_public_verification_at": "2026-10-06T07:43:59+08:00",
+  "last_public_verification_at": "2026-10-06T08:12:05+08:00",
   "mobile_open_sync": "開啟、回到前景、重新連網均立即核對版本",
   "model_release_allowed": true,
   "single_release_allowed": true,
   "strict_publication_policy": "mandatory_computed_single_strict_no_padding_v2",
   "strict_publication_no_padding": true,
   "strict_publication_qualified_count": 0,
-  "single_supermodel_policy": "全歷史多時間窗與全球六家族融合第三版",
-  "single_supermodel_candidate": 8,
+  "single_supermodel_policy": "全歷史多時間窗、全球六家族與連莊前置排除第四版",
+  "single_supermodel_candidate": 12,
   "single_supermodel_release_gate": true,
   "single_supermodel_walk_forward": {
     "full": {
@@ -381,7 +381,7 @@
       {
         "family": "指數時間衰減",
         "label": "半衰期60期與全歷史混合0.00",
-        "candidate": 8,
+        "candidate": 30,
         "robust_score": 1.133854047,
         "mean_score": 1.599550104,
         "selection_evidence": [
@@ -426,7 +426,7 @@
       {
         "family": "多時間窗頻率",
         "label": "540期與全歷史混合0.00",
-        "candidate": 8,
+        "candidate": 7,
         "robust_score": 1.055029969,
         "mean_score": 1.759722047,
         "selection_evidence": [
@@ -516,7 +516,7 @@
       {
         "family": "間隔風險",
         "label": "方向-1與全歷史混合0.35",
-        "candidate": 16,
+        "candidate": 2,
         "robust_score": -0.375734575,
         "mean_score": 0.508873184,
         "selection_evidence": [
@@ -651,32 +651,39 @@
     ],
     "accepted_vote_table": [
       {
-        "candidate": 8,
-        "accepted_model_votes": 18,
-        "family_support": 2,
-        "robust_score_sum": 9.390499904
-      },
-      {
         "candidate": 12,
-        "accepted_model_votes": 10,
+        "accepted_model_votes": 24,
         "family_support": 2,
-        "robust_score_sum": 1.295746159
+        "robust_score_sum": 7.599980234
       },
       {
         "candidate": 30,
-        "accepted_model_votes": 8,
+        "accepted_model_votes": 9,
         "family_support": 2,
-        "robust_score_sum": 4.303385259
+        "robust_score_sum": 5.437239306
+      },
+      {
+        "candidate": 7,
+        "accepted_model_votes": 3,
+        "family_support": 1,
+        "robust_score_sum": 1.952411782
       }
     ],
-    "fusion_candidate": 8,
-    "primary_candidate": 8,
+    "fusion_candidate": 12,
+    "primary_candidate": 12,
     "primary_candidate_support": {
-      "candidate": 8,
-      "accepted_model_votes": 18,
+      "candidate": 12,
+      "accepted_model_votes": 24,
       "family_support": 2,
-      "robust_score_sum": 9.390499904
+      "robust_score_sum": 7.599980234
     },
+    "blocked_unqualified_repeat_numbers": [
+      5,
+      8,
+      16,
+      31
+    ],
+    "repeat_qualification_enforced_before_voting": true,
     "rejected_families": [
       "間隔風險",
       "開獎日條件",
@@ -871,7 +878,7 @@
   "data_change_recent120_before": 1.1333,
   "data_change_recent120_after": 1.125,
   "model_drift": "stable_or_observing",
-  "recalculation_fingerprint": "1827f7c71f3f1836",
+  "recalculation_fingerprint": "ce7e8388396826ce",
   "settled_previous": true,
   "latest_review_status": "completed_from_pre_draw_seal",
   "latest_review_accounted": true,

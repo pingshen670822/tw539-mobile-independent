@@ -255,7 +255,7 @@ recalculated_ranking=expected_current_ranking
 if ranked_all!=recalculated_ranking: fail('連莊資格後完整39碼排名與公開排名不同')
 recalculated_number_diagnostics=build_number_diagnostics(recalculated_ranking,qualified_scores,raw_current,current_features,weights)
 if result.get('number_diagnostics')!=recalculated_number_diagnostics: fail('開獎前39碼模組貢獻無法重現')
-recalculated_supermodel=build_single_supermodel(draws)
+recalculated_supermodel=build_single_supermodel(draws,recalculated_repeat,latest['nums'])
 if result.get('single_supermodel')!=recalculated_supermodel or backtest.get('single_supermodel')!=recalculated_supermodel: fail('超級獨支多時間窗模型無法重現')
 if result.get('single_candidate')!=recalculated_supermodel.get('candidate'): fail('正式獨支候選與超級獨支模型不同步')
 recalculated_strict=build_strict_publication_gate(
@@ -401,7 +401,7 @@ if version.get('latest_period')!=latest['period'] or version.get('latest_draw_da
 
 page_rules={
     'index.html':{
-        'required':('本期唯一最強獨支','本期完整運算最強獨支','超級獨支完整運算來源','全球六家族融合複驗','雙重隨機基準','嚴格發布守門','目前模型選擇證據','六段時間隔離競賽','隔離結果總表','最強號碼多邏輯總結','強烈推薦守門','失準事件監測','本期分級正式發布','1中1','2中1～2','3中1～3','5中2～3','9中3～5','內部前十五診斷（非正式推薦）','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不足不補位'),
+        'required':('本期唯一最強獨支','終極獨支強烈驗證摘要','不合格連莊前置排除','超級獨支完整運算來源','全球六家族融合複驗','雙重隨機基準','嚴格發布守門','目前模型選擇證據','六段時間隔離競賽','隔離結果總表','最強號碼多邏輯總結','強烈推薦守門','失準事件監測','本期分級正式發布','1中1','2中1～2','3中1～3','5中2～3','9中3～5','內部前十五診斷（非正式推薦）','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不足不補位'),
         'forbidden':('最新一期命中結算','最後360期逐期走步回測','全歷史運算範圍','鐵律守門')},
     'backtest.html':{
         'required':('超級獨支多時間窗隔離驗證','全球融合與隨機基準複驗','最近14期逐段隔離','最後360期逐期走步回測','直接命中全排序校準','前5與前9任一關鍵區段退化即自動回退','資料變化影子驗證','單碼重複冷卻','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),

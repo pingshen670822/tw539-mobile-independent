@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-10-06T07:43:58+08:00",
+  "generated_at": "2026-10-06T08:12:03+08:00",
   "based_on_period": "115000241",
   "target_draw_date": "2026-10-06",
-  "recalculation_fingerprint": "1827f7c71f3f1836",
+  "recalculation_fingerprint": "ce7e8388396826ce",
   "pre_draw_seal": {
     "algorithm": "sha256",
-    "sha256": "1827f7c71f3f1836045eb45372b62f1ac4ca23ab2dab201008b6a1044ec6da8f",
+    "sha256": "ce7e8388396826ceeaa5d7f0751251d49c85b2bfff8b1b6fe2e83a27f96cad1b",
     "sealed_payload": {
       "based_on_period": "115000241",
       "target_draw_date": "2026-10-06",
@@ -977,14 +977,12 @@
         "qualified_numbers": [],
         "qualified_count": 0,
         "single_gate": {
-          "candidate": 8,
+          "candidate": 12,
           "computed": true,
           "model_gate_passed": true,
-          "repeat_qualification": false,
-          "qualified": false,
-          "failure_reasons": [
-            "上一期號碼未通過連莊資格"
-          ]
+          "repeat_qualification": true,
+          "qualified": true,
+          "failure_reasons": []
         },
         "requested_sizes": {
           "single": 1,
@@ -995,7 +993,7 @@
         },
         "tiers": {
           "single": [
-            8
+            12
           ],
           "two": [],
           "three": [],
@@ -1003,7 +1001,7 @@
           "nine": []
         },
         "tier_status": {
-          "single": "full_computed_validation_warning",
+          "single": "full_validated",
           "two": "insufficient_no_padding",
           "three": "insufficient_no_padding",
           "five": "insufficient_no_padding",
@@ -2384,10 +2382,9 @@
         ]
       },
       "single_supermodel": {
-        "policy": "全歷史多時間窗與全球六家族融合第三版",
-        "candidate": 8,
+        "policy": "全歷史多時間窗、全球六家族與連莊前置排除第四版",
+        "candidate": 12,
         "candidate_ranked": [
-          8,
           12,
           6,
           34,
@@ -2395,18 +2392,15 @@
           11,
           2,
           23,
-          31,
           29,
           35,
           21,
           17,
-          5,
           7,
           36,
           30,
           4,
           15,
-          16,
           19,
           3,
           18,
@@ -2425,7 +2419,11 @@
           9,
           26,
           33,
-          39
+          39,
+          8,
+          31,
+          5,
+          16
         ],
         "current_score": {
           "1": 0.125208333333,
@@ -2468,33 +2466,61 @@
           "38": 0.119440789474,
           "39": 0.095084064327
         },
+        "unconstrained_candidate": 8,
+        "blocked_unqualified_repeat_numbers": [
+          5,
+          8,
+          16,
+          31
+        ],
+        "repeat_qualification_enforced_before_selection": true,
         "selected_window": 240,
         "selected_global_history_blend": 0.35,
         "recent_history_blend": 0.65,
         "full_history_draws": 5985,
-        "candidate_recent_hits": 48,
+        "candidate_recent_hits": 41,
         "candidate_recent_samples": 240,
-        "candidate_full_hits": 771,
+        "candidate_full_hits": 785,
         "candidate_full_samples": 5985,
         "candidate_consensus": [
           {
-            "window": 180,
+            "window": 90,
             "global_history_blend": 0.05
           },
           {
-            "window": 180,
+            "window": 90,
             "global_history_blend": 0.1
           },
           {
-            "window": 180,
+            "window": 90,
             "global_history_blend": 0.2
           },
           {
-            "window": 180,
+            "window": 90,
             "global_history_blend": 0.35
           },
           {
-            "window": 180,
+            "window": 90,
+            "global_history_blend": 0.5
+          },
+          {
+            "window": 120,
+            "global_history_blend": 0.05
+          },
+          {
+            "window": 120,
+            "global_history_blend": 0.1
+          },
+          {
+            "window": 120,
+            "global_history_blend": 0.2
+          },
+          {
+            "window": 120,
+            "global_history_blend": 0.35
+          },
+          {
+            "window": 120,
             "global_history_blend": 0.5
           },
           {
@@ -2538,47 +2564,47 @@
             "global_history_blend": 0.5
           },
           {
-            "window": 540,
+            "window": 720,
             "global_history_blend": 0.05
           },
           {
-            "window": 540,
+            "window": 720,
             "global_history_blend": 0.1
           },
           {
-            "window": 540,
+            "window": 720,
             "global_history_blend": 0.2
           },
           {
-            "window": 540,
+            "window": 720,
             "global_history_blend": 0.35
           },
           {
-            "window": 540,
+            "window": 720,
             "global_history_blend": 0.5
           },
           {
-            "window": 720,
+            "window": 1200,
             "global_history_blend": 0.05
           },
           {
-            "window": 720,
+            "window": 1200,
             "global_history_blend": 0.1
           },
           {
-            "window": 720,
+            "window": 1200,
             "global_history_blend": 0.2
           },
           {
-            "window": 720,
+            "window": 1200,
             "global_history_blend": 0.35
           },
           {
-            "window": 720,
+            "window": 1200,
             "global_history_blend": 0.5
           }
         ],
-        "candidate_consensus_count": 25,
+        "candidate_consensus_count": 30,
         "current_selection": {
           "window": 240,
           "global_history_blend": 0.35,
@@ -2962,7 +2988,7 @@
             {
               "family": "指數時間衰減",
               "label": "半衰期60期與全歷史混合0.00",
-              "candidate": 8,
+              "candidate": 30,
               "robust_score": 1.133854047,
               "mean_score": 1.599550104,
               "selection_evidence": [
@@ -3007,7 +3033,7 @@
             {
               "family": "多時間窗頻率",
               "label": "540期與全歷史混合0.00",
-              "candidate": 8,
+              "candidate": 7,
               "robust_score": 1.055029969,
               "mean_score": 1.759722047,
               "selection_evidence": [
@@ -3097,7 +3123,7 @@
             {
               "family": "間隔風險",
               "label": "方向-1與全歷史混合0.35",
-              "candidate": 16,
+              "candidate": 2,
               "robust_score": -0.375734575,
               "mean_score": 0.508873184,
               "selection_evidence": [
@@ -3232,32 +3258,39 @@
           ],
           "accepted_vote_table": [
             {
-              "candidate": 8,
-              "accepted_model_votes": 18,
-              "family_support": 2,
-              "robust_score_sum": 9.390499904
-            },
-            {
               "candidate": 12,
-              "accepted_model_votes": 10,
+              "accepted_model_votes": 24,
               "family_support": 2,
-              "robust_score_sum": 1.295746159
+              "robust_score_sum": 7.599980234
             },
             {
               "candidate": 30,
-              "accepted_model_votes": 8,
+              "accepted_model_votes": 9,
               "family_support": 2,
-              "robust_score_sum": 4.303385259
+              "robust_score_sum": 5.437239306
+            },
+            {
+              "candidate": 7,
+              "accepted_model_votes": 3,
+              "family_support": 1,
+              "robust_score_sum": 1.952411782
             }
           ],
-          "fusion_candidate": 8,
-          "primary_candidate": 8,
+          "fusion_candidate": 12,
+          "primary_candidate": 12,
           "primary_candidate_support": {
-            "candidate": 8,
-            "accepted_model_votes": 18,
+            "candidate": 12,
+            "accepted_model_votes": 24,
             "family_support": 2,
-            "robust_score_sum": 9.390499904
+            "robust_score_sum": 7.599980234
           },
+          "blocked_unqualified_repeat_numbers": [
+            5,
+            8,
+            16,
+            31
+          ],
+          "repeat_qualification_enforced_before_voting": true,
           "rejected_families": [
             "間隔風險",
             "開獎日條件",
@@ -3311,6 +3344,7 @@
           "最近五十四期不低於隨機": true,
           "至少十二組參數同選一碼": true,
           "至少四種時間窗同選一碼": true,
+          "不合格連莊號碼已在候選排序前排除": true,
           "全球六家族融合驗證通過": true,
           "兩種隨機基準已完成且不得隱藏": true
         },
@@ -15807,10 +15841,10 @@
     "direct_hit_full_rank_blend": 0.35,
     "direct_hit_full_rank_gate": false,
     "direct_hit_weights": {
-      "full_frequency_balance": 0.36194312478896323,
-      "full_transition_correction": 0.3717855108891292,
-      "full_signature_correction": -0.07762260428695028,
-      "full_overdue_correction": 0.1886487600349573
+      "full_frequency_balance": 0.3619431247889631,
+      "full_transition_correction": 0.37178551088912914,
+      "full_signature_correction": -0.07762260428695027,
+      "full_overdue_correction": 0.18864876003495745
     },
     "data_change_enabled": true,
     "data_change_window": 720,
@@ -15819,14 +15853,14 @@
     "data_change_preserve_front": 5,
     "data_change_gate": false,
     "data_change_weights": [
-      0.20762431810455328,
-      0.2712117954504414,
-      -0.05426869014446861,
-      0.07296581719333298,
-      0.014229289124511988,
-      0.21854328761947908,
+      0.20762431810455326,
+      0.27121179545044133,
+      -0.054268690144468605,
+      0.07296581719333302,
+      0.014229289124511985,
+      0.21854328761947905,
       0.15579790129805396,
-      -0.0053589010651586555
+      -0.0053589010651588
     ],
     "selected_next_strategy": {
       "method": "five_member_signed_weight_consensus",
@@ -16745,10 +16779,9 @@
     }
   ],
   "single_supermodel": {
-    "policy": "全歷史多時間窗與全球六家族融合第三版",
-    "candidate": 8,
+    "policy": "全歷史多時間窗、全球六家族與連莊前置排除第四版",
+    "candidate": 12,
     "candidate_ranked": [
-      8,
       12,
       6,
       34,
@@ -16756,18 +16789,15 @@
       11,
       2,
       23,
-      31,
       29,
       35,
       21,
       17,
-      5,
       7,
       36,
       30,
       4,
       15,
-      16,
       19,
       3,
       18,
@@ -16786,7 +16816,11 @@
       9,
       26,
       33,
-      39
+      39,
+      8,
+      31,
+      5,
+      16
     ],
     "current_score": {
       "1": 0.125208333333,
@@ -16829,33 +16863,61 @@
       "38": 0.119440789474,
       "39": 0.095084064327
     },
+    "unconstrained_candidate": 8,
+    "blocked_unqualified_repeat_numbers": [
+      5,
+      8,
+      16,
+      31
+    ],
+    "repeat_qualification_enforced_before_selection": true,
     "selected_window": 240,
     "selected_global_history_blend": 0.35,
     "recent_history_blend": 0.65,
     "full_history_draws": 5985,
-    "candidate_recent_hits": 48,
+    "candidate_recent_hits": 41,
     "candidate_recent_samples": 240,
-    "candidate_full_hits": 771,
+    "candidate_full_hits": 785,
     "candidate_full_samples": 5985,
     "candidate_consensus": [
       {
-        "window": 180,
+        "window": 90,
         "global_history_blend": 0.05
       },
       {
-        "window": 180,
+        "window": 90,
         "global_history_blend": 0.1
       },
       {
-        "window": 180,
+        "window": 90,
         "global_history_blend": 0.2
       },
       {
-        "window": 180,
+        "window": 90,
         "global_history_blend": 0.35
       },
       {
-        "window": 180,
+        "window": 90,
+        "global_history_blend": 0.5
+      },
+      {
+        "window": 120,
+        "global_history_blend": 0.05
+      },
+      {
+        "window": 120,
+        "global_history_blend": 0.1
+      },
+      {
+        "window": 120,
+        "global_history_blend": 0.2
+      },
+      {
+        "window": 120,
+        "global_history_blend": 0.35
+      },
+      {
+        "window": 120,
         "global_history_blend": 0.5
       },
       {
@@ -16899,47 +16961,47 @@
         "global_history_blend": 0.5
       },
       {
-        "window": 540,
+        "window": 720,
         "global_history_blend": 0.05
       },
       {
-        "window": 540,
+        "window": 720,
         "global_history_blend": 0.1
       },
       {
-        "window": 540,
+        "window": 720,
         "global_history_blend": 0.2
       },
       {
-        "window": 540,
+        "window": 720,
         "global_history_blend": 0.35
       },
       {
-        "window": 540,
+        "window": 720,
         "global_history_blend": 0.5
       },
       {
-        "window": 720,
+        "window": 1200,
         "global_history_blend": 0.05
       },
       {
-        "window": 720,
+        "window": 1200,
         "global_history_blend": 0.1
       },
       {
-        "window": 720,
+        "window": 1200,
         "global_history_blend": 0.2
       },
       {
-        "window": 720,
+        "window": 1200,
         "global_history_blend": 0.35
       },
       {
-        "window": 720,
+        "window": 1200,
         "global_history_blend": 0.5
       }
     ],
-    "candidate_consensus_count": 25,
+    "candidate_consensus_count": 30,
     "current_selection": {
       "window": 240,
       "global_history_blend": 0.35,
@@ -17323,7 +17385,7 @@
         {
           "family": "指數時間衰減",
           "label": "半衰期60期與全歷史混合0.00",
-          "candidate": 8,
+          "candidate": 30,
           "robust_score": 1.133854047,
           "mean_score": 1.599550104,
           "selection_evidence": [
@@ -17368,7 +17430,7 @@
         {
           "family": "多時間窗頻率",
           "label": "540期與全歷史混合0.00",
-          "candidate": 8,
+          "candidate": 7,
           "robust_score": 1.055029969,
           "mean_score": 1.759722047,
           "selection_evidence": [
@@ -17458,7 +17520,7 @@
         {
           "family": "間隔風險",
           "label": "方向-1與全歷史混合0.35",
-          "candidate": 16,
+          "candidate": 2,
           "robust_score": -0.375734575,
           "mean_score": 0.508873184,
           "selection_evidence": [
@@ -17593,32 +17655,39 @@
       ],
       "accepted_vote_table": [
         {
-          "candidate": 8,
-          "accepted_model_votes": 18,
-          "family_support": 2,
-          "robust_score_sum": 9.390499904
-        },
-        {
           "candidate": 12,
-          "accepted_model_votes": 10,
+          "accepted_model_votes": 24,
           "family_support": 2,
-          "robust_score_sum": 1.295746159
+          "robust_score_sum": 7.599980234
         },
         {
           "candidate": 30,
-          "accepted_model_votes": 8,
+          "accepted_model_votes": 9,
           "family_support": 2,
-          "robust_score_sum": 4.303385259
+          "robust_score_sum": 5.437239306
+        },
+        {
+          "candidate": 7,
+          "accepted_model_votes": 3,
+          "family_support": 1,
+          "robust_score_sum": 1.952411782
         }
       ],
-      "fusion_candidate": 8,
-      "primary_candidate": 8,
+      "fusion_candidate": 12,
+      "primary_candidate": 12,
       "primary_candidate_support": {
-        "candidate": 8,
-        "accepted_model_votes": 18,
+        "candidate": 12,
+        "accepted_model_votes": 24,
         "family_support": 2,
-        "robust_score_sum": 9.390499904
+        "robust_score_sum": 7.599980234
       },
+      "blocked_unqualified_repeat_numbers": [
+        5,
+        8,
+        16,
+        31
+      ],
+      "repeat_qualification_enforced_before_voting": true,
       "rejected_families": [
         "間隔風險",
         "開獎日條件",
@@ -17672,6 +17741,7 @@
       "最近五十四期不低於隨機": true,
       "至少十二組參數同選一碼": true,
       "至少四種時間窗同選一碼": true,
+      "不合格連莊號碼已在候選排序前排除": true,
       "全球六家族融合驗證通過": true,
       "兩種隨機基準已完成且不得隱藏": true
     },
@@ -17696,14 +17766,12 @@
     "qualified_numbers": [],
     "qualified_count": 0,
     "single_gate": {
-      "candidate": 8,
+      "candidate": 12,
       "computed": true,
       "model_gate_passed": true,
-      "repeat_qualification": false,
-      "qualified": false,
-      "failure_reasons": [
-        "上一期號碼未通過連莊資格"
-      ]
+      "repeat_qualification": true,
+      "qualified": true,
+      "failure_reasons": []
     },
     "requested_sizes": {
       "single": 1,
@@ -17714,7 +17782,7 @@
     },
     "tiers": {
       "single": [
-        8
+        12
       ],
       "two": [],
       "three": [],
@@ -17722,7 +17790,7 @@
       "nine": []
     },
     "tier_status": {
-      "single": "full_computed_validation_warning",
+      "single": "full_validated",
       "two": "insufficient_no_padding",
       "three": "insufficient_no_padding",
       "five": "insufficient_no_padding",
@@ -19104,7 +19172,7 @@
   },
   "published_predictions": {
     "single": [
-      8
+      12
     ],
     "two": [],
     "three": [],
@@ -19243,8 +19311,8 @@
       "listed_top9": false
     }
   ],
-  "single_candidate": 8,
-  "single_published": 8,
+  "single_candidate": 12,
+  "single_published": 12,
   "single_repeat_break": {
     "applied": false,
     "original": 2,
@@ -19256,10 +19324,9 @@
     "source": "開獎前逐日封存預測"
   },
   "single_selection_evidence": {
-    "policy": "全歷史多時間窗與全球六家族融合第三版",
-    "candidate": 8,
+    "policy": "全歷史多時間窗、全球六家族與連莊前置排除第四版",
+    "candidate": 12,
     "candidate_ranked": [
-      8,
       12,
       6,
       34,
@@ -19267,18 +19334,15 @@
       11,
       2,
       23,
-      31,
       29,
       35,
       21,
       17,
-      5,
       7,
       36,
       30,
       4,
       15,
-      16,
       19,
       3,
       18,
@@ -19297,7 +19361,11 @@
       9,
       26,
       33,
-      39
+      39,
+      8,
+      31,
+      5,
+      16
     ],
     "current_score": {
       "1": 0.125208333333,
@@ -19340,33 +19408,61 @@
       "38": 0.119440789474,
       "39": 0.095084064327
     },
+    "unconstrained_candidate": 8,
+    "blocked_unqualified_repeat_numbers": [
+      5,
+      8,
+      16,
+      31
+    ],
+    "repeat_qualification_enforced_before_selection": true,
     "selected_window": 240,
     "selected_global_history_blend": 0.35,
     "recent_history_blend": 0.65,
     "full_history_draws": 5985,
-    "candidate_recent_hits": 48,
+    "candidate_recent_hits": 41,
     "candidate_recent_samples": 240,
-    "candidate_full_hits": 771,
+    "candidate_full_hits": 785,
     "candidate_full_samples": 5985,
     "candidate_consensus": [
       {
-        "window": 180,
+        "window": 90,
         "global_history_blend": 0.05
       },
       {
-        "window": 180,
+        "window": 90,
         "global_history_blend": 0.1
       },
       {
-        "window": 180,
+        "window": 90,
         "global_history_blend": 0.2
       },
       {
-        "window": 180,
+        "window": 90,
         "global_history_blend": 0.35
       },
       {
-        "window": 180,
+        "window": 90,
+        "global_history_blend": 0.5
+      },
+      {
+        "window": 120,
+        "global_history_blend": 0.05
+      },
+      {
+        "window": 120,
+        "global_history_blend": 0.1
+      },
+      {
+        "window": 120,
+        "global_history_blend": 0.2
+      },
+      {
+        "window": 120,
+        "global_history_blend": 0.35
+      },
+      {
+        "window": 120,
         "global_history_blend": 0.5
       },
       {
@@ -19410,47 +19506,47 @@
         "global_history_blend": 0.5
       },
       {
-        "window": 540,
+        "window": 720,
         "global_history_blend": 0.05
       },
       {
-        "window": 540,
+        "window": 720,
         "global_history_blend": 0.1
       },
       {
-        "window": 540,
+        "window": 720,
         "global_history_blend": 0.2
       },
       {
-        "window": 540,
+        "window": 720,
         "global_history_blend": 0.35
       },
       {
-        "window": 540,
+        "window": 720,
         "global_history_blend": 0.5
       },
       {
-        "window": 720,
+        "window": 1200,
         "global_history_blend": 0.05
       },
       {
-        "window": 720,
+        "window": 1200,
         "global_history_blend": 0.1
       },
       {
-        "window": 720,
+        "window": 1200,
         "global_history_blend": 0.2
       },
       {
-        "window": 720,
+        "window": 1200,
         "global_history_blend": 0.35
       },
       {
-        "window": 720,
+        "window": 1200,
         "global_history_blend": 0.5
       }
     ],
-    "candidate_consensus_count": 25,
+    "candidate_consensus_count": 30,
     "current_selection": {
       "window": 240,
       "global_history_blend": 0.35,
@@ -19834,7 +19930,7 @@
         {
           "family": "指數時間衰減",
           "label": "半衰期60期與全歷史混合0.00",
-          "candidate": 8,
+          "candidate": 30,
           "robust_score": 1.133854047,
           "mean_score": 1.599550104,
           "selection_evidence": [
@@ -19879,7 +19975,7 @@
         {
           "family": "多時間窗頻率",
           "label": "540期與全歷史混合0.00",
-          "candidate": 8,
+          "candidate": 7,
           "robust_score": 1.055029969,
           "mean_score": 1.759722047,
           "selection_evidence": [
@@ -19969,7 +20065,7 @@
         {
           "family": "間隔風險",
           "label": "方向-1與全歷史混合0.35",
-          "candidate": 16,
+          "candidate": 2,
           "robust_score": -0.375734575,
           "mean_score": 0.508873184,
           "selection_evidence": [
@@ -20104,32 +20200,39 @@
       ],
       "accepted_vote_table": [
         {
-          "candidate": 8,
-          "accepted_model_votes": 18,
-          "family_support": 2,
-          "robust_score_sum": 9.390499904
-        },
-        {
           "candidate": 12,
-          "accepted_model_votes": 10,
+          "accepted_model_votes": 24,
           "family_support": 2,
-          "robust_score_sum": 1.295746159
+          "robust_score_sum": 7.599980234
         },
         {
           "candidate": 30,
-          "accepted_model_votes": 8,
+          "accepted_model_votes": 9,
           "family_support": 2,
-          "robust_score_sum": 4.303385259
+          "robust_score_sum": 5.437239306
+        },
+        {
+          "candidate": 7,
+          "accepted_model_votes": 3,
+          "family_support": 1,
+          "robust_score_sum": 1.952411782
         }
       ],
-      "fusion_candidate": 8,
-      "primary_candidate": 8,
+      "fusion_candidate": 12,
+      "primary_candidate": 12,
       "primary_candidate_support": {
-        "candidate": 8,
-        "accepted_model_votes": 18,
+        "candidate": 12,
+        "accepted_model_votes": 24,
         "family_support": 2,
-        "robust_score_sum": 9.390499904
+        "robust_score_sum": 7.599980234
       },
+      "blocked_unqualified_repeat_numbers": [
+        5,
+        8,
+        16,
+        31
+      ],
+      "repeat_qualification_enforced_before_voting": true,
       "rejected_families": [
         "間隔風險",
         "開獎日條件",
@@ -20183,6 +20286,7 @@
       "最近五十四期不低於隨機": true,
       "至少十二組參數同選一碼": true,
       "至少四種時間窗同選一碼": true,
+      "不合格連莊號碼已在候選排序前排除": true,
       "全球六家族融合驗證通過": true,
       "兩種隨機基準已完成且不得隱藏": true
     },
@@ -20193,7 +20297,7 @@
   },
   "single_explanation": {
     "label": "本期超級獨支",
-    "candidate": 8,
+    "candidate": 12,
     "unique": true,
     "method": "全歷史基準、多時間窗單碼專家與全球六家族融合逐段隔離競賽",
     "selected_window": 240,
@@ -20537,7 +20641,7 @@
         {
           "family": "指數時間衰減",
           "label": "半衰期60期與全歷史混合0.00",
-          "candidate": 8,
+          "candidate": 30,
           "robust_score": 1.133854047,
           "mean_score": 1.599550104,
           "selection_evidence": [
@@ -20582,7 +20686,7 @@
         {
           "family": "多時間窗頻率",
           "label": "540期與全歷史混合0.00",
-          "candidate": 8,
+          "candidate": 7,
           "robust_score": 1.055029969,
           "mean_score": 1.759722047,
           "selection_evidence": [
@@ -20672,7 +20776,7 @@
         {
           "family": "間隔風險",
           "label": "方向-1與全歷史混合0.35",
-          "candidate": 16,
+          "candidate": 2,
           "robust_score": -0.375734575,
           "mean_score": 0.508873184,
           "selection_evidence": [
@@ -20807,32 +20911,39 @@
       ],
       "accepted_vote_table": [
         {
-          "candidate": 8,
-          "accepted_model_votes": 18,
-          "family_support": 2,
-          "robust_score_sum": 9.390499904
-        },
-        {
           "candidate": 12,
-          "accepted_model_votes": 10,
+          "accepted_model_votes": 24,
           "family_support": 2,
-          "robust_score_sum": 1.295746159
+          "robust_score_sum": 7.599980234
         },
         {
           "candidate": 30,
-          "accepted_model_votes": 8,
+          "accepted_model_votes": 9,
           "family_support": 2,
-          "robust_score_sum": 4.303385259
+          "robust_score_sum": 5.437239306
+        },
+        {
+          "candidate": 7,
+          "accepted_model_votes": 3,
+          "family_support": 1,
+          "robust_score_sum": 1.952411782
         }
       ],
-      "fusion_candidate": 8,
-      "primary_candidate": 8,
+      "fusion_candidate": 12,
+      "primary_candidate": 12,
       "primary_candidate_support": {
-        "candidate": 8,
-        "accepted_model_votes": 18,
+        "candidate": 12,
+        "accepted_model_votes": 24,
         "family_support": 2,
-        "robust_score_sum": 9.390499904
+        "robust_score_sum": 7.599980234
       },
+      "blocked_unqualified_repeat_numbers": [
+        5,
+        8,
+        16,
+        31
+      ],
+      "repeat_qualification_enforced_before_voting": true,
       "rejected_families": [
         "間隔風險",
         "開獎日條件",
@@ -20886,6 +20997,7 @@
       "最近五十四期不低於隨機": true,
       "至少十二組參數同選一碼": true,
       "至少四種時間窗同選一碼": true,
+      "不合格連莊號碼已在候選排序前排除": true,
       "全球六家族融合驗證通過": true,
       "兩種隨機基準已完成且不得隱藏": true
     },
@@ -20982,7 +21094,7 @@
   "single_recommendation": {
     "label": "本期唯一最強獨支",
     "evidence_label": "跨時間窗守門通過的最強獨支",
-    "validation_qualified": false,
+    "validation_qualified": true,
     "strong": true,
     "consensus_votes": 2,
     "module_count": 4,
@@ -20994,6 +21106,7 @@
       "最近五十四期不低於隨機": true,
       "至少十二組參數同選一碼": true,
       "至少四種時間窗同選一碼": true,
+      "不合格連莊號碼已在候選排序前排除": true,
       "全球六家族融合驗證通過": true,
       "兩種隨機基準已完成且不得隱藏": true
     },
@@ -21175,10 +21288,10 @@
     "direct_hit_full_rank_blend": 0.35,
     "direct_hit_full_rank_gate": false,
     "direct_hit_weights": {
-      "full_frequency_balance": 0.36194312478896323,
-      "full_transition_correction": 0.3717855108891292,
-      "full_signature_correction": -0.07762260428695028,
-      "full_overdue_correction": 0.1886487600349573
+      "full_frequency_balance": 0.3619431247889631,
+      "full_transition_correction": 0.37178551088912914,
+      "full_signature_correction": -0.07762260428695027,
+      "full_overdue_correction": 0.18864876003495745
     },
     "direct_hit_baseline": {
       "samples": 360,
@@ -21345,14 +21458,14 @@
       "delta_full_overdue_correction"
     ],
     "data_change_weights": [
-      0.20762431810455328,
-      0.2712117954504414,
-      -0.05426869014446861,
-      0.07296581719333298,
-      0.014229289124511988,
-      0.21854328761947908,
+      0.20762431810455326,
+      0.27121179545044133,
+      -0.054268690144468605,
+      0.07296581719333302,
+      0.014229289124511985,
+      0.21854328761947905,
       0.15579790129805396,
-      -0.0053589010651586555
+      -0.0053589010651588
     ],
     "data_change_baseline": {
       "samples": 360,
@@ -21695,11 +21808,11 @@
       "22": -0.33080288684422665,
       "12": -0.36904172836211513,
       "26": -0.4705594210005049,
-      "10": -0.478444815050173,
+      "10": -0.47844481505017283,
       "18": -0.4917669938908923,
       "38": -0.6050561294457938,
       "35": -0.6396064656175562,
-      "27": -0.7255916463531139,
+      "27": -0.7255916463531138,
       "23": -0.7884314884936167,
       "11": -0.8601737387121288,
       "36": -1.0866750474621625,
@@ -21716,7 +21829,7 @@
       "7": 0.11046999082422117,
       "8": 0.7886626981255028,
       "9": -0.2546325829912114,
-      "10": -0.4784448149688353,
+      "10": -0.4784448149688351,
       "11": -0.8601737386139625,
       "12": -0.3690417282863869,
       "13": 0.8547275506969471,
@@ -21733,7 +21846,7 @@
       "24": 0.5570766616690166,
       "25": -1.102624905312725,
       "26": -0.47055942092197195,
-      "27": -0.7255916462605572,
+      "27": -0.725591646260557,
       "28": 0.44315055340531784,
       "29": 0.7919928241432864,
       "30": 0.5253367670011486,
@@ -22021,10 +22134,9 @@
     "data_change_mode": "shadow_only_until_cross_window_gate",
     "method": "full_history_consensus_with_35pct_direct_hit_and_shadow_change",
     "single_supermodel": {
-      "policy": "全歷史多時間窗與全球六家族融合第三版",
-      "candidate": 8,
+      "policy": "全歷史多時間窗、全球六家族與連莊前置排除第四版",
+      "candidate": 12,
       "candidate_ranked": [
-        8,
         12,
         6,
         34,
@@ -22032,18 +22144,15 @@
         11,
         2,
         23,
-        31,
         29,
         35,
         21,
         17,
-        5,
         7,
         36,
         30,
         4,
         15,
-        16,
         19,
         3,
         18,
@@ -22062,7 +22171,11 @@
         9,
         26,
         33,
-        39
+        39,
+        8,
+        31,
+        5,
+        16
       ],
       "current_score": {
         "1": 0.125208333333,
@@ -22105,33 +22218,61 @@
         "38": 0.119440789474,
         "39": 0.095084064327
       },
+      "unconstrained_candidate": 8,
+      "blocked_unqualified_repeat_numbers": [
+        5,
+        8,
+        16,
+        31
+      ],
+      "repeat_qualification_enforced_before_selection": true,
       "selected_window": 240,
       "selected_global_history_blend": 0.35,
       "recent_history_blend": 0.65,
       "full_history_draws": 5985,
-      "candidate_recent_hits": 48,
+      "candidate_recent_hits": 41,
       "candidate_recent_samples": 240,
-      "candidate_full_hits": 771,
+      "candidate_full_hits": 785,
       "candidate_full_samples": 5985,
       "candidate_consensus": [
         {
-          "window": 180,
+          "window": 90,
           "global_history_blend": 0.05
         },
         {
-          "window": 180,
+          "window": 90,
           "global_history_blend": 0.1
         },
         {
-          "window": 180,
+          "window": 90,
           "global_history_blend": 0.2
         },
         {
-          "window": 180,
+          "window": 90,
           "global_history_blend": 0.35
         },
         {
-          "window": 180,
+          "window": 90,
+          "global_history_blend": 0.5
+        },
+        {
+          "window": 120,
+          "global_history_blend": 0.05
+        },
+        {
+          "window": 120,
+          "global_history_blend": 0.1
+        },
+        {
+          "window": 120,
+          "global_history_blend": 0.2
+        },
+        {
+          "window": 120,
+          "global_history_blend": 0.35
+        },
+        {
+          "window": 120,
           "global_history_blend": 0.5
         },
         {
@@ -22175,47 +22316,47 @@
           "global_history_blend": 0.5
         },
         {
-          "window": 540,
+          "window": 720,
           "global_history_blend": 0.05
         },
         {
-          "window": 540,
+          "window": 720,
           "global_history_blend": 0.1
         },
         {
-          "window": 540,
+          "window": 720,
           "global_history_blend": 0.2
         },
         {
-          "window": 540,
+          "window": 720,
           "global_history_blend": 0.35
         },
         {
-          "window": 540,
+          "window": 720,
           "global_history_blend": 0.5
         },
         {
-          "window": 720,
+          "window": 1200,
           "global_history_blend": 0.05
         },
         {
-          "window": 720,
+          "window": 1200,
           "global_history_blend": 0.1
         },
         {
-          "window": 720,
+          "window": 1200,
           "global_history_blend": 0.2
         },
         {
-          "window": 720,
+          "window": 1200,
           "global_history_blend": 0.35
         },
         {
-          "window": 720,
+          "window": 1200,
           "global_history_blend": 0.5
         }
       ],
-      "candidate_consensus_count": 25,
+      "candidate_consensus_count": 30,
       "current_selection": {
         "window": 240,
         "global_history_blend": 0.35,
@@ -22599,7 +22740,7 @@
           {
             "family": "指數時間衰減",
             "label": "半衰期60期與全歷史混合0.00",
-            "candidate": 8,
+            "candidate": 30,
             "robust_score": 1.133854047,
             "mean_score": 1.599550104,
             "selection_evidence": [
@@ -22644,7 +22785,7 @@
           {
             "family": "多時間窗頻率",
             "label": "540期與全歷史混合0.00",
-            "candidate": 8,
+            "candidate": 7,
             "robust_score": 1.055029969,
             "mean_score": 1.759722047,
             "selection_evidence": [
@@ -22734,7 +22875,7 @@
           {
             "family": "間隔風險",
             "label": "方向-1與全歷史混合0.35",
-            "candidate": 16,
+            "candidate": 2,
             "robust_score": -0.375734575,
             "mean_score": 0.508873184,
             "selection_evidence": [
@@ -22869,32 +23010,39 @@
         ],
         "accepted_vote_table": [
           {
-            "candidate": 8,
-            "accepted_model_votes": 18,
-            "family_support": 2,
-            "robust_score_sum": 9.390499904
-          },
-          {
             "candidate": 12,
-            "accepted_model_votes": 10,
+            "accepted_model_votes": 24,
             "family_support": 2,
-            "robust_score_sum": 1.295746159
+            "robust_score_sum": 7.599980234
           },
           {
             "candidate": 30,
-            "accepted_model_votes": 8,
+            "accepted_model_votes": 9,
             "family_support": 2,
-            "robust_score_sum": 4.303385259
+            "robust_score_sum": 5.437239306
+          },
+          {
+            "candidate": 7,
+            "accepted_model_votes": 3,
+            "family_support": 1,
+            "robust_score_sum": 1.952411782
           }
         ],
-        "fusion_candidate": 8,
-        "primary_candidate": 8,
+        "fusion_candidate": 12,
+        "primary_candidate": 12,
         "primary_candidate_support": {
-          "candidate": 8,
-          "accepted_model_votes": 18,
+          "candidate": 12,
+          "accepted_model_votes": 24,
           "family_support": 2,
-          "robust_score_sum": 9.390499904
+          "robust_score_sum": 7.599980234
         },
+        "blocked_unqualified_repeat_numbers": [
+          5,
+          8,
+          16,
+          31
+        ],
+        "repeat_qualification_enforced_before_voting": true,
         "rejected_families": [
           "間隔風險",
           "開獎日條件",
@@ -22948,6 +23096,7 @@
         "最近五十四期不低於隨機": true,
         "至少十二組參數同選一碼": true,
         "至少四種時間窗同選一碼": true,
+        "不合格連莊號碼已在候選排序前排除": true,
         "全球六家族融合驗證通過": true,
         "兩種隨機基準已完成且不得隱藏": true
       },
@@ -23046,10 +23195,10 @@
       "boundary_control_valid": false,
       "ranking_direction_valid": false,
       "backtest_weights": {
-        "full_frequency_balance": 0.16212362307768788,
-        "full_transition_correction": 0.18405870782936737,
-        "full_signature_correction": 0.14450703752150593,
-        "full_overdue_correction": 0.5093106315714389
+        "full_frequency_balance": 0.16212362307768793,
+        "full_transition_correction": 0.18405870782936726,
+        "full_signature_correction": 0.1445070375215061,
+        "full_overdue_correction": 0.5093106315714387
       },
       "anchor_weights": {
         "full_frequency_balance": 0.10000000000000002,
@@ -23058,10 +23207,10 @@
         "full_overdue_correction": 0.3666666666666667
       },
       "end_weights": {
-        "full_frequency_balance": 0.16212362307768788,
-        "full_transition_correction": 0.18405870782936737,
-        "full_signature_correction": 0.14450703752150593,
-        "full_overdue_correction": 0.5093106315714389
+        "full_frequency_balance": 0.16212362307768793,
+        "full_transition_correction": 0.18405870782936726,
+        "full_signature_correction": 0.1445070375215061,
+        "full_overdue_correction": 0.5093106315714387
       },
       "anchor_ensemble_weights": [
         {
@@ -23085,22 +23234,22 @@
       ],
       "end_ensemble_weights": [
         {
-          "full_frequency_balance": 0.18165779489155678,
-          "full_transition_correction": 0.16769253620686075,
-          "full_signature_correction": 0.09347263311750235,
-          "full_overdue_correction": 0.5571770357840801
+          "full_frequency_balance": 0.1816577948915569,
+          "full_transition_correction": 0.1676925362068605,
+          "full_signature_correction": 0.09347263311750265,
+          "full_overdue_correction": 0.55717703578408
         },
         {
-          "full_frequency_balance": 0.04308290442781802,
-          "full_transition_correction": 0.24486613684351777,
-          "full_signature_correction": 0.17402341698272009,
-          "full_overdue_correction": 0.5380275417459441
+          "full_frequency_balance": 0.04308290442781799,
+          "full_transition_correction": 0.24486613684351766,
+          "full_signature_correction": 0.17402341698272034,
+          "full_overdue_correction": 0.538027541745944
         },
         {
           "full_frequency_balance": 0.26163016991368887,
           "full_transition_correction": 0.13961745043772358,
-          "full_signature_correction": 0.1660250624642953,
-          "full_overdue_correction": 0.4327273171842923
+          "full_signature_correction": 0.16602506246429535,
+          "full_overdue_correction": 0.43272731718429225
         }
       ],
       "rolling_update_count": 360,
@@ -23151,6 +23300,7 @@
       "最近五十四期不低於隨機": true,
       "至少十二組參數同選一碼": true,
       "至少四種時間窗同選一碼": true,
+      "不合格連莊號碼已在候選排序前排除": true,
       "全球六家族融合驗證通過": true,
       "兩種隨機基準已完成且不得隱藏": true
     },
@@ -23172,14 +23322,12 @@
       "qualified_numbers": [],
       "qualified_count": 0,
       "single_gate": {
-        "candidate": 8,
+        "candidate": 12,
         "computed": true,
         "model_gate_passed": true,
-        "repeat_qualification": false,
-        "qualified": false,
-        "failure_reasons": [
-          "上一期號碼未通過連莊資格"
-        ]
+        "repeat_qualification": true,
+        "qualified": true,
+        "failure_reasons": []
       },
       "requested_sizes": {
         "single": 1,
@@ -23190,7 +23338,7 @@
       },
       "tiers": {
         "single": [
-          8
+          12
         ],
         "two": [],
         "three": [],
@@ -23198,7 +23346,7 @@
         "nine": []
       },
       "tier_status": {
-        "single": "full_computed_validation_warning",
+        "single": "full_validated",
         "two": "insufficient_no_padding",
         "three": "insufficient_no_padding",
         "five": "insufficient_no_padding",
