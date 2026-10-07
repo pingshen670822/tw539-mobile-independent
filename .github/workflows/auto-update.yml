@@ -32,12 +32,12 @@ permissions:
   issues: write
 concurrency:
   group: tw539-auto-update
-  # 新一輪接管卡住的舊輪次，避免舊工作持續佔住更新佇列。
-  cancel-in-progress: true
+  # 五分鐘排程不得取消正在完成的正式重算；卡住工作由三十分鐘硬逾時與看門狗接管。
+  cancel-in-progress: false
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with: {fetch-depth: 0}

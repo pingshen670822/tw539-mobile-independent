@@ -14,6 +14,7 @@ MODEL_TIMEOUT_SECONDS=900
 FAST_WATCHDOG=os.getenv('TW539_WATCHDOG_FAST','').lower() in ('1','true','yes')
 REQUEST_RETRY_DELAYS=(0,1) if FAST_WATCHDOG else (0,3,10)
 REQUEST_TIMEOUT_SECONDS=8 if FAST_WATCHDOG else 45
+THIRTY_MINUTE_POLICY_EFFECTIVE_DRAW_DATE='2026-10-07'
 
 def _request_json(url, params=None):
     if params:
@@ -577,8 +578,10 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
     same_period=str(previous_health.get('latest_period'))==str(latest['period'])
     sync_completed_at=(previous_health.get('sync_completed_at') if same_period else None) or checked_at.isoformat(timespec='seconds')
     draw_at=datetime.strptime(latest['draw_date']+' 20:30','%Y-%m-%d %H:%M').replace(tzinfo=TAIPEI)
-    repair_deadline=draw_at+timedelta(hours=1)
+    repair_deadline=draw_at+timedelta(minutes=30)
     sync_delay=max(0,round((datetime.fromisoformat(sync_completed_at)-draw_at).total_seconds()/60))
+    deadline_enforced=latest['draw_date']>=THIRTY_MINUTE_POLICY_EFFECTIVE_DRAW_DATE
+    deadline_met=datetime.fromisoformat(sync_completed_at)<=repair_deadline
     repair_count=int(previous_health.get('self_repair_count') or 0)+(1 if repair_run else 0)
     health={
         'status':'healthy_model_degraded' if degraded else 'healthy','checked_at':checked_at.isoformat(timespec='seconds'),
@@ -594,7 +597,7 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
         'local_computer_required':False,
         'cloud_update_schedule':'開獎時段每五分鐘核對、主流程每十分鐘重算、全天每小時巡檢',
         'update_start_deadline_minutes':10,
-        'completion_deadline_minutes':60,
+        'completion_deadline_minutes':30,
         'watchdog_interval_minutes':5,
         'upstream_failure_forces_repair':True,
         'desktop_mobile_sync':True,
@@ -603,8 +606,11 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
         'official_draw_time':draw_at.isoformat(timespec='minutes'),
         'sync_completed_at':sync_completed_at,
         'sync_delay_minutes':sync_delay,
-        'one_hour_repair_deadline':repair_deadline.isoformat(timespec='minutes'),
-        'one_hour_deadline_met':datetime.fromisoformat(sync_completed_at)<=repair_deadline,
+        'thirty_minute_repair_deadline':repair_deadline.isoformat(timespec='minutes'),
+        'thirty_minute_deadline_met':deadline_met,
+        'deadline_policy_effective_draw_date':THIRTY_MINUTE_POLICY_EFFECTIVE_DRAW_DATE,
+        'deadline_enforced_for_latest_draw':deadline_enforced,
+        'deadline_violation':bool(deadline_enforced and not deadline_met),
         'self_repair_status':'本次自修完成' if repair_run else '雲端待命',
         'self_repair_count':repair_count,
         'last_self_repair_at':checked_at.isoformat(timespec='seconds') if repair_run else previous_health.get('last_self_repair_at'),

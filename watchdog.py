@@ -73,8 +73,8 @@ warnings=[]
 if download_status!=200 or len(download_body)<100000 or download_type not in ('application/zip','application/x-zip-compressed','application/octet-stream'):
     errors.append('主程式完整壓縮包缺失或內容不完整')
 now=datetime.now(TAIPEI)
-deadline_active=now.time()>=clock_time(21,30) or now.time()<clock_time(6,0)
-if deadline_active and official['draw_date']<expected_latest_date(now): warnings.append('開獎後一小時官方資料仍未取得；持續巡檢，但不得阻斷已對上官方期別的預測')
+deadline_active=now.time()>=clock_time(21,0) or now.time()<clock_time(6,0)
+if deadline_active and official['draw_date']<expected_latest_date(now): warnings.append('開獎後三十分鐘官方資料仍未取得；立即自修並持續巡檢')
 if str(health.get('latest_period'))!=str(official['period']): errors.append(f"公開期別 {health.get('latest_period')} != 官方 {official['period']}")
 if health.get('latest_draw_date')!=official['draw_date']: errors.append(f"公開日期 {health.get('latest_draw_date')} != 官方 {official['draw_date']}")
 if not health.get('freshness_ok'): errors.append('公開頁新鮮度未通過')
@@ -84,16 +84,17 @@ settlement_coverage=health.get('settlement_coverage') or {}
 if (not health.get('settlement_coverage_complete') or settlement_coverage.get('missing_draws')!=0
         or settlement_coverage.get('accounted_draws')!=settlement_coverage.get('expected_draws')):
     errors.append('公開歷史結算仍有遺失資料')
-for key in ('sync_completed_at','sync_delay_minutes','one_hour_repair_deadline','one_hour_deadline_met','self_repair_status','self_repair_count','last_public_verification_at','mobile_open_sync','pipeline_version','update_retry_policy','stability_monitor','latest_review_accounted','cloud_independent_update','local_computer_required','cloud_update_schedule','update_start_deadline_minutes','completion_deadline_minutes','watchdog_interval_minutes','upstream_failure_forces_repair','desktop_mobile_sync','desktop_mobile_shared_version'):
+for key in ('sync_completed_at','sync_delay_minutes','thirty_minute_repair_deadline','thirty_minute_deadline_met','deadline_policy_effective_draw_date','deadline_enforced_for_latest_draw','deadline_violation','self_repair_status','self_repair_count','last_public_verification_at','mobile_open_sync','pipeline_version','update_retry_policy','stability_monitor','latest_review_accounted','cloud_independent_update','local_computer_required','cloud_update_schedule','update_start_deadline_minutes','completion_deadline_minutes','watchdog_interval_minutes','upstream_failure_forces_repair','desktop_mobile_sync','desktop_mobile_shared_version'):
     if key not in health: errors.append('公開健康檔缺少自主修復欄位：'+key)
 if not health.get('cloud_independent_update') or health.get('local_computer_required') is not False:
     errors.append('公開健康檔未確認關機後仍由雲端獨立更新')
 if not health.get('desktop_mobile_sync') or not health.get('desktop_mobile_shared_version'):
     errors.append('公開健康檔未確認電腦版與手機版同版同步')
-if (health.get('update_start_deadline_minutes')!=10 or health.get('completion_deadline_minutes')!=60
+if (health.get('update_start_deadline_minutes')!=10 or health.get('completion_deadline_minutes')!=30
         or health.get('watchdog_interval_minutes')!=5 or not health.get('upstream_failure_forces_repair')):
-    errors.append('公開健康檔未落實十分鐘啟動、一小時完成與故障強制自修')
-if not health.get('one_hour_deadline_met',True): warnings.append('本期超過一小時期限後才完成同步')
+    errors.append('公開健康檔未落實十分鐘啟動、三十分鐘完成與故障強制自修')
+if health.get('deadline_enforced_for_latest_draw') and not health.get('thirty_minute_deadline_met',True):
+    errors.append('本期超過三十分鐘仍未完成同步')
 data_latest=result.get('data_latest') or {}
 if str(data_latest.get('period'))!=str(official['period']) or data_latest.get('date')!=official['draw_date']: errors.append('公開結果未對應官方最新期別')
 ranked=result.get('ranked_top15') or []
@@ -243,19 +244,19 @@ if ('本期最強終極獨支' not in home or '本期其他鐵律號碼' not in 
         or '查看獨支強烈驗證與完整運算' not in home or '查看資料、排名、排除與連莊診斷' not in home
         or '超級獨支完整運算來源' not in home or '嚴格發布守門' not in home
         or '目前模型選擇證據' not in home or '六段時間隔離競賽' not in home
-        or '隔離結果總表' not in home or '全球六家族融合複驗' not in home or '雙重隨機基準' not in home or '1中1' not in home
+        or '隔離結果總表' not in home or '全球八家族軌跡融合複驗' not in home or '雙重隨機基準' not in home or '1中1' not in home
         or '終極獨支強烈驗證摘要' not in home or '不合格連莊前置排除' not in home
         or '不足不補位' not in home or '內部前十五診斷（非正式推薦）' not in home
         or (result.get('single_candidate') and f"{int(result['single_candidate']):02}" not in home)):
     errors.append('本期預測頁未完整顯示嚴格發布、運算來源或單碼冷卻狀態')
 if any(term in home for term in ('最新一期命中結算','最後360期逐期走步回測','全歷史運算範圍','鐵律守門')): errors.append('本期預測頁混入其他分類資料')
 if '最新一期命中結算' not in review_page or '開獎前前5正式預測' not in review_page or '前5命中資料' not in review_page or '錯誤模組與前9邊界逐項檢討' not in review_page or '第10至15名命中' not in review_page or '開獎後滾動權重重算' not in review_page or '禁止開獎後換號或補號' not in review_page: errors.append('開獎檢討分頁內容不完整')
-if '超級獨支多時間窗隔離驗證' not in backtest_page or '全球融合與隨機基準複驗' not in backtest_page or '最近14期逐段隔離' not in backtest_page or '最後360期逐期走步回測' not in backtest_page or '直接命中全排序校準' not in backtest_page or '前5與前9任一關鍵區段退化即自動回退' not in backtest_page or '資料變化影子驗證' not in backtest_page or '單碼重複冷卻' not in backtest_page or '最近54期獨立觀察' not in backtest_page or '全歷史逐期一致性掃描' not in backtest_page: errors.append('回測驗證分頁內容不完整')
+if '超級獨支多時間窗隔離驗證' not in backtest_page or '全球軌跡融合與隨機基準複驗' not in backtest_page or '最近14期逐段隔離' not in backtest_page or '最後360期逐期走步回測' not in backtest_page or '直接命中全排序校準' not in backtest_page or '前5與前9任一關鍵區段退化即自動回退' not in backtest_page or '資料變化影子驗證' not in backtest_page or '單碼重複冷卻' not in backtest_page or '最近54期獨立觀察' not in backtest_page or '全歷史逐期一致性掃描' not in backtest_page: errors.append('回測驗證分頁內容不完整')
 if ('歷史資料完整度' not in history_page or '尚缺官方資料' not in history_page or '官方期別' not in history_page
         or '開獎前封存實戰紀錄' not in history_page or '前5命中資料' not in history_page
         or '錯誤模組與前9邊界逐項檢討' in history_page): errors.append('歷史封存分頁內容不完整或混入逐項檢討')
-if '超級獨支獨立模型' not in models_page or '全球六家族融合架構' not in models_page or '全球方法查證來源' not in models_page or '主程式完整壓縮包' not in models_page or '正式方向模型' not in models_page or '全系統重組' not in models_page or '五組正式權重共識' not in models_page or '直接命中全排序校準' not in models_page or '單碼重複冷卻' not in models_page or '資料變化影子驗證' not in models_page or '穩定冠軍與每日挑戰模型' not in models_page or '連莊資格驗算規格' not in models_page or '嚴格發布規格' not in models_page or '全歷史連莊率不低於12.82%' not in models_page: errors.append('模型說明分頁內容不完整')
-if '超級獨支模型' not in health_page or '鐵律守門' not in health_page or '五組權重共識' not in health_page or '直接命中全排序校準' not in health_page or '單碼重複冷卻' not in health_page or '資料變化影子驗證' not in health_page or '手機同步' not in health_page or '開獎後更新與自主修復' not in health_page or '一小時修復期限' not in health_page or '最遲啟動' not in health_page or '最遲完成' not in health_page or '主程式下載' not in health_page: errors.append('系統健康分頁內容不完整')
+if '超級獨支獨立模型' not in models_page or '全球八家族軌跡融合架構' not in models_page or '多階拖牌軌跡' not in models_page or '週期間隔危險率' not in models_page or '全球方法查證來源' not in models_page or '主程式完整壓縮包' not in models_page or '正式方向模型' not in models_page or '全系統重組' not in models_page or '五組正式權重共識' not in models_page or '直接命中全排序校準' not in models_page or '單碼重複冷卻' not in models_page or '資料變化影子驗證' not in models_page or '穩定冠軍與每日挑戰模型' not in models_page or '連莊資格驗算規格' not in models_page or '嚴格發布規格' not in models_page or '全歷史連莊率不低於12.82%' not in models_page: errors.append('模型說明分頁內容不完整')
+if '超級獨支模型' not in health_page or '鐵律守門' not in health_page or '五組權重共識' not in health_page or '直接命中全排序校準' not in health_page or '單碼重複冷卻' not in health_page or '資料變化影子驗證' not in health_page or '手機同步' not in health_page or '開獎後更新與自主修復' not in health_page or '三十分鐘完成期限' not in health_page or '最遲啟動' not in health_page or '最遲完成' not in health_page or '主程式下載' not in health_page: errors.append('系統健康分頁內容不完整')
 if any('低機率' in visible or '當期預測前九' in visible for visible in visible_pages.values()): errors.append('公開分頁仍含易誤解標示或事後回算內容')
 expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'
 if expected_direction not in backtest_page or expected_direction not in health_page: errors.append('回測或健康分頁未照實顯示排序方向')

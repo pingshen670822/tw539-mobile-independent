@@ -1907,6 +1907,65 @@ def build_global_single_fusion_audit(draws: list[dict], count_prefix: list[list[
     for parameter_index,(polarity,blend) in enumerate(transition_parameters):
         register("前期條件轉移",f"方向{polarity}與全歷史混合{blend:.2f}",transition_picks[parameter_index])
 
+    trajectory_lags=(1,2,3,5,8)
+    trajectory_parameters=[(lag,polarity,blend) for lag in trajectory_lags
+                           for polarity in (1,-1) for blend in (.10,.35)]
+    trajectory_picks=[[0]*(total_draws+1) for _ in trajectory_parameters]
+    trajectory_transition={lag:[[0]*40 for _ in range(40)] for lag in trajectory_lags}
+    trajectory_exposure={lag:[0]*40 for lag in trajectory_lags}
+    for index in range(1,total_draws+1):
+        known=index-1
+        for lag in trajectory_lags:
+            source_index=known-lag
+            if source_index>=0:
+                for source in draws[source_index]["nums"]:
+                    trajectory_exposure[lag][source]+=1
+                    for destination in draws[known]["nums"]:
+                        trajectory_transition[lag][source][destination]+=1
+        for parameter_index,(lag,polarity,blend) in enumerate(trajectory_parameters):
+            source_index=index-lag
+            values=[0.0]*40
+            for number in universe:
+                base=(sum((trajectory_transition[lag][source][number]+1)
+                          /(trajectory_exposure[lag][source]+39)
+                          for source in draws[source_index]["nums"])
+                      if source_index>=0 else 5/39)
+                values[number]=polarity*base+blend*count_prefix[index][number]/index
+            trajectory_picks[parameter_index][index]=top_number(
+                values,f"多階拖牌:{lag}:{polarity}:{blend}:{draws[index-1]['period']}",
+                blocked_current_numbers if index==total_draws else None)
+    for parameter_index,(lag,polarity,blend) in enumerate(trajectory_parameters):
+        register("多階拖牌軌跡",f"前{lag}期拖牌方向{polarity}混合{blend:.2f}",trajectory_picks[parameter_index])
+
+    hazard_parameters=[(polarity,blend) for polarity in (1,-1) for blend in (0.0,.10,.35)]
+    hazard_picks=[[0]*(total_draws+1) for _ in hazard_parameters]
+    gap_limit=60
+    hazard_hist=[[0]*(gap_limit+1) for _ in range(40)]
+    hazard_global=[0]*(gap_limit+1);hazard_last=[-1]*40
+    for index in range(1,total_draws+1):
+        for number in draws[index-1]["nums"]:
+            if hazard_last[number]>=0:
+                completed_gap=min(gap_limit,index-1-hazard_last[number])
+                hazard_hist[number][completed_gap]+=1;hazard_global[completed_gap]+=1
+            hazard_last[number]=index-1
+        base=[0.0]*40
+        for number in universe:
+            current_gap=min(gap_limit,index-hazard_last[number])
+            local_events=hazard_hist[number][current_gap]
+            local_survivors=sum(hazard_hist[number][current_gap:])
+            global_events=hazard_global[current_gap]
+            global_survivors=sum(hazard_global[current_gap:])
+            base[number]=(local_events+.10*global_events+1)/(local_survivors+.10*global_survivors+2)
+        for parameter_index,(polarity,blend) in enumerate(hazard_parameters):
+            values=[0.0]*40
+            for number in universe:
+                values[number]=polarity*base[number]+blend*count_prefix[index][number]/index
+            hazard_picks[parameter_index][index]=top_number(
+                values,f"週期危險率:{polarity}:{blend}:{draws[index-1]['period']}",
+                blocked_current_numbers if index==total_draws else None)
+    for parameter_index,(polarity,blend) in enumerate(hazard_parameters):
+        register("週期間隔危險率",f"方向{polarity}與全歷史混合{blend:.2f}",hazard_picks[parameter_index])
+
     weekday_parameters=[(polarity,blend) for polarity in (1,-1) for blend in (0.0,.10,.35)]
     weekday_picks=[[0]*(total_draws+1) for _ in weekday_parameters]
     weekday_counts=[[0]*40 for _ in range(7)];weekday_total=[0]*7
@@ -1932,21 +1991,67 @@ def build_global_single_fusion_audit(draws: list[dict], count_prefix: list[list[
     for parameter_index,(polarity,blend) in enumerate(weekday_parameters):
         register("開獎日條件",f"方向{polarity}與全歷史混合{blend:.2f}",weekday_picks[parameter_index])
 
-    def evidence(model: dict) -> list[dict]:
+    def evidence_at(model: dict, cutoff: int) -> list[dict]:
         rows=[]
         for span in SINGLE_FUSION_SELECTION_SPANS:
-            actual_span=min(span,total_draws-1)
-            hits=(model["hit_prefix"][total_draws-1]
-                  -model["hit_prefix"][total_draws-1-actual_span])
+            actual_span=min(span,cutoff-1)
+            hits=(model["hit_prefix"][cutoff-1]
+                  -model["hit_prefix"][cutoff-1-actual_span])
             expected=actual_span*5/39
             z=(hits-expected)/math.sqrt(max(1e-12,actual_span*(5/39)*(34/39)))
             rows.append({"span":actual_span,"hits":hits,"expected":round(expected,6),
                          "standardized_excess":round(z,9)})
         return rows
 
+    def fusion_vote_at(cutoff: int) -> tuple[int | None,list[dict],list[dict]]:
+        accepted_at=[]
+        for model_index,model in enumerate(models):
+            rows=evidence_at(model,cutoff)
+            robust=min(row["standardized_excess"] for row in rows)
+            mean_z=sum(row["standardized_excess"] for row in rows)/len(rows)
+            item={"model_index":model_index,"family":model["family"],"label":model["label"],
+                  "candidate":model["picks"][cutoff],"robust_score":round(robust,9),
+                  "mean_score":round(mean_z,9),"selection_evidence":rows}
+            if robust>0:
+                accepted_at.append(item)
+        vote_at=[]
+        for candidate_at in sorted({item["candidate"] for item in accepted_at}):
+            supporters=[item for item in accepted_at if item["candidate"]==candidate_at]
+            vote_at.append({"candidate":candidate_at,"accepted_model_votes":len(supporters),
+                            "family_support":len({item["family"] for item in supporters}),
+                            "robust_score_sum":round(sum(item["robust_score"] for item in supporters),9)})
+        vote_at.sort(key=lambda item:(item["accepted_model_votes"],item["family_support"],
+                                      item["robust_score_sum"],-item["candidate"]),reverse=True)
+        return (vote_at[0]["candidate"] if vote_at else None),accepted_at,vote_at
+
+    fusion_all_rows=[]
+    for cutoff in range(max(2,total_draws-1440),total_draws):
+        candidate_at,accepted_at,_=fusion_vote_at(cutoff)
+        if candidate_at is None:
+            continue
+        actual=set(draws[cutoff]["nums"])
+        fusion_all_rows.append({"index":cutoff,"candidate":candidate_at,
+                                "single_hit":int(candidate_at in actual),
+                                "accepted_models":len(accepted_at)})
+    fusion_rows=fusion_all_rows[-720:]
+
+    def fusion_summary(rows: list[dict]) -> dict:
+        samples=len(rows);hits=sum(item["single_hit"] for item in rows);expected=samples*5/39
+        return {"samples":samples,"single_hits":hits,"single_rate":round(hits/max(1,samples),9),
+                "random_expected_hits":round(expected,6),"excess_hits":round(hits-expected,6),
+                "mean_accepted_models":round(sum(item["accepted_models"] for item in rows)/max(1,samples),3)}
+
+    fusion_walk_forward={
+        "full":fusion_summary(fusion_rows),"recent_360":fusion_summary(fusion_rows[-360:]),
+        "recent_240":fusion_summary(fusion_rows[-240:]),"recent_120":fusion_summary(fusion_rows[-120:]),
+        "recent_54":fusion_summary(fusion_rows[-54:]),"recent_33":fusion_summary(fusion_rows[-33:]),
+        "recent_14":fusion_summary(fusion_rows[-14:]),
+        "no_future_data":True,"selection_rule":"每期只按更早的六段隔離成績篩選模型後投票",
+    }
+
     family_rows=defaultdict(list);accepted=[]
     for model_index,model in enumerate(models):
-        rows=evidence(model);robust=min(row["standardized_excess"] for row in rows)
+        rows=evidence_at(model,total_draws);robust=min(row["standardized_excess"] for row in rows)
         mean_z=sum(row["standardized_excess"] for row in rows)/len(rows)
         item={"model_index":model_index,"family":model["family"],"label":model["label"],
               "candidate":model["picks"][total_draws],"robust_score":round(robust,9),
@@ -1959,36 +2064,34 @@ def build_global_single_fusion_audit(draws: list[dict], count_prefix: list[list[
         champion=max(rows,key=lambda item:(item["robust_score"],item["mean_score"],-item["model_index"]))
         family_champions.append(champion)
     family_champions.sort(key=lambda item:(item["robust_score"],item["mean_score"]),reverse=True)
-    vote_rows=[]
-    for candidate in sorted({item["candidate"] for item in accepted}):
-        supporters=[item for item in accepted if item["candidate"]==candidate]
-        vote_rows.append({"candidate":candidate,"accepted_model_votes":len(supporters),
-                          "family_support":len({item["family"] for item in supporters}),
-                          "robust_score_sum":round(sum(item["robust_score"] for item in supporters),9)})
-    vote_rows.sort(key=lambda item:(item["accepted_model_votes"],item["family_support"],
-                                    item["robust_score_sum"],-item["candidate"]),reverse=True)
-    fusion_candidate=vote_rows[0]["candidate"] if vote_rows else None
+    fusion_candidate,current_accepted,vote_rows=fusion_vote_at(total_draws)
+    if len(current_accepted)!=len(accepted):
+        raise RuntimeError("全球融合當期模型篩選前後不一致")
     candidate_row=next((item for item in vote_rows if item["candidate"]==primary_candidate),{})
     positive_family_champions=sum(item["robust_score"]>0 for item in family_champions)
     gate_conditions={
-        "六類全球方法完成隔離驗證":len(family_rows)==6,
+        "八類軌跡方法完成隔離驗證":len(family_rows)==8,
         "至少二十四組模型跨全部區段高於隨機":len(accepted)>=SINGLE_FUSION_MIN_ACCEPTED_MODELS,
         "融合最高票與主模型同碼":fusion_candidate==primary_candidate,
         "至少兩個獨立家族共同支持主碼":candidate_row.get("family_support",0)>=SINGLE_FUSION_MIN_FAMILY_SUPPORT,
-        "至少三個家族冠軍跨區段保持正向":positive_family_champions>=3,
+        "至少四個家族冠軍跨區段保持正向":positive_family_champions>=4,
+        "七百二十期融合走步高於隨機":fusion_walk_forward["full"]["single_hits"]>fusion_walk_forward["full"]["random_expected_hits"],
+        "最近一百二十期融合走步高於隨機":fusion_walk_forward["recent_120"]["single_hits"]>fusion_walk_forward["recent_120"]["random_expected_hits"],
     }
     return {
-        "policy":"全球六家族逐期前推融合第二版","module_count":len(models),
+        "policy":"全球八家族軌跡逐期前推融合第三版","module_count":len(models),
         "family_count":len(family_rows),"selection_spans":list(SINGLE_FUSION_SELECTION_SPANS),
         "accepted_module_count":len(accepted),"acceptance_rule":"六個檢驗區段標準化超額命中均大於零",
         "family_champions":[{key:value for key,value in item.items() if key!="model_index"}
                             for item in family_champions],
+        "fusion_walk_forward":fusion_walk_forward,
+        "_fusion_walk_trace":fusion_all_rows,
         "accepted_vote_table":vote_rows,"fusion_candidate":fusion_candidate,
         "primary_candidate":primary_candidate,"primary_candidate_support":candidate_row,
         "blocked_unqualified_repeat_numbers":sorted(blocked_current_numbers),
         "repeat_qualification_enforced_before_voting":True,
         "rejected_families":[item["family"] for item in family_champions if item["robust_score"]<=0],
-        "methods":["多時間窗頻率","指數時間衰減","動量與反轉","間隔風險","前期條件轉移","開獎日條件"],
+        "methods":["多時間窗頻率","指數時間衰減","動量與反轉","間隔風險","前期條件轉移","多階拖牌軌跡","週期間隔危險率","開獎日條件"],
         "validation":["全歷史擴展訓練","逐期前推驗證","多區段最弱表現守門","模型家族分離驗證","隨機基準比較"],
         "gate_conditions":gate_conditions,"release_gate_passed":all(gate_conditions.values()),
         "no_future_data":True,"zero_error_certified":False,
@@ -2104,6 +2207,21 @@ def build_single_supermodel(draws: list[dict], repeat_audit: list[dict] | None =
         if parameter_ranked[0]==candidate:
             candidate_consensus.append({"window":candidate_window,"global_history_blend":candidate_blend})
     global_fusion=build_global_single_fusion_audit(draws,count_prefix,candidate,blocked_repeat_numbers)
+    global_fusion.pop("_fusion_walk_trace",None)
+    fusion_walk=global_fusion.get("fusion_walk_forward") or {}
+    comparison_spans=("full","recent_360","recent_240","recent_120","recent_54","recent_33")
+    fusion_upgrade=bool(
+        (fusion_walk.get("full") or {}).get("single_hits",0)>walk_forward["full"]["single_hits"]
+        and all((fusion_walk.get(span) or {}).get("single_hits",0)>=walk_forward[span]["single_hits"]
+                for span in comparison_spans[1:]))
+    global_fusion["production_upgrade_gate"]={
+        "passed":fusion_upgrade,
+        "rule":"七百二十期必須增加，且最近三百六十、二百四十、一百二十、五十四、三十三期不得退化",
+        "primary_hits":{span:walk_forward[span]["single_hits"] for span in comparison_spans},
+        "fusion_hits":{span:(fusion_walk.get(span) or {}).get("single_hits",0) for span in comparison_spans},
+        "decision":"融合軌跡取代主模型" if fusion_upgrade else "融合軌跡未達不退化標準，保留原主模型",
+    }
+    global_fusion["production_upgrade_applied"]=fusion_upgrade
     observed_hits=walk_forward["full"]["single_hits"];samples=len(walk_rows)
     predicted=[item["ranked"][0] for item in walk_rows]
     actual_sets=[item["actual"] for item in walk_rows]
@@ -2136,12 +2254,12 @@ def build_single_supermodel(draws: list[dict], repeat_audit: list[dict] | None =
         "至少十二組參數同選一碼":len(candidate_consensus)>=12,
         "至少四種時間窗同選一碼":len({item["window"] for item in candidate_consensus})>=4,
         "不合格連莊號碼已在候選排序前排除":candidate not in blocked_repeat_numbers,
-        "全球六家族融合驗證通過":bool(global_fusion.get("release_gate_passed")),
+        "全球八家族軌跡融合驗證通過":bool(global_fusion.get("release_gate_passed")),
         "兩種隨機基準已完成且不得隱藏":bool(statistical_validation["circular_shift_tests"]>=719
                                             and statistical_validation["exact_binomial_upper_tail_p"]>=0),
     }
     return {
-        "policy":"全歷史多時間窗、全球六家族與連莊前置排除第四版","candidate":candidate,
+        "policy":"全歷史多時間窗、全球八家族軌跡與連莊前置排除第五版","candidate":candidate,
         "candidate_ranked":current_ranked,"current_score":{str(number):round(value,12) for number,value in current_score.items()},
         "unconstrained_candidate":unconstrained_ranked[0],
         "blocked_unqualified_repeat_numbers":sorted(blocked_repeat_numbers),
@@ -2768,7 +2886,7 @@ def main() -> None:
         "single_selection_evidence": single_supermodel,
         "single_explanation": {
             "label":"本期超級獨支","candidate":single_supermodel.get("candidate"),"unique":True,
-            "method":"全歷史基準、多時間窗單碼專家與全球六家族融合逐段隔離競賽",
+            "method":"全歷史基準、多時間窗單碼專家與全球八家族軌跡融合逐段隔離競賽",
             "selected_window":single_supermodel.get("selected_window"),
             "selected_global_history_blend":single_supermodel.get("selected_global_history_blend"),
             "full_history_draws":single_supermodel.get("full_history_draws"),
