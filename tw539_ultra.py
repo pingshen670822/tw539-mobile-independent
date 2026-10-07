@@ -2620,6 +2620,8 @@ def main() -> None:
     consensus_votes=sum(item["supports"] for item in module_consensus)
     single_supermodel=bt.get("single_supermodel") or {}
     strong_conditions=dict(single_supermodel.get("gate_conditions") or {})
+    strong_conditions["雙重隨機百分之五顯著性通過"]=bool(
+        (single_supermodel.get("statistical_validation") or {}).get("strict_five_percent_significance"))
     bt["single_module_consensus"]=module_consensus
     bt["single_consensus_votes"]=consensus_votes
     bt["single_strong_conditions"]=strong_conditions

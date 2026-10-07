@@ -466,10 +466,12 @@ if not {'192x192','512x512'}.issubset(icon_sizes) or not any('maskable' in item.
 for name,size in (('icon-180.png',(180,180)),('icon-192.png',(192,192)),('icon-512.png',(512,512)),('maskable-512.png',(512,512))):
     path=SITE/'icons'/name
     if not path.exists() or png_size(path)!=size: fail(f'手機安裝圖示不完整：{name}')
-for term in ('tw539-mobile-ironlaw-v8','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
+for term in ('tw539-mobile-ironlaw-v9','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
     if term not in service: fail(f'離線安裝快取缺少：{term}')
 for term in ('beforeinstallprompt','appinstalled','install-app-button','手機版已安裝','AbortController','SYNC_TIMEOUT_MS=10000','syncInFlight'):
     if term not in sync: fail(f'手機安裝流程缺少：{term}')
+for term in ('manualCloudSync','manual-update-button','caches.delete','latest-result.json','system-health.json','雲端資料已取得'):
+    if term not in sync: fail(f'手動更新按鈕不是完整的一鍵雲端同步：{term}')
 
 history_file=REPORTS/'prediction-history.jsonl'
 try:

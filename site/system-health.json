@@ -1,16 +1,16 @@
 {
   "status": "healthy",
-  "checked_at": "2026-10-07T01:16:30+08:00",
+  "checked_at": "2026-10-07T09:06:36+08:00",
   "latest_period": "115000242",
   "latest_draw_date": "2026-10-06",
   "expected_latest_date": "2026-10-06",
   "freshness_ok": true,
   "calendar_freshness_ok": true,
-  "data_changed": true,
-  "official_source": "taiwanlottery_latest_result",
+  "data_changed": false,
+  "official_source": null,
   "source_failover_used": false,
   "backfill_complete": true,
-  "backfill_draw_count": 1,
+  "backfill_draw_count": 0,
   "history_repair_pending": false,
   "pipeline_version": "持續更新第三版",
   "update_retry_policy": "五次重試、雙官方端點、缺期逐月補齊、失敗強制重跑",
@@ -23,17 +23,17 @@
   "watchdog_interval_minutes": 5,
   "upstream_failure_forces_repair": true,
   "desktop_mobile_sync": true,
-  "desktop_mobile_shared_version": "20261007011630",
+  "desktop_mobile_shared_version": "20261007090636",
   "desktop_mobile_source": "電腦版與手機版共用同一次正式運算、同一結果檔與同一組分頁",
   "official_draw_time": "2026-10-06T20:30+08:00",
   "sync_completed_at": "2026-10-07T01:16:30+08:00",
   "sync_delay_minutes": 286,
   "one_hour_repair_deadline": "2026-10-06T21:30+08:00",
   "one_hour_deadline_met": false,
-  "self_repair_status": "本次自修完成",
+  "self_repair_status": "雲端待命",
   "self_repair_count": 16,
   "last_self_repair_at": "2026-10-07T01:16:30+08:00",
-  "last_public_verification_at": "2026-10-07T01:16:30+08:00",
+  "last_public_verification_at": "2026-10-07T09:06:36+08:00",
   "mobile_open_sync": "開啟、回到前景、重新連網均立即核對版本",
   "model_release_allowed": true,
   "single_release_allowed": true,
@@ -729,6 +729,72 @@
     "strict_five_percent_significance": false,
     "candidate_level_ten_percent_significance": false
   },
+  "live_single_accuracy": {
+    "source": "開獎前封存正式結算",
+    "recovery_rows_excluded": true,
+    "random_rate": 0.128205128,
+    "minimum_live_samples": 30,
+    "all_sealed": {
+      "samples": 35,
+      "hits": 1,
+      "rate": 0.028571429,
+      "random_expected_hits": 4.487179,
+      "not_below_random": false
+    },
+    "supermodel_series": {
+      "samples": 2,
+      "hits": 1,
+      "rate": 0.5,
+      "random_expected_hits": 0.25641,
+      "not_below_random": true
+    },
+    "current_architecture": {
+      "samples": 1,
+      "hits": 0,
+      "rate": 0.0,
+      "random_expected_hits": 0.128205,
+      "not_below_random": false
+    },
+    "current_architecture_policy": "全歷史多時間窗、全球六家族與連莊前置排除第四版",
+    "recent": {
+      "5": {
+        "samples": 5,
+        "hits": 1,
+        "rate": 0.2,
+        "random_expected_hits": 0.641026,
+        "not_below_random": true
+      },
+      "10": {
+        "samples": 10,
+        "hits": 1,
+        "rate": 0.1,
+        "random_expected_hits": 1.282051,
+        "not_below_random": false
+      },
+      "20": {
+        "samples": 20,
+        "hits": 1,
+        "rate": 0.05,
+        "random_expected_hits": 2.564103,
+        "not_below_random": false
+      },
+      "30": {
+        "samples": 30,
+        "hits": 1,
+        "rate": 0.033333333,
+        "random_expected_hits": 3.846154,
+        "not_below_random": false
+      }
+    },
+    "current_miss_streak": 1,
+    "longest_miss_streak": 33,
+    "exact_binomial_lower_tail_p": 0.050485681,
+    "all_sealed_gate_passed": false,
+    "current_architecture_gate_passed": false,
+    "live_accuracy_gate_passed": false,
+    "status": "實戰強烈門檻未通過，僅能列為完整運算最高順位"
+  },
+  "single_strong_recommendation": false,
   "single_edge_verified": false,
   "ranking_direction_valid": true,
   "top1_hits": 52,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """官方最新開獎 -> 驗證 -> 重算 -> 產生獨立 PWA。僅使用 Python 標準庫。"""
 from __future__ import annotations
-import argparse, csv, hashlib, json, os, shutil, subprocess, sys, time, urllib.parse, urllib.request
+import argparse, csv, hashlib, json, math, os, shutil, subprocess, sys, time, urllib.parse, urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -292,6 +292,82 @@ def compact_prediction_history(current):
     if current.get('target_draw_date') not in targets: chosen.append(current)
     path.write_text('\n'.join(json.dumps(x,ensure_ascii=False) for x in chosen)+'\n',encoding='utf-8')
 
+def build_live_single_accuracy(current):
+    """只用開獎前已封存且事後正式結算的獨支，禁止把停擺補登混入命中率。"""
+    settlements=[item for item in read_jsonl(REPORTS/'published-settlements.jsonl')
+                 if item.get('review_status')=='completed_from_pre_draw_seal'
+                 and isinstance(item.get('single_hit'),bool)]
+    settlements.sort(key=lambda item:str(item.get('target_draw_date') or ''))
+    history=read_jsonl(REPORTS/'prediction-history.jsonl')
+    history_by_date={str(item.get('target_draw_date')):item for item in history}
+    policy=(current.get('single_supermodel') or {}).get('policy')
+    architecture=[]
+    supermodel_series=[]
+    for item in settlements:
+        prediction=history_by_date.get(str(item.get('target_draw_date'))) or {}
+        if prediction.get('single_supermodel'):
+            supermodel_series.append(item)
+        if (prediction.get('single_supermodel') or {}).get('policy')==policy:
+            architecture.append(item)
+
+    def summary(rows):
+        samples=len(rows);hits=sum(bool(item.get('single_hit')) for item in rows)
+        expected=samples*5/39
+        return {'samples':samples,'hits':hits,'rate':round(hits/max(1,samples),9),
+                'random_expected_hits':round(expected,6),'not_below_random':hits>=expected}
+
+    recent={str(span):summary(settlements[-span:]) for span in (5,10,20,30)}
+    miss_streak=0
+    for item in reversed(settlements):
+        if item.get('single_hit'): break
+        miss_streak+=1
+    longest=running=0
+    for item in settlements:
+        running=0 if item.get('single_hit') else running+1
+        longest=max(longest,running)
+    overall=summary(settlements);current_architecture=summary(architecture)
+    supermodel_total=summary(supermodel_series)
+    lower_tail=(sum(math.comb(overall['samples'],hits)*(5/39)**hits*(34/39)**(overall['samples']-hits)
+                    for hits in range(overall['hits']+1)) if overall['samples'] else 1.0)
+    minimum=30
+    overall_gate=overall['samples']>=minimum and overall['not_below_random']
+    architecture_gate=(current_architecture['samples']>=minimum
+                       and current_architecture['not_below_random'])
+    return {
+        'source':'開獎前封存正式結算','recovery_rows_excluded':True,
+        'random_rate':round(5/39,9),'minimum_live_samples':minimum,
+        'all_sealed':overall,'supermodel_series':supermodel_total,
+        'current_architecture':current_architecture,
+        'current_architecture_policy':policy,'recent':recent,
+        'current_miss_streak':miss_streak,'longest_miss_streak':longest,
+        'exact_binomial_lower_tail_p':round(lower_tail,9),
+        'all_sealed_gate_passed':overall_gate,
+        'current_architecture_gate_passed':architecture_gate,
+        'live_accuracy_gate_passed':overall_gate and architecture_gate,
+        'status':('實戰守門通過' if overall_gate and architecture_gate else
+                  '實戰強烈門檻未通過，僅能列為完整運算最高順位'),
+    }
+
+def apply_live_single_accuracy_guard(current):
+    live=build_live_single_accuracy(current)
+    backtest=current.get('backtest') or {}
+    supermodel=current.get('single_supermodel') or backtest.get('single_supermodel') or {}
+    statistical=supermodel.get('statistical_validation') or {}
+    conditions=dict(backtest.get('single_strong_conditions') or supermodel.get('gate_conditions') or {})
+    conditions['雙重隨機百分之五顯著性通過']=bool(statistical.get('strict_five_percent_significance'))
+    conditions['現行架構開獎前封存至少三十期']=bool(live['current_architecture']['samples']>=live['minimum_live_samples'])
+    conditions['現行架構封存實績不低於隨機']=bool(live['current_architecture']['not_below_random'])
+    conditions['全部封存實績不低於隨機']=bool(live['all_sealed']['not_below_random'])
+    backtest['live_single_accuracy']=live
+    backtest['single_strong_conditions']=conditions
+    backtest['single_strong_recommendation']=all(conditions.values())
+    backtest['single_confidence_label']=('實戰與統計守門通過的最強獨支'
+                                        if backtest['single_strong_recommendation']
+                                        else '完整運算最高順位，實戰強烈門檻未通過')
+    current['backtest']=backtest
+    current['live_single_accuracy']=live
+    return current
+
 def settle_previous(previous, latest):
     if not previous or previous.get('target_draw_date') != latest['draw_date']: return None
     actual=set(latest['nums']); top=previous.get('ranked_top15') or []
@@ -489,6 +565,8 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
             evidence={k:v for k,v in completed_item.items() if k!='review_evidence_sha256'}
             completed_item['review_evidence_sha256']=hashlib.sha256(json.dumps(evidence,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
             append_jsonl(REPORTS/'published-settlements.jsonl',completed_item,lambda x:(x.get('target_draw_date'),x.get('fingerprint')),replace=True)
+    current=apply_live_single_accuracy_guard(current)
+    (REPORTS/'最新結果.json').write_text(json.dumps(current,ensure_ascii=False,indent=2),encoding='utf-8')
     append_jsonl(REPORTS/'prediction-history.jsonl',current,lambda x:x.get('target_draw_date'),replace=True)
     compact_prediction_history(current)
     backtest=current.get('backtest') or {}
@@ -544,6 +622,8 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
         'single_supermodel_walk_forward':(current.get('single_supermodel') or {}).get('walk_forward'),
         'single_global_fusion':(current.get('single_supermodel') or {}).get('global_fusion'),
         'single_statistical_validation':(current.get('single_supermodel') or {}).get('statistical_validation'),
+        'live_single_accuracy':current.get('live_single_accuracy'),
+        'single_strong_recommendation':bool((current.get('backtest') or {}).get('single_strong_recommendation')),
         'single_edge_verified':bool((current.get('backtest') or {}).get('single_release_allowed')),
         'ranking_direction_valid':direction_ok,
         'top1_hits':backtest.get('single_hits'),'bottom1_hits':backtest.get('bottom1_hits'),

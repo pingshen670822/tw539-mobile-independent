@@ -3,9 +3,41 @@ const installButton=document.getElementById('install-app-button');
 const installStatus=document.getElementById('install-app-status');
 const installHelp=document.getElementById('install-app-help');
 const cloudControlStatus=document.getElementById('cloud-control-status');
-document.querySelectorAll('.cloud-button').forEach(button=>button.addEventListener('click',()=>{
-  if(cloudControlStatus)cloudControlStatus.textContent=button.id==='emergency-repair-button'?'已開啟當機修復控制頁':'已開啟最新資料更新控制頁';
-}));
+const manualUpdateButton=document.getElementById('manual-update-button');
+const repairButton=document.getElementById('emergency-repair-button');
+if(repairButton)repairButton.addEventListener('click',()=>{
+  if(cloudControlStatus)cloudControlStatus.textContent='已開啟受保護的當機修復控制頁';
+});
+async function manualCloudSync(){
+  if(!manualUpdateButton||manualUpdateButton.disabled)return;
+  manualUpdateButton.disabled=true;
+  if(cloudControlStatus)cloudControlStatus.textContent='正在清除舊快取並重新取得雲端資料';
+  try{
+    if('caches' in window)await Promise.all((await caches.keys()).map(key=>caches.delete(key)));
+    if('serviceWorker' in navigator){
+      const registrations=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(registration=>registration.update()));
+    }
+    const stamp=Date.now();
+    const [versionResponse,resultResponse,healthResponse]=await Promise.all([
+      fetch('./version.json?manual='+stamp,{cache:'no-store',headers:{'Cache-Control':'no-cache'}}),
+      fetch('./latest-result.json?manual='+stamp,{cache:'no-store',headers:{'Cache-Control':'no-cache'}}),
+      fetch('./system-health.json?manual='+stamp,{cache:'no-store',headers:{'Cache-Control':'no-cache'}})
+    ]);
+    if(!versionResponse.ok||!resultResponse.ok||!healthResponse.ok)throw new Error('雲端資料取得失敗');
+    const [version,result,health]=await Promise.all([versionResponse.json(),resultResponse.json(),healthResponse.json()]);
+    if(!version.version||!result.target_draw_date||!health.latest_period)throw new Error('雲端資料不完整');
+    if(cloudControlStatus)cloudControlStatus.textContent='雲端資料已取得，正在載入最新版本';
+    sessionStorage.setItem('tw539-manual-sync',JSON.stringify({version:version.version,time:Date.now()}));
+    await new Promise(resolve=>setTimeout(resolve,500));
+    location.replace(location.pathname+'?v='+encodeURIComponent(version.version)+'&manual='+stamp+location.hash);
+  }catch(error){
+    if(cloudControlStatus)cloudControlStatus.textContent='更新失敗，五秒後自動重試；請檢查網路連線';
+    manualUpdateButton.disabled=false;
+    setTimeout(checkVersion,5000);
+  }
+}
+if(manualUpdateButton)manualUpdateButton.addEventListener('click',manualCloudSync);
 let installPrompt=null;
 const installedMode=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 function showInstallState(){

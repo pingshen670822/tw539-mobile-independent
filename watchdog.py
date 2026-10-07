@@ -266,9 +266,11 @@ if not {'192x192','512x512'}.issubset({item.get('sizes') for item in manifest_ic
     errors.append('公開手機安裝清單缺少必要圖示')
 for name,(status,content_type,raw) in public_icons.items():
     if status!=200 or content_type!='image/png' or raw[:8]!=b'\x89PNG\r\n\x1a\n': errors.append(f'公開手機安裝圖示無效：{name}')
-for term in ('tw539-mobile-ironlaw-v8','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
+for term in ('tw539-mobile-ironlaw-v9','mobile-sync.js','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'):
     if term not in worker: errors.append(f'公開離線安裝快取缺少：{term}')
 for term in ('beforeinstallprompt','appinstalled','install-app-button','手機版已安裝','AbortController','SYNC_TIMEOUT_MS=10000','syncInFlight'):
     if term not in sync: errors.append(f'公開手機安裝流程缺少：{term}')
+for term in ('manualCloudSync','manual-update-button','caches.delete','latest-result.json','system-health.json','雲端資料已取得'):
+    if term not in sync: errors.append(f'公開手動更新按鈕不是完整的一鍵雲端同步：{term}')
 if errors: raise SystemExit('鐵律看門狗失敗：'+'；'.join(errors))
 print(json.dumps({'看門狗':'通過','官方期別':official['period'],'公開期別':health['latest_period'],'全歷史':True,'命中檢討':'已完成或誠實登錄停擺缺口','滾動候選':286,'1中1主選':result['single_published'],'手機可安裝':True,'模型警報':warnings,'戰報可見英文':0},ensure_ascii=False))
