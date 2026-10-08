@@ -410,7 +410,7 @@ if version.get('latest_period')!=latest['period'] or version.get('latest_draw_da
 
 page_rules={
     'index.html':{
-        'required':('本期最強終極獨支','本期其他鐵律號碼','終極獨支強烈驗證摘要','不合格連莊前置排除','超級獨支完整運算來源','全球八家族軌跡融合複驗','雙重隨機基準','嚴格發布守門','目前模型選擇證據','六段時間隔離競賽','隔離結果總表','最強號碼多邏輯總結','強烈推薦守門','失準事件監測','1中1','2中1～2','3中1～3','5中2～3','9中3～5','內部前十五診斷（非正式推薦）','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不足不補位','查看獨支強烈驗證與完整運算','查看資料、排名、排除與連莊診斷'),
+        'required':('本期最強終極獨支','本期預測日期','資料計算截止','最新官方期別','本頁更新時間','全系統與全球模組聯合運算來源','本期其他鐵律號碼','終極獨支強烈驗證摘要','不合格連莊前置排除','超級獨支完整運算來源','全球八家族軌跡融合複驗','雙重隨機基準','嚴格發布守門','目前模型選擇證據','六段時間隔離競賽','隔離結果總表','最強號碼多邏輯總結','強烈推薦守門','失準事件監測','1中1','2中1～2','3中1～3','5中2～3','9中3～5','內部前十五診斷（非正式推薦）','本期推薦牌組','本期投注排除','上一期號碼連莊資格','相對指數（非機率）','不足不補位','查看獨支強烈驗證與完整運算','查看資料、排名、排除與連莊診斷'),
         'forbidden':('最新一期命中結算','最後360期逐期走步回測','全歷史運算範圍','鐵律守門')},
     'backtest.html':{
         'required':('超級獨支多時間窗隔離驗證','全球軌跡融合與隨機基準複驗','最近14期逐段隔離','最後360期逐期走步回測','直接命中全排序校準','前5與前9任一關鍵區段退化即自動回退','資料變化影子驗證','單碼重複冷卻','前後段方向對照','前9逐期命中分布','最近54期獨立觀察','全歷史逐期一致性掃描','禁止用同一期開獎結果改寫同一期預測'),
@@ -454,6 +454,10 @@ if legacy!=visible_text(REPORTS/'index.html'): fail('相容戰報入口與本期
 if result.get('single_published') is not None and f"{int(result['single_published']):02}" not in visible_text(SITE/'index.html'): fail('本期預測頁未顯示當期1中1主選')
 generated_visible=str(result.get('generated_at',''))[:16].replace('T',' ')
 if generated_visible and generated_visible not in visible_text(SITE/'index.html'): fail('本期預測頁產生時間未同步台灣時區')
+target_visible=datetime.strptime(result['target_draw_date'],'%Y-%m-%d')
+target_weekdays=('星期一','星期二','星期三','星期四','星期五','星期六','星期日')
+target_label=f"{target_visible.year}年{target_visible.month:02d}月{target_visible.day:02d}日（{target_weekdays[target_visible.weekday()]}）"
+if f'{target_label} 終極獨支（1中1）' not in visible_text(SITE/'index.html'): fail('終極獨支未直接標示正確開獎日期')
 expected_direction='排序方向通過' if backtest.get('ranking_direction_valid') else '排序方向未通過'
 if expected_direction not in visible_text(SITE/'backtest.html') or expected_direction not in visible_text(SITE/'health.html'):
     fail('回測或健康分頁未照實顯示高低分方向')

@@ -243,13 +243,20 @@ for name,page in pages.items():
     for term in ("rel='manifest'","rel='apple-touch-icon'","mobile-web-app-capable","apple-mobile-web-app-capable","id='install-app-button'",'安裝手機版',"id='manual-update-button'",'手動更新最新',"id='emergency-repair-button'",'當機立即修復','mobile-sync.js'):
         if term not in page: errors.append(f'{name} 缺少手機安裝條件：{term}')
 home=visible_pages['index.html']; review_page=visible_pages['review.html']; backtest_page=visible_pages['backtest.html']; history_page=visible_pages['history.html']; models_page=visible_pages['models.html']; health_page=visible_pages['health.html']
+target_visible=datetime.strptime(result['target_draw_date'],'%Y-%m-%d')
+target_weekdays=('星期一','星期二','星期三','星期四','星期五','星期六','星期日')
+target_label=f"{target_visible.year}年{target_visible.month:02d}月{target_visible.day:02d}日（{target_weekdays[target_visible.weekday()]}）"
 if ('本期最強終極獨支' not in home or '本期其他鐵律號碼' not in home
+        or '本期預測日期' not in home or '資料計算截止' not in home
+        or '最新官方期別' not in home or '本頁更新時間' not in home
+        or '全系統與全球模組聯合運算來源' not in home
         or '查看獨支強烈驗證與完整運算' not in home or '查看資料、排名、排除與連莊診斷' not in home
         or '超級獨支完整運算來源' not in home or '嚴格發布守門' not in home
         or '目前模型選擇證據' not in home or '六段時間隔離競賽' not in home
         or '隔離結果總表' not in home or '全球八家族軌跡融合複驗' not in home or '雙重隨機基準' not in home or '1中1' not in home
         or '終極獨支強烈驗證摘要' not in home or '不合格連莊前置排除' not in home
         or '不足不補位' not in home or '內部前十五診斷（非正式推薦）' not in home
+        or f'{target_label} 終極獨支（1中1）' not in home
         or (result.get('single_candidate') and f"{int(result['single_candidate']):02}" not in home)):
     errors.append('本期預測頁未完整顯示嚴格發布、運算來源或單碼冷卻狀態')
 if any(term in home for term in ('最新一期命中結算','最後360期逐期走步回測','全歷史運算範圍','鐵律守門')): errors.append('本期預測頁混入其他分類資料')

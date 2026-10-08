@@ -95,6 +95,9 @@ def _page_shell(filename: str, heading: str, subtitle: str, content: str) -> str
 
 def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, target_date, generated_at, feature_labels, bt):
     latest = draws[-1]
+    target_day = datetime.strptime(target_date, "%Y-%m-%d")
+    weekday_names = ("星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日")
+    target_label = f"{target_day.year}年{target_day.month:02d}月{target_day.day:02d}日（{weekday_names[target_day.weekday()]}）"
     minimum = min(score.values())
     spread = max(0.00001, max(score.values()) - minimum)
     engine = __import__("tw539_ultra")
@@ -183,21 +186,27 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
         guard_note="條件成立，但跨區間回測證明旋轉會拖累前5、前9與邊界，本期只記錄、不改號。"
     else:
         guard_note="條件未成立；監測器只記錄，不得改動正式排序。"
+    fusion_candidate=int(global_fusion.get("fusion_candidate") or 0)
+    fusion_relation=("同碼" if fusion_candidate==super_candidate else f"不同碼（全球融合最高票為{fusion_candidate:02}）")
+    source_note=(f"<p class='note'><b>全系統與全球模組聯合運算來源：全歷史{supermodel.get('full_history_draws',0):,}期、"
+                 f"{supermodel.get('parameter_count',0)}組主模型、{global_fusion.get('family_count',0)}類共"
+                 f"{global_fusion.get('module_count',0)}組全球模組，跨區段合格{global_fusion.get('accepted_module_count',0)}組；"
+                 f"本期主模型最高順位與全球融合最高票{fusion_relation}。</b></p>")
     if single_formal is not None:
         failed="、".join(single_gate.get("failure_reasons") or [])
         validation_note=("統計與開獎前封存實戰守門全部通過。" if strong else
                          f"完整運算已完成；目前只能列為最高順位，實戰強烈門檻未通過。{failed}")
-        single_head=(f"<div class='badge'>{'強烈驗證通過' if strong else '完整運算最高順位'}</div><h2>1中1</h2>"
+        single_head=(f"<div class='badge'>{'強烈驗證通過' if strong else '完整運算最高順位'}</div><h2>{target_label} 終極獨支（1中1）</h2>"
                      f"<div class='number'>{single_formal:02}</div>"
                      f"<div class='validation-seals'><span>全歷史{supermodel.get('full_history_draws',0):,}期</span>"
                      f"<span>{supermodel.get('parameter_count',0)}組主模型融合</span>"
                      f"<span>{global_fusion.get('module_count',0)}組全球八家族軌跡複驗</span>"
                      f"<span>{sum(bool(value) for value in strong_conditions.values())}／{len(strong_conditions)}項強烈驗證</span></div>"
-                     f"<p><b>{validation_note}</b></p>")
+                     f"{source_note}<p><b>{validation_note}</b></p>")
     else:
         failed="、".join((strict.get("single_gate") or {}).get("failure_reasons") or ["嚴格條件未全部通過"])
-        single_head=("<div class='badge'>完整運算完成</div><h2>1中1</h2>"
-                     f"<div class='number'>{super_candidate:02}</div><p><b>驗證警示：{failed}。</b></p>")
+        single_head=(f"<div class='badge'>完整運算完成</div><h2>{target_label} 終極獨支（1中1）</h2>"
+                     f"<div class='number'>{super_candidate:02}</div>{source_note}<p><b>驗證警示：{failed}。</b></p>")
     tier_labels={"single":"1中1","two":"2中1～2","three":"3中1～3","five":"5中2～3","nine":"9中3～5"}
     tier_rows="".join(
         f"<tr><td><b>{tier_labels[key]}</b></td><td class='number-line'>{_fmt(tiers.get(key) or []) or '未發布'}</td></tr>"
@@ -232,6 +241,13 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
         "</div><p class='note'>未通過連莊資格的上期號碼先排除，再由全部模型重新排序與投票；不得把第二名直接補上，也不得沿用前期獨支。</p></div>"
     )
     content = f"""
+<div class='band strong'><h2>本期預測日期：{target_label}</h2><div class='grid'>
+<div class='card'><div class='label'>本期預測日期</div><div class='value'>{target_label}</div></div>
+<div class='card'><div class='label'>資料計算截止</div><div class='value'>{latest['date']}</div></div>
+<div class='card'><div class='label'>最新官方期別</div><div class='value'>{latest['period']}</div></div>
+<div class='card'><div class='label'>本頁更新時間</div><div class='value'>{generated_at}</div></div>
+<div class='card'><div class='label'>使用歷史期數</div><div class='value'>{len(draws):,}期</div></div>
+</div></div>
 <div class='band {'strong' if single_formal is not None and strong else 'primary'}'>{single_head}</div>
 <div class='band ironlaw-numbers'><h2>本期其他鐵律號碼</h2><div class='table-wrap'><table><thead><tr><th>類型</th><th>正式號碼</th></tr></thead><tbody>{tier_rows}</tbody></table></div><p class='note'>未達全部條件即顯示未發布；不足不補位。</p></div>
 <details class='report-details'><summary>查看獨支強烈驗證與完整運算</summary>
@@ -243,13 +259,6 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
 <div class='band'><h2>最強號碼多邏輯總結</h2><div class='grid'><div class='card'><div class='label'>逐段隔離命中</div><div class='value'>{(walk.get('full') or {}).get('single_hits',0)}／{(walk.get('full') or {}).get('samples',0)}</div></div><div class='card'><div class='label'>最近120期</div><div class='value'>{(walk.get('recent_120') or {}).get('single_hits',0)}中</div></div><div class='card'><div class='label'>最近33期</div><div class='value'>{(walk.get('recent_33') or {}).get('single_hits',0)}中</div></div></div><h3>強烈推薦守門</h3><div class='table-wrap'><table><thead><tr><th>必要條件</th><th>結果</th></tr></thead><tbody>{condition_rows}</tbody></table></div></div>
 </details>
 <details class='report-details'><summary>查看資料、排名、排除與連莊診斷</summary>
-<div class='band'><h2>本期資料</h2><div class='grid'>
-<div class='card'><div class='label'>預測目標日</div><div class='value'>{target_date}</div></div>
-<div class='card'><div class='label'>歷史資料截止日</div><div class='value'>{latest['date']}</div></div>
-<div class='card'><div class='label'>依據期別</div><div class='value'>{latest['period']}</div></div>
-<div class='card'><div class='label'>使用歷史期數</div><div class='value'>{len(draws):,}期</div></div>
-<div class='card'><div class='label'>戰報產生時間</div><div class='value'>{generated_at}</div></div>
-</div></div>
 <div class='band {'warning' if guard_condition else ''}'><h2>失準事件監測</h2><p><b>{guard_note} 鐵律：監測器永久禁止旋轉、換號或改動任何正式排名。</b></p><div class='grid'><div class='card'><div class='label'>監測條件</div><div class='value'>前9零中且平均名次至少{bt.get('catastrophic_guard_avg_rank_floor',22):.0f}</div></div><div class='card'><div class='label'>歷史條件成立</div><div class='value'>{bt.get('catastrophic_guard_trigger_count',0)}／{bt.get('samples',0)}期</div></div><div class='card'><div class='label'>正式旋轉次數</div><div class='value'>{bt.get('catastrophic_guard_application_count',0)}期</div></div><div class='card'><div class='label'>反事實比較窗</div><div class='value'>最近{bt.get('catastrophic_guard_policy_window',0)}次條件樣本</div></div><div class='card'><div class='label'>原排序前9平均</div><div class='value'>{guard_before.get('top9_avg_hits',0)}</div></div><div class='card'><div class='label'>正式前9平均</div><div class='value'>{bt.get('top9_avg_hits',0)}</div></div></div><p class='note'>原始前9：{_fmt((bt.get('next_unguarded_ranked') or [])[:9])}；正式前9：{_fmt(ranking[:9])}。監測依據：{bt.get('catastrophic_guard_current_source','逐期隔離重演')}。</p></div>
 <div class='band'><h2>內部前十五診斷（非正式推薦）</h2><p class='note'>此表用來公開驗證淘汰原因；只有標示「通過正式發布」的號碼才是本期推薦。</p><div class='table-wrap'><table><thead><tr><th>排名</th><th>號碼</th><th>區段</th><th>相對指數（非機率）</th><th>主要支撐</th><th>正式資格</th></tr></thead><tbody>{''.join(rank_rows)}</tbody></table></div></div>
 <div class='band'><h2>本期推薦牌組</h2><div class='table-wrap'><table><thead><tr><th>組別</th><th>號碼</th><th>檢查</th></tr></thead><tbody>{ticket_rows}</tbody></table></div></div>
@@ -257,7 +266,7 @@ def _prediction_page(draws, weights, score, tickets, repeat_audit, ranking, targ
 <div class='band'><h2>上一期號碼連莊資格</h2><p class='note'>上一期號碼只有通過相對指數、全歷史轉移、正式模組與個別連莊回測，才可保留在本期前9；不做補位。</p><div class='table-wrap'><table><thead><tr><th>上一期號碼</th><th>相對指數</th><th>正貢獻模組</th><th>連莊命中／樣本</th><th>資格</th><th>本期名次</th><th>結果</th></tr></thead><tbody>{repeat_rows}</tbody></table></div></div>
 <div class='band warning'><h2>使用說明</h2><p>本頁只放同一期正式預測，不混入回測、開獎檢討、歷史封存或模型說明。今彩539為隨機遊戲，統計排序不保證中獎或獲利。</p></div>
 </details>"""
-    return _page_shell("index.html", "本期最強終極獨支", "全歷史、多模組與全球八家族軌跡層層運算再複驗", content)
+    return _page_shell("index.html", "本期最強終極獨支", f"{target_label}｜全歷史、多模組與全球八家族軌跡層層運算再複驗", content)
 
 
 def _backtest_page(bt, full_scan):
