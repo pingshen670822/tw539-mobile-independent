@@ -512,7 +512,7 @@ def _health_page(draws, bt, full_scan, generated_at, settlements, health):
         ("嚴格發布守門", "通過" if (bt.get("strict_publication_gate") or {}).get("no_padding") else "未通過", "逐號驗算；不足一、二、三、五、九顆時不補位"),
         ("超級獨支模型", "通過" if (bt.get("single_supermodel") or {}).get("release_gate_passed") else "未通過", f"四十組主模型、{((bt.get('single_supermodel') or {}).get('global_fusion') or {}).get('module_count',0)}組全球八家族軌跡融合、六段時間隔離守門"),
         ("手機同步", "通過", "開啟、回到前景與重新連網時立即核對；同步後每30秒巡檢"),
-        ("三十分鐘自修", ("啟用前舊期" if not health.get("deadline_enforced_for_latest_draw") else ("通過" if health.get("thirty_minute_deadline_met",True) else "逾時故障")), "自2026年10月7日開獎起，超過期限立即重跑資料、模型、分頁、部署與公開驗收"),
+        ("三十分鐘自修", ("啟用前舊期" if not health.get("deadline_enforced_for_latest_draw") else ("通過" if health.get("thirty_minute_deadline_met",True) else ("逾時後已補齊" if health.get("deadline_recovered") else "逾時故障"))), "自2026年10月7日開獎起，超過期限立即重跑資料、模型、分頁、部署與公開驗收"),
     )
     rows = "".join(f"<tr><td>{name}</td><td>{status}</td><td>{detail}</td></tr>" for name, status, detail in checks)
     content = f"""
@@ -527,7 +527,7 @@ def _health_page(draws, bt, full_scan, generated_at, settlements, health):
 <div class='card'><div class='label'>完成同步時間</div><div class='value'>{_display_time(health.get('sync_completed_at'))}</div></div>
 <div class='card'><div class='label'>同步延遲</div><div class='value'>{health.get('sync_delay_minutes','－')}分鐘</div></div>
 <div class='card'><div class='label'>三十分鐘完成期限</div><div class='value'>{_display_time(health.get('thirty_minute_repair_deadline'))}</div></div>
-<div class='card'><div class='label'>期限結果</div><div class='value'>{'鐵律啟用前舊期' if not health.get('deadline_enforced_for_latest_draw') else ('期限內完成' if health.get('thirty_minute_deadline_met',True) else '逾時故障並已觸發自修')}</div></div>
+<div class='card'><div class='label'>期限結果</div><div class='value'>{'鐵律啟用前舊期' if not health.get('deadline_enforced_for_latest_draw') else ('期限內完成' if health.get('thirty_minute_deadline_met',True) else ('曾逾時，資料已補齊' if health.get('deadline_recovered') else '逾時故障並已觸發自修'))}</div></div>
 <div class='card'><div class='label'>執行位置</div><div class='value'>全天候雲端</div></div>
 <div class='card'><div class='label'>本機關機</div><div class='value'>{'照常更新' if health.get('cloud_independent_update') and health.get('local_computer_required') is False else '設定異常'}</div></div>
 <div class='card'><div class='label'>雲端更新排程</div><div class='value'>{health.get('cloud_update_schedule','開獎時段每五分鐘核對')}</div></div>

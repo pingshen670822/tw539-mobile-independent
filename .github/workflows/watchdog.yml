@@ -4,10 +4,10 @@ on:
     workflows: [開獎後全自動更新與手機同步]
     types: [completed]
   schedule:
-    # 台灣時間20:30至隔日00:55每5分鐘輕量巡檢；落後即觸發完整自修。
+    # 台灣時間20:29至隔日00:59每5分鐘輕量巡檢；落後即觸發完整自修。
     # 加密觸發可降低雲端排程偶發延遲造成三十分鐘期限失守的風險。
-    - cron: '30,35,40,45,50,55 12 * * 1-6'
-    - cron: '*/5 13-16 * * 1-6'
+    - cron: '29,34,39,44,49,54,59 12 * * 1-6'
+    - cron: '4,9,14,19,24,29,34,39,44,49,54,59 13-16 * * 1-6'
     - cron: '0 23 * * 1-6'
     # 全天每小時獨立巡檢；即使主排程沒有啟動，也能偵測公開頁與官方期別差異。
     - cron: '17 * * * *'
@@ -53,6 +53,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          active=$(gh run list --repo "${{ github.repository }}" --workflow auto-update.yml --limit 20 --json status --jq '[.[] | select(.status == "in_progress" or .status == "queued")] | length')
+          if [ "$active" != "0" ]; then
+            echo "主更新已在執行或排隊，不重複觸發"
+            exit 0
+          fi
           for attempt in 1 2 3 4 5; do
             gh workflow run auto-update.yml --repo "${{ github.repository }}" --ref master -f repair=true && exit 0
             sleep $((attempt * 3))
@@ -61,11 +66,11 @@ jobs:
       - name: 修復後再次驗證
         id: repair_freshness
         if: steps.upstream_failure.outcome == 'failure' || steps.fast_check.outcome == 'failure' || steps.full_check.outcome == 'failure'
-        timeout-minutes: 8
+        timeout-minutes: 18
         env:
           TW539_WATCHDOG_FAST: 1
         run: |
-          for i in {1..60}; do
+          for i in {1..180}; do
             python watchdog.py && exit 0
             sleep 5
           done

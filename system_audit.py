@@ -372,8 +372,12 @@ if site_health!=health: fail('手機健康檔與戰報健康檔不同步')
 if (health.get('update_start_deadline_minutes')!=10 or health.get('completion_deadline_minutes')!=30
         or not health.get('thirty_minute_repair_deadline')
         or not health.get('deadline_policy_effective_draw_date')
-        or (health.get('deadline_enforced_for_latest_draw') and health.get('thirty_minute_deadline_met') is not True)):
+        or 'deadline_recovered' not in health):
     fail('十分鐘啟動、三十分鐘完成鐵律未落實')
+if (health.get('deadline_enforced_for_latest_draw') and health.get('thirty_minute_deadline_met') is not True):
+    if not health.get('deadline_recovered') or not health.get('freshness_ok'):
+        fail('三十分鐘期限超時且資料尚未補齊')
+    warn('本期曾超過三十分鐘，已補齊並保留真實逾時紀錄')
 for label,item in (('戰報健康檔',health),('手機健康檔',site_health)):
     if item.get('latest_period')!=latest['period'] or item.get('latest_draw_date')!=latest['date']: fail(f'{label}期別日期錯誤')
     if not item.get('full_history_mode'): fail(f'{label}不是全歷史模式')

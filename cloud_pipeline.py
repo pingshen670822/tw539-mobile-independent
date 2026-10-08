@@ -582,9 +582,13 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
     sync_delay=max(0,round((datetime.fromisoformat(sync_completed_at)-draw_at).total_seconds()/60))
     deadline_enforced=latest['draw_date']>=THIRTY_MINUTE_POLICY_EFFECTIVE_DRAW_DATE
     deadline_met=datetime.fromisoformat(sync_completed_at)<=repair_deadline
+    deadline_violation=bool(deadline_enforced and not deadline_met)
+    deadline_recovered=bool(deadline_violation and latest['draw_date']>=expected_latest_date())
     repair_count=int(previous_health.get('self_repair_count') or 0)+(1 if repair_run else 0)
+    health_status=('recovered_after_deadline' if deadline_recovered
+                   else ('healthy_model_degraded' if degraded else 'healthy'))
     health={
-        'status':'healthy_model_degraded' if degraded else 'healthy','checked_at':checked_at.isoformat(timespec='seconds'),
+        'status':health_status,'checked_at':checked_at.isoformat(timespec='seconds'),
         'latest_period':latest['period'],'latest_draw_date':latest['draw_date'],'expected_latest_date':expected_latest_date(),
         'freshness_ok':True,'calendar_freshness_ok':latest['draw_date']>=expected_latest_date(),'data_changed':changed,
         'official_source':latest.get('source'),'source_failover_used':bool(pipeline_meta.get('source_failover_used')),
@@ -592,10 +596,10 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
         'backfill_draw_count':int(pipeline_meta.get('backfill_draw_count') or 0),
         'history_repair_pending':bool(pipeline_meta.get('history_repair_pending')),
         'pipeline_version':'持續更新第三版','update_retry_policy':'五次重試、雙官方端點、缺期逐月補齊、失敗強制重跑',
-        'stability_monitor':'每次更新後立即驗證、開獎時段每五分鐘、全天每小時巡檢',
+        'stability_monitor':'開獎前常駐哨兵、每次更新後立即驗證、開獎時段每五分鐘、全天每小時巡檢',
         'cloud_independent_update':True,
         'local_computer_required':False,
-        'cloud_update_schedule':'開獎時段每五分鐘核對、主流程每十分鐘重算、全天每小時巡檢',
+        'cloud_update_schedule':'開獎前常駐哨兵每十五秒等待新期別、開獎時段每五分鐘備援、全天每小時巡檢',
         'update_start_deadline_minutes':10,
         'completion_deadline_minutes':30,
         'watchdog_interval_minutes':5,
@@ -610,8 +614,10 @@ def build_site(latest, changed, previous=None, new_draws=None, pipeline_meta=Non
         'thirty_minute_deadline_met':deadline_met,
         'deadline_policy_effective_draw_date':THIRTY_MINUTE_POLICY_EFFECTIVE_DRAW_DATE,
         'deadline_enforced_for_latest_draw':deadline_enforced,
-        'deadline_violation':bool(deadline_enforced and not deadline_met),
-        'self_repair_status':'本次自修完成' if repair_run else '雲端待命',
+        'deadline_violation':deadline_violation,
+        'deadline_recovered':deadline_recovered,
+        'self_repair_status':('逾時後已補齊，持續監控' if deadline_recovered
+                              else ('本次自修完成' if repair_run else '雲端待命')),
         'self_repair_count':repair_count,
         'last_self_repair_at':checked_at.isoformat(timespec='seconds') if repair_run else previous_health.get('last_self_repair_at'),
         'last_public_verification_at':checked_at.isoformat(timespec='seconds'),

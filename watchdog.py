@@ -84,7 +84,7 @@ settlement_coverage=health.get('settlement_coverage') or {}
 if (not health.get('settlement_coverage_complete') or settlement_coverage.get('missing_draws')!=0
         or settlement_coverage.get('accounted_draws')!=settlement_coverage.get('expected_draws')):
     errors.append('公開歷史結算仍有遺失資料')
-for key in ('sync_completed_at','sync_delay_minutes','thirty_minute_repair_deadline','thirty_minute_deadline_met','deadline_policy_effective_draw_date','deadline_enforced_for_latest_draw','deadline_violation','self_repair_status','self_repair_count','last_public_verification_at','mobile_open_sync','pipeline_version','update_retry_policy','stability_monitor','latest_review_accounted','cloud_independent_update','local_computer_required','cloud_update_schedule','update_start_deadline_minutes','completion_deadline_minutes','watchdog_interval_minutes','upstream_failure_forces_repair','desktop_mobile_sync','desktop_mobile_shared_version'):
+for key in ('sync_completed_at','sync_delay_minutes','thirty_minute_repair_deadline','thirty_minute_deadline_met','deadline_policy_effective_draw_date','deadline_enforced_for_latest_draw','deadline_violation','deadline_recovered','self_repair_status','self_repair_count','last_public_verification_at','mobile_open_sync','pipeline_version','update_retry_policy','stability_monitor','latest_review_accounted','cloud_independent_update','local_computer_required','cloud_update_schedule','update_start_deadline_minutes','completion_deadline_minutes','watchdog_interval_minutes','upstream_failure_forces_repair','desktop_mobile_sync','desktop_mobile_shared_version'):
     if key not in health: errors.append('公開健康檔缺少自主修復欄位：'+key)
 if not health.get('cloud_independent_update') or health.get('local_computer_required') is not False:
     errors.append('公開健康檔未確認關機後仍由雲端獨立更新')
@@ -94,7 +94,10 @@ if (health.get('update_start_deadline_minutes')!=10 or health.get('completion_de
         or health.get('watchdog_interval_minutes')!=5 or not health.get('upstream_failure_forces_repair')):
     errors.append('公開健康檔未落實十分鐘啟動、三十分鐘完成與故障強制自修')
 if health.get('deadline_enforced_for_latest_draw') and not health.get('thirty_minute_deadline_met',True):
-    errors.append('本期超過三十分鐘仍未完成同步')
+    if health.get('freshness_ok') and health.get('deadline_recovered'):
+        warnings.append('本期曾超過三十分鐘，但資料已補齊；保留逾時紀錄並繼續監控下一期')
+    else:
+        errors.append('本期超過三十分鐘且尚未完成同步')
 data_latest=result.get('data_latest') or {}
 if str(data_latest.get('period'))!=str(official['period']) or data_latest.get('date')!=official['draw_date']: errors.append('公開結果未對應官方最新期別')
 ranked=result.get('ranked_top15') or []

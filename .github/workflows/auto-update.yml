@@ -9,15 +9,18 @@ on:
       - 'system_audit.py'
       - 'tw539_ultra.py'
       - 'watchdog.py'
+      - 'draw_sentinel.py'
       - 'site/mobile-sync.js'
       - 'site/service-worker.js'
       - '.github/workflows/auto-update.yml'
       - '.github/workflows/watchdog.yml'
+      - '.github/workflows/draw-sentinel.yml'
   schedule:
-    # 鐵律：台灣時間週一至週六 20:25～23:55 每5分鐘先做輕量期別比對。
+    # 鐵律：台灣時間週一至週六 20:27～23:57 每5分鐘先做輕量期別比對。
+    # 改用非整點熱門分鐘，降低雲端排程擁塞與佚列丟棄。
     # 公開頁已同版立即結束；只有官方期別變動才啟動完整重算與部署。
-    - cron: '25,30,35,40,45,50,55 12 * * 1-6'
-    - cron: '*/5 13-15 * * 1-6'
+    - cron: '27,32,37,42,47,52,57 12 * * 1-6'
+    - cron: '2,7,12,17,22,27,32,37,42,47,52,57 13-15 * * 1-6'
   workflow_dispatch:
     inputs:
       repair:

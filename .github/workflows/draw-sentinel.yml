@@ -1,0 +1,44 @@
+name: 開獎前常駐哨兵
+on:
+  schedule:
+    # 台灣時間20:07、20:19、20:26備援啟動；最後一個哨兵持續等待當日新期別。
+    - cron: '7,19,26 12 * * 1-6'
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: tw539-draw-sentinel
+  cancel-in-progress: true
+jobs:
+  watch-draw:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with: {python-version: '3.12'}
+      - name: 常駐等待新期別並立即觸發更新
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in {1..280}; do
+            set +e
+            python draw_sentinel.py
+            state=$?
+            set -e
+            if [ "$state" = "0" ]; then
+              exit 0
+            fi
+            if [ "$state" = "20" ]; then
+              active=$(gh run list --repo "${{ github.repository }}" --workflow auto-update.yml --limit 20 --json status --jq '[.[] | select(.status == "in_progress" or .status == "queued")] | length')
+              if [ "$active" = "0" ]; then
+                gh workflow run auto-update.yml --repo "${{ github.repository }}" --ref master -f repair=true
+              else
+                echo "主更新已在執行或排隊，不重複觸發"
+              fi
+              exit 0
+            fi
+            sleep 15
+          done
+          exit 1
