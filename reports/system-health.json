@@ -1,9 +1,9 @@
 {
   "status": "recovered_after_deadline",
-  "checked_at": "2026-11-17T06:15:32+08:00",
-  "latest_period": "115000277",
-  "latest_draw_date": "2026-11-16",
-  "expected_latest_date": "2026-11-16",
+  "checked_at": "2026-11-17T22:35:27+08:00",
+  "latest_period": "115000278",
+  "latest_draw_date": "2026-11-17",
+  "expected_latest_date": "2026-11-17",
   "freshness_ok": true,
   "calendar_freshness_ok": true,
   "data_changed": true,
@@ -23,21 +23,21 @@
   "watchdog_interval_minutes": 5,
   "upstream_failure_forces_repair": true,
   "desktop_mobile_sync": true,
-  "desktop_mobile_shared_version": "20261117061532",
+  "desktop_mobile_shared_version": "20261117223527",
   "desktop_mobile_source": "電腦版與手機版共用同一次正式運算、同一結果檔與同一組分頁",
-  "official_draw_time": "2026-11-16T20:30+08:00",
-  "sync_completed_at": "2026-11-17T06:15:32+08:00",
-  "sync_delay_minutes": 586,
-  "thirty_minute_repair_deadline": "2026-11-16T21:00+08:00",
+  "official_draw_time": "2026-11-17T20:30+08:00",
+  "sync_completed_at": "2026-11-17T22:35:27+08:00",
+  "sync_delay_minutes": 125,
+  "thirty_minute_repair_deadline": "2026-11-17T21:00+08:00",
   "thirty_minute_deadline_met": false,
   "deadline_policy_effective_draw_date": "2026-10-07",
   "deadline_enforced_for_latest_draw": true,
   "deadline_violation": true,
   "deadline_recovered": true,
   "self_repair_status": "逾時後已補齊，持續監控",
-  "self_repair_count": 41,
-  "last_self_repair_at": "2026-11-17T06:15:32+08:00",
-  "last_public_verification_at": "2026-11-17T06:15:32+08:00",
+  "self_repair_count": 42,
+  "last_self_repair_at": "2026-11-17T22:35:27+08:00",
+  "last_public_verification_at": "2026-11-17T22:35:27+08:00",
   "mobile_open_sync": "開啟、回到前景、重新連網均立即核對版本",
   "model_release_allowed": true,
   "single_release_allowed": true,
@@ -50,23 +50,23 @@
   "single_supermodel_walk_forward": {
     "full": {
       "samples": 720,
-      "single_hits": 100,
-      "single_rate": 0.138889,
+      "single_hits": 99,
+      "single_rate": 0.1375,
       "random_expected_hits": 92.307692,
-      "excess_hits": 7.692308,
-      "top5_avg_hits": 0.633333,
-      "top9_avg_hits": 1.155556,
-      "average_actual_rank": 20.173333
+      "excess_hits": 6.692308,
+      "top5_avg_hits": 0.6375,
+      "top9_avg_hits": 1.163889,
+      "average_actual_rank": 20.141944
     },
     "recent_360": {
       "samples": 360,
-      "single_hits": 48,
-      "single_rate": 0.133333,
+      "single_hits": 47,
+      "single_rate": 0.130556,
       "random_expected_hits": 46.153846,
-      "excess_hits": 1.846154,
-      "top5_avg_hits": 0.591667,
-      "top9_avg_hits": 1.108333,
-      "average_actual_rank": 20.503889
+      "excess_hits": 0.846154,
+      "top5_avg_hits": 0.6,
+      "top9_avg_hits": 1.119444,
+      "average_actual_rank": 20.437222
     },
     "recent_240": {
       "samples": 240,
@@ -74,9 +74,9 @@
       "single_rate": 0.129167,
       "random_expected_hits": 30.769231,
       "excess_hits": 0.230769,
-      "top5_avg_hits": 0.616667,
-      "top9_avg_hits": 1.125,
-      "average_actual_rank": 20.159167
+      "top5_avg_hits": 0.629167,
+      "top9_avg_hits": 1.145833,
+      "average_actual_rank": 20.078333
     },
     "recent_120": {
       "samples": 120,
@@ -84,19 +84,19 @@
       "single_rate": 0.15,
       "random_expected_hits": 15.384615,
       "excess_hits": 2.615385,
-      "top5_avg_hits": 0.558333,
-      "top9_avg_hits": 1.058333,
-      "average_actual_rank": 20.425
+      "top5_avg_hits": 0.566667,
+      "top9_avg_hits": 1.083333,
+      "average_actual_rank": 20.331667
     },
     "recent_54": {
       "samples": 54,
-      "single_hits": 9,
-      "single_rate": 0.166667,
+      "single_hits": 8,
+      "single_rate": 0.148148,
       "random_expected_hits": 6.923077,
-      "excess_hits": 2.076923,
+      "excess_hits": 1.076923,
       "top5_avg_hits": 0.592593,
-      "top9_avg_hits": 1.12963,
-      "average_actual_rank": 20.155556
+      "top9_avg_hits": 1.148148,
+      "average_actual_rank": 20.133333
     },
     "recent_33": {
       "samples": 33,
@@ -104,9 +104,9 @@
       "single_rate": 0.181818,
       "random_expected_hits": 4.230769,
       "excess_hits": 1.769231,
-      "top5_avg_hits": 0.575758,
-      "top9_avg_hits": 1.030303,
-      "average_actual_rank": 20.836364
+      "top5_avg_hits": 0.606061,
+      "top9_avg_hits": 1.090909,
+      "average_actual_rank": 20.575758
     },
     "recent_14": {
       "samples": 14,
@@ -114,55 +114,55 @@
       "single_rate": 0.285714,
       "random_expected_hits": 1.794872,
       "excess_hits": 2.205128,
-      "top5_avg_hits": 0.5,
-      "top9_avg_hits": 1.214286,
-      "average_actual_rank": 20.028571
+      "top5_avg_hits": 0.571429,
+      "top9_avg_hits": 1.285714,
+      "average_actual_rank": 19.785714
     },
     "folds": [
       {
-        "first_date": "2024-08-06",
-        "last_date": "2024-12-23",
+        "first_date": "2024-08-07",
+        "last_date": "2024-12-24",
         "samples": 120,
-        "single_hits": 20,
+        "single_hits": 19,
         "window": 540,
         "global_history_blend": 0.1,
-        "robust_score": 0.146550668,
+        "robust_score": 0.238750858,
         "selection_evidence": [
           {
             "span": 720,
-            "hits": 99,
+            "hits": 100,
             "expected": 92.307692,
-            "standardized_excess": 0.249407582
+            "standardized_excess": 0.286675382
           },
           {
             "span": 360,
-            "hits": 52,
+            "hits": 53,
             "expected": 46.153846,
-            "standardized_excess": 0.308119362
+            "standardized_excess": 0.360823989
           },
           {
             "span": 240,
-            "hits": 34,
+            "hits": 35,
             "expected": 30.769231,
-            "standardized_excess": 0.208545257
+            "standardized_excess": 0.27309498
           },
           {
             "span": 120,
-            "hits": 17,
+            "hits": 18,
             "expected": 15.384615,
-            "standardized_excess": 0.147463765
+            "standardized_excess": 0.238750858
           },
           {
             "span": 54,
-            "hits": 8,
+            "hits": 9,
             "expected": 6.923077,
-            "standardized_excess": 0.146550668
+            "standardized_excess": 0.282633432
           }
         ]
       },
       {
-        "first_date": "2024-12-24",
-        "last_date": "2025-05-08",
+        "first_date": "2024-12-25",
+        "last_date": "2025-05-09",
         "samples": 120,
         "single_hits": 16,
         "window": 90,
@@ -171,9 +171,9 @@
         "selection_evidence": [
           {
             "span": 720,
-            "hits": 95,
+            "hits": 94,
             "expected": 92.307692,
-            "standardized_excess": 0.100336384
+            "standardized_excess": 0.063068584
           },
           {
             "span": 360,
@@ -189,9 +189,9 @@
           },
           {
             "span": 120,
-            "hits": 18,
+            "hits": 17,
             "expected": 15.384615,
-            "standardized_excess": 0.238750858
+            "standardized_excess": 0.147463765
           },
           {
             "span": 54,
@@ -202,10 +202,10 @@
         ]
       },
       {
-        "first_date": "2025-05-09",
-        "last_date": "2025-09-25",
+        "first_date": "2025-05-10",
+        "last_date": "2025-09-26",
         "samples": 120,
-        "single_hits": 16,
+        "single_hits": 17,
         "window": 120,
         "global_history_blend": 0.2,
         "robust_score": 0.286675382,
@@ -224,9 +224,9 @@
           },
           {
             "span": 240,
-            "hits": 38,
+            "hits": 37,
             "expected": 30.769231,
-            "standardized_excess": 0.466744147
+            "standardized_excess": 0.402194424
           },
           {
             "span": 120,
@@ -243,19 +243,19 @@
         ]
       },
       {
-        "first_date": "2025-09-26",
-        "last_date": "2026-02-12",
+        "first_date": "2025-09-27",
+        "last_date": "2026-02-13",
         "samples": 120,
-        "single_hits": 17,
+        "single_hits": 16,
         "window": 120,
         "global_history_blend": 0.2,
-        "robust_score": 0.010467905,
+        "robust_score": 0.146550668,
         "selection_evidence": [
           {
             "span": 720,
-            "hits": 107,
+            "hits": 108,
             "expected": 92.307692,
-            "standardized_excess": 0.547549979
+            "standardized_excess": 0.584817779
           },
           {
             "span": 360,
@@ -265,27 +265,27 @@
           },
           {
             "span": 240,
-            "hits": 36,
+            "hits": 37,
             "expected": 30.769231,
-            "standardized_excess": 0.337644702
+            "standardized_excess": 0.402194424
           },
           {
             "span": 120,
-            "hits": 16,
+            "hits": 17,
             "expected": 15.384615,
-            "standardized_excess": 0.056176673
+            "standardized_excess": 0.147463765
           },
           {
             "span": 54,
-            "hits": 7,
+            "hits": 8,
             "expected": 6.923077,
-            "standardized_excess": 0.010467905
+            "standardized_excess": 0.146550668
           }
         ]
       },
       {
-        "first_date": "2026-02-13",
-        "last_date": "2026-06-29",
+        "first_date": "2026-02-14",
+        "last_date": "2026-06-30",
         "samples": 120,
         "single_hits": 13,
         "window": 1200,
@@ -325,8 +325,8 @@
         ]
       },
       {
-        "first_date": "2026-06-30",
-        "last_date": "2026-11-16",
+        "first_date": "2026-07-01",
+        "last_date": "2026-11-17",
         "samples": 120,
         "single_hits": 18,
         "window": 90,
@@ -379,7 +379,7 @@
       120,
       54
     ],
-    "accepted_module_count": 37,
+    "accepted_module_count": 36,
     "acceptance_rule": "六個檢驗區段標準化超額命中均大於零",
     "family_champions": [
       {
@@ -387,7 +387,7 @@
         "label": "540期與全歷史混合0.00",
         "candidate": 8,
         "robust_score": 0.818557734,
-        "mean_score": 1.361952265,
+        "mean_score": 1.343373252,
         "selection_evidence": [
           {
             "span": 1440,
@@ -397,9 +397,9 @@
           },
           {
             "span": 720,
-            "hits": 101,
+            "hits": 100,
             "expected": 92.307692,
-            "standardized_excess": 0.968967006
+            "standardized_excess": 0.857492926
           },
           {
             "span": 360,
@@ -432,7 +432,7 @@
         "label": "120對720期方向1混合0.35",
         "candidate": 30,
         "robust_score": 0.818557734,
-        "mean_score": 1.289156189,
+        "mean_score": 1.244302482,
         "selection_evidence": [
           {
             "span": 1440,
@@ -442,15 +442,15 @@
           },
           {
             "span": 720,
-            "hits": 108,
+            "hits": 107,
             "expected": 92.307692,
-            "standardized_excess": 1.749285568
+            "standardized_excess": 1.637811488
           },
           {
             "span": 360,
-            "hits": 56,
+            "hits": 55,
             "expected": 46.153846,
-            "standardized_excess": 1.552228
+            "standardized_excess": 1.394579844
           },
           {
             "span": 240,
@@ -473,11 +473,56 @@
         ]
       },
       {
+        "family": "週期間隔危險率",
+        "label": "方向-1與全歷史混合0.00",
+        "candidate": 31,
+        "robust_score": 0.739733656,
+        "mean_score": 1.249752027,
+        "selection_evidence": [
+          {
+            "span": 1440,
+            "hits": 194,
+            "expected": 184.615385,
+            "standardized_excess": 0.739733656
+          },
+          {
+            "span": 720,
+            "hits": 103,
+            "expected": 92.307692,
+            "standardized_excess": 1.191915167
+          },
+          {
+            "span": 360,
+            "hits": 51,
+            "expected": 46.153846,
+            "standardized_excess": 0.763987219
+          },
+          {
+            "span": 240,
+            "hits": 37,
+            "expected": 30.769231,
+            "standardized_excess": 1.203029265
+          },
+          {
+            "span": 120,
+            "hits": 21,
+            "expected": 15.384615,
+            "standardized_excess": 1.533306692
+          },
+          {
+            "span": 54,
+            "hits": 12,
+            "expected": 6.923077,
+            "standardized_excess": 2.066540161
+          }
+        ]
+      },
+      {
         "family": "指數時間衰減",
         "label": "半衰期30期與全歷史混合0.00",
         "candidate": 30,
         "robust_score": 0.714142843,
-        "mean_score": 0.960290917,
+        "mean_score": 0.847596246,
         "selection_evidence": [
           {
             "span": 1440,
@@ -487,15 +532,15 @@
           },
           {
             "span": 720,
-            "hits": 102,
+            "hits": 101,
             "expected": 92.307692,
-            "standardized_excess": 1.080441086
+            "standardized_excess": 0.968967006
           },
           {
             "span": 360,
-            "hits": 52,
+            "hits": 51,
             "expected": 46.153846,
-            "standardized_excess": 0.921635375
+            "standardized_excess": 0.763987219
           },
           {
             "span": 240,
@@ -511,93 +556,48 @@
           },
           {
             "span": 54,
-            "hits": 10,
+            "hits": 9,
             "expected": 6.923077,
-            "standardized_excess": 1.252448582
-          }
-        ]
-      },
-      {
-        "family": "週期間隔危險率",
-        "label": "方向-1與全歷史混合0.00",
-        "candidate": 38,
-        "robust_score": 0.606339063,
-        "mean_score": 1.078410907,
-        "selection_evidence": [
-          {
-            "span": 1440,
-            "hits": 193,
-            "expected": 184.615385,
-            "standardized_excess": 0.660909578
-          },
-          {
-            "span": 720,
-            "hits": 102,
-            "expected": 92.307692,
-            "standardized_excess": 1.080441086
-          },
-          {
-            "span": 360,
-            "hits": 50,
-            "expected": 46.153846,
-            "standardized_excess": 0.606339063
-          },
-          {
-            "span": 240,
-            "hits": 37,
-            "expected": 30.769231,
-            "standardized_excess": 1.203029265
-          },
-          {
-            "span": 120,
-            "hits": 20,
-            "expected": 15.384615,
-            "standardized_excess": 1.260252076
-          },
-          {
-            "span": 54,
-            "hits": 11,
-            "expected": 6.923077,
-            "standardized_excess": 1.659494371
+            "standardized_excess": 0.845402793
           }
         ]
       },
       {
         "family": "多階拖牌軌跡",
-        "label": "前5期拖牌方向-1混合0.35",
-        "candidate": 30,
-        "robust_score": 0.266789188,
-        "mean_score": 0.760233049,
+        "label": "前8期拖牌方向-1混合0.35",
+        "candidate": 35,
+        "robust_score": 0.438357004,
+        "mean_score": 1.475896265,
         "selection_evidence": [
           {
             "span": 1440,
-            "hits": 188,
+            "hits": 213,
             "expected": 184.615385,
-            "standardized_excess": 0.266789188
+            "standardized_excess": 2.237391141
           },
           {
             "span": 720,
-            "hits": 100,
+            "hits": 103,
             "expected": 92.307692,
-            "standardized_excess": 0.857492926
+            "standardized_excess": 1.191915167
           },
           {
             "span": 360,
-            "hits": 52,
+            "hits": 59,
             "expected": 46.153846,
-            "standardized_excess": 0.921635375
+            "standardized_excess": 2.025172469
           },
           {
             "span": 240,
-            "hits": 35,
+            "hits": 41,
             "expected": 30.769231,
-            "standardized_excess": 0.816871723
+            "standardized_excess": 1.975344348
           },
           {
             "span": 120,
-            "hits": 20,
+            "hits": 19,
             "expected": 15.384615,
-            "standardized_excess": 1.260252076
+            "standardized_excess": 0.987197459
           },
           {
             "span": 54,
@@ -610,7 +610,7 @@
       {
         "family": "間隔風險",
         "label": "方向-1與全歷史混合0.00",
-        "candidate": 30,
+        "candidate": 21,
         "robust_score": 0.16803361,
         "mean_score": 0.606261907,
         "selection_evidence": [
@@ -655,7 +655,7 @@
       {
         "family": "開獎日條件",
         "label": "方向-1與全歷史混合0.00",
-        "candidate": 33,
+        "candidate": 25,
         "robust_score": -0.181901719,
         "mean_score": 0.34193861,
         "selection_evidence": [
@@ -700,45 +700,45 @@
       {
         "family": "前期條件轉移",
         "label": "方向1與全歷史混合0.00",
-        "candidate": 5,
-        "robust_score": -2.152307244,
-        "mean_score": -1.140612334,
+        "candidate": 35,
+        "robust_score": -2.040833163,
+        "mean_score": -0.937091418,
         "selection_evidence": [
           {
             "span": 1440,
-            "hits": 174,
+            "hits": 175,
             "expected": 184.615385,
-            "standardized_excess": -0.836747906
+            "standardized_excess": -0.757923828
           },
           {
             "span": 720,
-            "hits": 73,
+            "hits": 74,
             "expected": 92.307692,
-            "standardized_excess": -2.152307244
+            "standardized_excess": -2.040833163
           },
           {
             "span": 360,
-            "hits": 36,
+            "hits": 37,
             "expected": 46.153846,
-            "standardized_excess": -1.600735125
+            "standardized_excess": -1.443086969
           },
           {
             "span": 240,
-            "hits": 23,
+            "hits": 24,
             "expected": 30.769231,
-            "standardized_excess": -1.500073528
+            "standardized_excess": -1.306994757
           },
           {
             "span": 120,
-            "hits": 14,
+            "hits": 15,
             "expected": 15.384615,
-            "standardized_excess": -0.378075623
+            "standardized_excess": -0.105021006
           },
           {
             "span": 54,
-            "hits": 6,
+            "hits": 7,
             "expected": 6.923077,
-            "standardized_excess": -0.375734575
+            "standardized_excess": 0.031311215
           }
         ]
       }
@@ -746,19 +746,19 @@
     "fusion_walk_forward": {
       "full": {
         "samples": 720,
-        "single_hits": 105,
-        "single_rate": 0.145833333,
+        "single_hits": 104,
+        "single_rate": 0.144444444,
         "random_expected_hits": 92.307692,
-        "excess_hits": 12.692308,
-        "mean_accepted_models": 30.036
+        "excess_hits": 11.692308,
+        "mean_accepted_models": 30.042
       },
       "recent_360": {
         "samples": 360,
-        "single_hits": 52,
-        "single_rate": 0.144444444,
+        "single_hits": 51,
+        "single_rate": 0.141666667,
         "random_expected_hits": 46.153846,
-        "excess_hits": 5.846154,
-        "mean_accepted_models": 27.6
+        "excess_hits": 4.846154,
+        "mean_accepted_models": 27.606
       },
       "recent_240": {
         "samples": 240,
@@ -766,7 +766,7 @@
         "single_rate": 0.15,
         "random_expected_hits": 30.769231,
         "excess_hits": 5.230769,
-        "mean_accepted_models": 31.321
+        "mean_accepted_models": 31.413
       },
       "recent_120": {
         "samples": 120,
@@ -774,15 +774,15 @@
         "single_rate": 0.133333333,
         "random_expected_hits": 15.384615,
         "excess_hits": 0.615385,
-        "mean_accepted_models": 37.742
+        "mean_accepted_models": 37.65
       },
       "recent_54": {
         "samples": 54,
-        "single_hits": 8,
-        "single_rate": 0.148148148,
+        "single_hits": 7,
+        "single_rate": 0.12962963,
         "random_expected_hits": 6.923077,
-        "excess_hits": 1.076923,
-        "mean_accepted_models": 39.481
+        "excess_hits": 0.076923,
+        "mean_accepted_models": 39.593
       },
       "recent_33": {
         "samples": 33,
@@ -790,7 +790,7 @@
         "single_rate": 0.121212121,
         "random_expected_hits": 4.230769,
         "excess_hits": -0.230769,
-        "mean_accepted_models": 36.576
+        "mean_accepted_models": 36.424
       },
       "recent_14": {
         "samples": 14,
@@ -798,7 +798,7 @@
         "single_rate": 0.214285714,
         "random_expected_hits": 1.794872,
         "excess_hits": 1.205128,
-        "mean_accepted_models": 30.357
+        "mean_accepted_models": 30.571
       },
       "no_future_data": true,
       "selection_rule": "每期只按更早的六段隔離成績篩選模型後投票"
@@ -806,43 +806,61 @@
     "accepted_vote_table": [
       {
         "candidate": 30,
-        "accepted_model_votes": 20,
-        "family_support": 5,
-        "robust_score_sum": 10.363181703
+        "accepted_model_votes": 17,
+        "family_support": 3,
+        "robust_score_sum": 6.621952994
       },
       {
         "candidate": 8,
-        "accepted_model_votes": 10,
+        "accepted_model_votes": 9,
         "family_support": 2,
-        "robust_score_sum": 2.577658187
+        "robust_score_sum": 2.230395206
       },
       {
-        "candidate": 32,
-        "accepted_model_votes": 4,
-        "family_support": 2,
-        "robust_score_sum": 1.33171196
-      },
-      {
-        "candidate": 38,
+        "candidate": 31,
         "accepted_model_votes": 3,
         "family_support": 1,
-        "robust_score_sum": 1.321819157
+        "robust_score_sum": 1.667432422
+      },
+      {
+        "candidate": 37,
+        "accepted_model_votes": 2,
+        "family_support": 1,
+        "robust_score_sum": 1.04614137
+      },
+      {
+        "candidate": 35,
+        "accepted_model_votes": 2,
+        "family_support": 1,
+        "robust_score_sum": 0.876714008
+      },
+      {
+        "candidate": 21,
+        "accepted_model_votes": 2,
+        "family_support": 1,
+        "robust_score_sum": 0.33606722
+      },
+      {
+        "candidate": 29,
+        "accepted_model_votes": 1,
+        "family_support": 1,
+        "robust_score_sum": 0.266789188
       }
     ],
     "fusion_candidate": 30,
     "primary_candidate": 30,
     "primary_candidate_support": {
       "candidate": 30,
-      "accepted_model_votes": 20,
-      "family_support": 5,
-      "robust_score_sum": 10.363181703
+      "accepted_model_votes": 17,
+      "family_support": 3,
+      "robust_score_sum": 6.621952994
     },
     "blocked_unqualified_repeat_numbers": [
-      11,
-      21,
-      22,
-      35,
-      37
+      5,
+      17,
+      26,
+      32,
+      38
     ],
     "repeat_qualification_enforced_before_voting": true,
     "rejected_families": [
@@ -882,19 +900,19 @@
       "passed": false,
       "rule": "七百二十期必須增加，且最近三百六十、二百四十、一百二十、五十四、三十三期不得退化",
       "primary_hits": {
-        "full": 100,
-        "recent_360": 48,
+        "full": 99,
+        "recent_360": 47,
         "recent_240": 31,
         "recent_120": 18,
-        "recent_54": 9,
+        "recent_54": 8,
         "recent_33": 6
       },
       "fusion_hits": {
-        "full": 105,
-        "recent_360": 52,
+        "full": 104,
+        "recent_360": 51,
         "recent_240": 36,
         "recent_120": 16,
-        "recent_54": 8,
+        "recent_54": 7,
         "recent_33": 4
       },
       "decision": "融合軌跡未達不退化標準，保留原主模型"
@@ -902,16 +920,16 @@
     "production_upgrade_applied": false
   },
   "single_statistical_validation": {
-    "observed_hits": 100,
+    "observed_hits": 99,
     "samples": 720,
-    "observed_rate": 0.138888889,
+    "observed_rate": 0.1375,
     "random_rate": 0.128205128,
-    "exact_binomial_upper_tail_p": 0.20990151,
+    "exact_binomial_upper_tail_p": 0.242740489,
     "circular_shift_tests": 719,
-    "circular_shift_mean_hits": 100.867872,
-    "circular_shift_p": 0.386111111,
-    "wilson_95_lower": 0.115538967,
-    "wilson_95_upper": 0.166071676,
+    "circular_shift_mean_hits": 100.44089,
+    "circular_shift_p": 0.419444444,
+    "wilson_95_lower": 0.114262656,
+    "wilson_95_upper": 0.164584951,
     "strict_five_percent_significance": false,
     "candidate_level_ten_percent_significance": false
   },
@@ -921,24 +939,24 @@
     "random_rate": 0.128205128,
     "minimum_live_samples": 30,
     "all_sealed": {
-      "samples": 70,
+      "samples": 71,
       "hits": 5,
-      "rate": 0.071428571,
-      "random_expected_hits": 8.974359,
+      "rate": 0.070422535,
+      "random_expected_hits": 9.102564,
       "not_below_random": false
     },
     "supermodel_series": {
-      "samples": 37,
+      "samples": 38,
       "hits": 5,
-      "rate": 0.135135135,
-      "random_expected_hits": 4.74359,
+      "rate": 0.131578947,
+      "random_expected_hits": 4.871795,
       "not_below_random": true
     },
     "current_architecture": {
-      "samples": 35,
+      "samples": 36,
       "hits": 4,
-      "rate": 0.114285714,
-      "random_expected_hits": 4.487179,
+      "rate": 0.111111111,
+      "random_expected_hits": 4.615385,
       "not_below_random": false
     },
     "current_architecture_policy": "全歷史多時間窗、全球八家族軌跡與連莊前置排除第五版",
@@ -972,9 +990,9 @@
         "not_below_random": true
       }
     },
-    "current_miss_streak": 1,
+    "current_miss_streak": 2,
     "longest_miss_streak": 33,
-    "exact_binomial_lower_tail_p": 0.101103684,
+    "exact_binomial_lower_tail_p": 0.093904951,
     "all_sealed_gate_passed": false,
     "current_architecture_gate_passed": false,
     "live_accuracy_gate_passed": false,
@@ -984,59 +1002,59 @@
   "single_edge_verified": false,
   "ranking_direction_valid": false,
   "top1_hits": 49,
-  "bottom1_hits": 50,
-  "top5_avg_hits": 0.6639,
-  "bottom5_avg_hits": 0.6917,
-  "top9_avg_hits": 1.175,
+  "bottom1_hits": 51,
+  "top5_avg_hits": 0.6667,
+  "bottom5_avg_hits": 0.6889,
+  "top9_avg_hits": 1.1722,
   "bottom9_avg_hits": 1.1389,
-  "rank10_15_avg_hits": 0.75,
-  "top9_capture_rate": 0.6104,
-  "top9_slot_hit_rate": 0.130556,
-  "rank10_15_slot_hit_rate": 0.125,
+  "rank10_15_avg_hits": 0.7528,
+  "top9_capture_rate": 0.6089,
+  "top9_slot_hit_rate": 0.130247,
+  "rank10_15_slot_hit_rate": 0.125463,
   "boundary_control_valid": true,
   "top5_at_least_2_rate": 0.1278,
-  "top9_at_least_2_rate": 0.3306,
+  "top9_at_least_2_rate": 0.3278,
   "recent_54": {
     "samples": 54,
     "single_hits": 4,
-    "bottom1_hits": 11,
-    "top9_hits": 50,
-    "rank10_15_hits": 48,
+    "bottom1_hits": 12,
+    "top9_hits": 49,
+    "rank10_15_hits": 49,
     "top15_hits": 98,
-    "top5_avg_hits": 0.463,
-    "bottom5_avg_hits": 0.6852,
-    "top9_avg_hits": 0.9259,
-    "rank10_15_avg_hits": 0.8889,
+    "top5_avg_hits": 0.4815,
+    "bottom5_avg_hits": 0.7037,
+    "top9_avg_hits": 0.9074,
+    "rank10_15_avg_hits": 0.9074,
     "top15_avg_hits": 1.8148,
-    "top9_capture_rate": 0.5102,
-    "top9_slot_hit_rate": 0.102881,
-    "rank10_15_slot_hit_rate": 0.148148,
+    "top9_capture_rate": 0.5,
+    "top9_slot_hit_rate": 0.100823,
+    "rank10_15_slot_hit_rate": 0.151235,
     "boundary_expected_capture_rate": 0.6,
-    "bottom9_avg_hits": 1.2037,
-    "avg_actual_rank": 20.8037,
+    "bottom9_avg_hits": 1.2407,
+    "avg_actual_rank": 20.8926,
     "boundary_control_valid": false,
     "ranking_direction_valid": false,
     "single_direction_valid": false,
     "front_ranking_direction_valid": false,
     "top9_hit_distribution": {
       "0": 18,
-      "1": 22,
-      "2": 14,
+      "1": 23,
+      "2": 13,
       "3": 0,
       "4": 0,
       "5": 0
     },
-    "top9_at_least_2_rate": 0.2593
+    "top9_at_least_2_rate": 0.2407
   },
   "single_specialist_enabled": false,
   "single_repeat_break_enabled": true,
   "single_repeat_break_gate": false,
   "single_repeat_break_method": "repeat_once_then_consensus_second_with_one_draw_cooldown",
-  "single_repeat_break_application_count": 29,
+  "single_repeat_break_application_count": 28,
   "single_repeat_break_current": {
     "applied": false,
-    "original": 39,
-    "replacement": 39,
+    "original": 22,
+    "replacement": 22,
     "previous_single": 30,
     "previous_break_applied": false,
     "previous_single_missed": true,
@@ -1073,29 +1091,29 @@
       "full_overdue_correction": 0.4
     },
     "challenger_anchor_weights": {
-      "full_frequency_balance": 0.16666666666666666,
+      "full_frequency_balance": 0.20000000000000004,
       "full_transition_correction": 0.26666666666666666,
-      "full_signature_correction": 0.19999999999999998,
+      "full_signature_correction": 0.16666666666666666,
       "full_overdue_correction": 0.3666666666666667
     },
     "champion_metrics": {
       "last360_single_hits": 49,
-      "last360_top5_avg_hits": 0.6639,
-      "last360_top9_avg_hits": 1.175,
+      "last360_top5_avg_hits": 0.6667,
+      "last360_top9_avg_hits": 1.1722,
       "last360_direction_valid": false,
       "recent54_single_hits": 4,
-      "recent54_top5_avg_hits": 0.463,
-      "recent54_top9_avg_hits": 0.9259,
+      "recent54_top5_avg_hits": 0.4815,
+      "recent54_top9_avg_hits": 0.9074,
       "recent54_direction_valid": false
     },
     "challenger_metrics": {
-      "last360_single_hits": 44,
-      "last360_top5_avg_hits": 0.6333,
-      "last360_top9_avg_hits": 1.1528,
+      "last360_single_hits": 51,
+      "last360_top5_avg_hits": 0.6222,
+      "last360_top9_avg_hits": 1.1278,
       "last360_direction_valid": false,
-      "recent54_single_hits": 4,
-      "recent54_top5_avg_hits": 0.5185,
-      "recent54_top9_avg_hits": 0.9444,
+      "recent54_single_hits": 6,
+      "recent54_top5_avg_hits": 0.5741,
+      "recent54_top9_avg_hits": 0.9815,
       "recent54_direction_valid": false
     }
   },
@@ -1114,44 +1132,44 @@
   "direct_hit_full_rank_blend": 0.35,
   "direct_hit_full_rank_gate": false,
   "direct_hit_top5_before": 0.6389,
-  "direct_hit_top5_after": 0.6639,
+  "direct_hit_top5_after": 0.6667,
   "direct_hit_recent54_before": 0.5556,
-  "direct_hit_recent54_after": 0.463,
+  "direct_hit_recent54_after": 0.4815,
   "data_change_enabled": true,
   "data_change_window": 720,
   "data_change_ridge": 1.0,
   "data_change_rank_blend": 0.0,
   "data_change_preserve_front": 5,
   "data_change_gate": false,
-  "data_change_top9_before": 1.1972,
-  "data_change_top9_after": 1.175,
-  "data_change_recent54_before": 0.963,
-  "data_change_recent54_after": 0.9259,
+  "data_change_top9_before": 1.1944,
+  "data_change_top9_after": 1.1722,
+  "data_change_recent54_before": 0.9444,
+  "data_change_recent54_after": 0.9074,
   "data_change_recent120_before": 1.1167,
   "data_change_recent120_after": 1.1,
   "model_drift": "ranking_direction_invalid",
-  "recalculation_fingerprint": "32a0361e2bc4d5bb",
+  "recalculation_fingerprint": "03a0e5597eda5a91",
   "settled_previous": true,
   "latest_review_status": "completed_from_pre_draw_seal",
   "latest_review_accounted": true,
   "settlement_coverage": {
     "coverage_start": "2026-07-21",
-    "coverage_end": "2026-11-16",
-    "expected_draws": 102,
-    "accounted_draws": 102,
+    "coverage_end": "2026-11-17",
+    "expected_draws": 103,
+    "accounted_draws": 103,
     "missing_draws": 0,
     "missing_dates": [],
     "repaired_draws": 0,
-    "sealed_prediction_draws": 70,
+    "sealed_prediction_draws": 71,
     "official_recovery_draws": 32
   },
   "settlement_coverage_complete": true,
-  "settlement_expected_draws": 102,
-  "settlement_accounted_draws": 102,
+  "settlement_expected_draws": 103,
+  "settlement_accounted_draws": 103,
   "settlement_missing_draws": 0,
   "settlement_official_recovery_draws": 32,
-  "settlement_sealed_prediction_draws": 70,
+  "settlement_sealed_prediction_draws": 71,
   "full_history_mode": true,
-  "history_draws_used": 6021,
-  "history_database_sha256": "7da0ffd3d012c956eb35957332368ea78b0680d3b3d9476013f2450a2adf91ac"
+  "history_draws_used": 6022,
+  "history_database_sha256": "4881fe4271798118d60e6c276bb5f0f4363b1499837287ad72eae4f0de8a6040"
 }
